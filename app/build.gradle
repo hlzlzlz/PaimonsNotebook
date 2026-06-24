@@ -104,6 +104,9 @@ dependencies {
     debugApi "androidx.compose.ui:ui-test-manifest:$compose_version"
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:${compose_version}"
 
+    //WindowManager (WindowMetrics for multi-window / split-screen support)
+    implementation 'androidx.window:window:1.2.0'
+
     //Lifecycle
     def lifecycle_version = "2.8.0"
     api "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version"

@@ -1,7 +1,6 @@
 package com.lianyi.paimonsnotebook.common.components.components
 
 import android.app.Activity
-import android.content.res.Resources
 import android.os.Build
 import android.view.ViewGroup
 import androidx.compose.animation.core.Animatable
@@ -20,7 +19,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.get
+import androidx.window.layout.WindowMetricsCalculator
 import com.lianyi.paimonsnotebook.ui.theme.Black
 
 @Composable
@@ -28,8 +29,14 @@ fun SlideExitBox(
     activity: Activity,
     content: @Composable () -> Unit
 ) {
+    val context = LocalContext.current
     val screenXMax =
-        remember { Resources.getSystem().displayMetrics.widthPixels.toFloat() }//屏幕宽px，转成float方便后续使用
+        remember {
+            val windowMetrics = WindowMetricsCalculator
+                .getOrCreate()
+                .computeCurrentWindowMetrics(context)
+            windowMetrics.bounds.width().toFloat()
+        }//屏幕宽px，转成float方便后续使用
 
     //关闭的百分比
     val closePerc = remember { 0.5f }
