@@ -495,6 +495,9 @@ class AccountManagerScreenViewModel : ViewModel() {
     }
 
     private suspend fun loopQueryPassportQRCodeStatus(ticket: String): QrLoginStatusData? {
+        //连续非过期失败的次数上限,防止设备风控等持续性错误变成无声死循环
+        var consecutiveFailures = 0
+
         while (showPassportQRCodePopup) {
             delay(3000)
 
@@ -503,20 +506,31 @@ class AccountManagerScreenViewModel : ViewModel() {
             when {
                 !showPassportQRCodePopup -> return null
 
-                res.success -> when (res.data.status) {
-                    "Scanned" -> passportQrStatusText = "已扫码,请在米游社中确认"
-                    "Confirmed" -> return res.data
+                res.success -> {
+                    consecutiveFailures = 0
+
+                    when (res.data.status) {
+                        "Scanned" -> passportQrStatusText = "已扫码,请在米游社中确认"
+                        "Confirmed" -> return res.data
+                    }
                 }
 
+                //二维码真过期,由调用方重新生成
                 res.retcode == ResultData.RET_QR_URL_EXPIRED -> {
                     passportQrStatusText = "二维码已过期,正在刷新"
                     return null
                 }
 
+                //其余失败(网络抖动/响应解析失败/未知服务端错误)均为瞬态:
+                //静默重试同一ticket,不能误判"二维码已失效"打断登录
                 else -> {
-                    "扫码登录失败:${res.message}".errorNotify()
-                    showPassportQRCodePopup = false
-                    return null
+                    consecutiveFailures++
+
+                    if (consecutiveFailures >= 20) {
+                        "扫码登录失败:${res.message}".errorNotify()
+                        showPassportQRCodePopup = false
+                        return null
+                    }
                 }
             }
         }

@@ -129,11 +129,12 @@ class AchievementGoalScreenViewModel : ViewModel() {
             goalFinishCount = finishAchievementIdMap.values.size
 
             switchSortType()
-        }
 
-        //当传入了Id,使列表滚动到此处
-        if (targetId != -1) {
-            targetItemIndex = achievementList.indexOfFirst { it.id == targetId }
+            //当传入了Id,使列表滚动到此处
+            //必须在sortBy完成后计算,否则排序后索引错位导致长列表(如天地万象)滚动不到位
+            if (targetId != -1) {
+                targetItemIndex = achievementList.indexOfFirst { it.id == targetId }
+            }
         }
     }
 

@@ -17,3 +17,7 @@ local.properties
 # 签名私钥与本地凭证
 *.jks
 *.keystore
+
+# JVM崩溃/回放日志
+hs_err_pid*.log
+replay_pid*.log
