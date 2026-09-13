@@ -4,9 +4,9 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
 import android.content.Context
+import android.os.Bundle
 import android.content.pm.ApplicationInfo
 import android.os.Build
-import android.os.Bundle
 import androidx.lifecycle.ProcessLifecycleOwner
 import cat.ereza.customactivityoncrash.config.CaocConfig
 import coil.ImageLoader
@@ -17,21 +17,24 @@ import coil.disk.DiskCache
 import com.lianyi.paimonsnotebook.BuildConfig
 import com.lianyi.paimonsnotebook.R
 import com.lianyi.paimonsnotebook.common.core.enviroment.CoreEnvironment
+import com.lianyi.paimonsnotebook.common.service.sign_in.AutoSignInScheduler
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
 import com.lianyi.paimonsnotebook.common.extension.scope.launchIO
 import com.lianyi.paimonsnotebook.common.util.builder.imageLoader
+import com.lianyi.paimonsnotebook.common.util.coil.ImageFallbackInterceptor
 import com.lianyi.paimonsnotebook.common.util.coil.MergeInterceptor
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
 import com.lianyi.paimonsnotebook.common.util.data_store.dataStoreValuesFirstLambda
 import com.lianyi.paimonsnotebook.common.util.file.FileHelper
 import com.lianyi.paimonsnotebook.common.util.image.PaimonsNotebookImageLoader
-import com.lianyi.paimonsnotebook.common.util.request.emptyOkHttpClient
+import com.lianyi.paimonsnotebook.common.util.request.applicationOkHttpClient
 import com.lianyi.paimonsnotebook.common.view.CrashScreen
 import com.lianyi.paimonsnotebook.ui.screen.splash.view.SplashScreen
 import com.microsoft.appcenter.AppCenter
 import com.microsoft.appcenter.analytics.Analytics
 import com.microsoft.appcenter.crashes.Crashes
 import kotlinx.coroutines.*
+import java.io.File
 import kotlinx.coroutines.flow.first
 
 
@@ -39,6 +42,10 @@ class PaimonsNotebookApplication : Application(), ImageLoaderFactory {
     companion object {
         @SuppressLint("StaticFieldLeak")
         private lateinit var mContext: Context
+
+        //当前前台Activity,用于需要在指定界面上方弹出的组件(如极验滑块)
+        var currentActivity: Activity? = null
+            private set
         val context by lazy {
             mContext
         }
@@ -73,6 +80,28 @@ class PaimonsNotebookApplication : Application(), ImageLoaderFactory {
 
         //调用核心环境初始化
         CoreEnvironment.init()
+
+        //自动签到任务调度
+        AutoSignInScheduler.ensureScheduled()
+
+        //跟踪前台Activity
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            override fun onActivityResumed(activity: Activity) {
+                currentActivity = activity
+            }
+
+            override fun onActivityPaused(activity: Activity) {
+                if (currentActivity == activity) {
+                    currentActivity = null
+                }
+            }
+
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+            override fun onActivityStarted(activity: Activity) {}
+            override fun onActivityStopped(activity: Activity) {}
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+            override fun onActivityDestroyed(activity: Activity) {}
+        })
 
         //crashScreen
         CaocConfig.Builder.create()
@@ -201,15 +230,21 @@ class PaimonsNotebookApplication : Application(), ImageLoaderFactory {
             .build()
     }
 
-    override fun newImageLoader(): ImageLoader =
-        imageLoader {
+    override fun newImageLoader(): ImageLoader {
+        wipeCorruptedImageCacheOnce()
+        return imageLoader {
             components {
-                callFactory(emptyOkHttpClient)
+                //emptyOkHttpClient默认超时仅10秒,大图传输中断会产生残缺数据导致Failed to decode GIF
+                //改用60秒超时且具备连接失败重试能力的客户端
+                callFactory(applicationOkHttpClient.newBuilder()
+                    .addInterceptor(ImageFallbackInterceptor)
+                    .build())
 
+                //注意:coil-gif的GifDecoder(2.6.0)基于android.graphics.Movie,解不动时直接抛
+                //IllegalStateException(Failed to decode GIF)而不是返回null,异常会使整个请求失败
+                //Android<P上不注册任何GIF解码器,由默认BitmapFactoryDecoder解码GIF静态首帧
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     add { result, options, _ -> ImageDecoderDecoder(result.source, options, false) }
-                } else {
-                    add { result, options, _ -> GifDecoder(result.source, options, false) }
                 }
 
                 add(MergeInterceptor)
@@ -219,4 +254,17 @@ class PaimonsNotebookApplication : Application(), ImageLoaderFactory {
             error(R.drawable.ic_image_error)
             respectCacheHeaders(false)
         }
+    }
+
+    //早期版本下载失败时可能残留残缺的缓存文件,一次性清空图片缓存
+    private fun wipeCorruptedImageCacheOnce() {
+        try {
+            val marker = File(filesDir, "image_cache_wiped_20260912")
+            if (!marker.exists()) {
+                File(filesDir, "image_cache").deleteRecursively()
+                marker.createNewFile()
+            }
+        } catch (_: Exception) {
+        }
+    }
 }

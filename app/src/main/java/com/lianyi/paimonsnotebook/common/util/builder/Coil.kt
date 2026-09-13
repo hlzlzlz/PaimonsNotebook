@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import coil.ImageLoader
-import coil.decode.GifDecoder
 import coil.request.ImageRequest
 import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
 import okhttp3.Headers
@@ -20,9 +19,6 @@ inline fun Context.imageRequest(
         data(url)
         memoryCacheKey(url)
         diskCacheKey(url)
-        if (url.endsWith(".gif")) {
-            decoderFactory(GifDecoder.Factory())
-        }
     }.apply(builder).build()
 
 fun requestOf(url: String): ImageRequest {

@@ -13,7 +13,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.king.camera.scan.CameraScan
 import com.lianyi.paimonsnotebook.common.data.hoyolab.game_record.DailyNote
+import com.lianyi.paimonsnotebook.common.data.hoyolab.PlayerUid
 import com.lianyi.paimonsnotebook.common.data.hoyolab.user.User
+import com.lianyi.paimonsnotebook.common.data.hoyolab.user.UserAndUid
+import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.GameRecordClient
+import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.ledger.LedgerData
 import com.lianyi.paimonsnotebook.common.database.daily_note.util.DailyNoteHelper
 import com.lianyi.paimonsnotebook.common.database.user.util.AccountHelper
 import com.lianyi.paimonsnotebook.common.extension.data_store.editValue
@@ -47,6 +51,7 @@ import com.lianyi.paimonsnotebook.ui.screen.setting.util.SettingsHelper
 import com.lianyi.paimonsnotebook.ui.screen.setting.util.UpdateService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -58,6 +63,13 @@ class HomeScreenViewModel : ViewModel() {
 
     //当前选择的用户
     var selectedUser by mutableStateOf<User?>(null)
+
+    //旅行者札记当月摘要
+    var travelersDiaryData by mutableStateOf<LedgerData?>(null)
+
+    private val gameRecordClient by lazy {
+        GameRecordClient()
+    }
 
     //祈愿记录列表
     val dailyNoteList = mutableStateListOf<DailyNote>()
@@ -86,6 +98,7 @@ class HomeScreenViewModel : ViewModel() {
             launch {
                 AccountHelper.selectedUserFlow.collect {
                     selectedUser = it
+                    loadTravelersDiary(it)
                 }
             }
             launch {
@@ -394,6 +407,38 @@ class HomeScreenViewModel : ViewModel() {
                 it.errorNotify()
             })
             dismissUserDialog()
+        }
+    }
+
+    //记录上次已加载的用户,避免用户流重复发射时反复发起网络请求
+    private var travelersDiaryLoadedMid: String? = null
+
+    private fun loadTravelersDiary(user: User?) {
+        val role = user?.getSelectedGameRole()
+
+        if (role == null) {
+            travelersDiaryData = null
+            travelersDiaryLoadedMid = null
+            return
+        }
+
+        //同一用户不重复加载
+        if (travelersDiaryLoadedMid == user.userEntity.mid && travelersDiaryData != null) {
+            return
+        }
+
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                gameRecordClient.getLedgerMonthInfo(
+                    UserAndUid(user.userEntity, PlayerUid.fromGameRole(role)),
+                    0
+                )
+            }
+
+            if (result.success) {
+                travelersDiaryLoadedMid = user.userEntity.mid
+                travelersDiaryData = result.data
+            }
         }
     }
 }

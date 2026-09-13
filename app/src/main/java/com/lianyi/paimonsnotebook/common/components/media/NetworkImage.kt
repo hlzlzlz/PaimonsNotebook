@@ -13,6 +13,7 @@ import coil.compose.AsyncImage
 import com.lianyi.paimonsnotebook.common.database.disk_cache.entity.DiskCache
 import com.lianyi.paimonsnotebook.common.database.util.PaimonsNoteBookDatabaseHelper
 import com.lianyi.paimonsnotebook.common.util.builder.requestOf
+import com.lianyi.paimonsnotebook.common.util.image.ImageErrorLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Headers
@@ -47,7 +48,8 @@ fun NetworkImage(
             modifier = Modifier.fillMaxWidth(),
             contentDescription = null,
             contentScale = contentScale,
-            onError = {
+            onError = { result ->
+                ImageErrorLogger.log(url, result.result.throwable)
             },
             onSuccess = {
             },

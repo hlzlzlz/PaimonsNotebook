@@ -90,7 +90,8 @@ object CoreEnvironment {
     const val GameBizGenshin = "hk4e_cn"
 
     // 米游社 Rpc 版本
-    const val XrpcVersion = "2.75.2"
+    //与胡桃工具箱保持一致,过旧的客户端版本会被风控判定为高风险
+    const val XrpcVersion = "2.95.1"
 
     const val ClientType = EnvironmentClientType.BBS
 

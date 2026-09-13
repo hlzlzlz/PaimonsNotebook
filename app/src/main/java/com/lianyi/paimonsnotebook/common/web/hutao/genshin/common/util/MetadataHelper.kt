@@ -10,11 +10,13 @@ import com.lianyi.paimonsnotebook.common.util.parameter.getParameterizedType
 import com.lianyi.paimonsnotebook.common.util.request.applicationOkHttpClient
 import com.lianyi.paimonsnotebook.common.util.request.buildRequest
 import com.lianyi.paimonsnotebook.common.util.request.getAsText
-import com.lianyi.paimonsnotebook.common.util.request.getAsTextResult
 import com.lianyi.paimonsnotebook.common.web.HutaoEndpoints
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.LocaleNames
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -81,10 +83,12 @@ object MetadataHelper {
         hashMap.forEach { (fileName, hashValue) ->
 
             val file = FileHelper.getMetadata(fileName ?: "")
-            val arr = (file?.readText() ?: "").replace("\n", "\r\n").toByteArray()
+            //Snap.Metadata镜像仓库的Meta.json使用LF行尾计算哈希,不再做CRLF替换
+            val arr = file?.readText()?.toByteArray() ?: ByteArray(0)
 
             //此处使用.toString(16)会导致第一位如果为15会变F,导致无法与Map的0F对应
-            val xxh64 = xxHash.hash64(arr).toULong().toHexString().uppercase()
+            //toHexString()同样不会补前导零,哈希首位为0时输出不足16位,需padStart对齐
+            val xxh64 = xxHash.hash64(arr).toULong().toHexString().padStart(16, '0').uppercase()
 
             if (hashValue != xxh64 && !hashValue.isNullOrEmpty() && !fileName.isNullOrEmpty()) {
                 updateFileList += fileName
@@ -137,7 +141,7 @@ object MetadataHelper {
                     onSuccess.invoke()
                 },
                 onLoadMetadataFile = {},
-                finally = {
+                onFinally = {
                     PaimonsNotebookNotification.removeNotifyById(notifyId)
                     isUpdating = false
                 }
@@ -147,38 +151,50 @@ object MetadataHelper {
 
     /*
     * 更新元数据
+    * 成功与否取决于每个文件的实际下载结果,而非下载后的哈希二次比对
+    * (哈希比对只用于挑选需要更新的文件,上游哈希表可能存在自引用失效或记录滞后的脏数据)
     * */
     suspend fun updateMetadata(
         updateMap: Boolean = false,
         onFailed: suspend () -> Unit,
         onSuccess: suspend () -> Unit,
         onLoadMetadataFile: (Int) -> Unit,
-        finally: suspend () -> Unit
+        onFinally: suspend () -> Unit
     ) {
-        if (updateMap) {
-            updateMetadataHashMap()
-        }
-
-        withContext(Dispatchers.IO) {
-            val downloadFileList = getDownloadFileNameListFromMetadataMap()
-
-            downloadFileList.forEach { name ->
-                semaphore.withPermit {
-                    launch {
-                        loadAndSaveFile(name)
-                        onLoadMetadataFile.invoke(downloadFileList.size)
-                    }
-                }
+        try {
+            if (updateMap) {
+                updateMetadataHashMap()
             }
-        }
 
-        if (getDownloadFileNameListFromMetadataMap().isEmpty()) {
-            onSuccess.invoke()
-        } else {
+            val allSuccess = withContext(Dispatchers.IO) {
+                val downloadFileList = getDownloadFileNameListFromMetadataMap()
+
+                val results = coroutineScope {
+                    downloadFileList.map { name ->
+                        async {
+                            semaphore.withPermit {
+                                loadAndSaveFile(name).also {
+                                    onLoadMetadataFile.invoke(downloadFileList.size)
+                                }
+                            }
+                        }
+                    }.awaitAll()
+                }
+
+                results.all { it }
+            }
+
+            if (allSuccess) {
+                onSuccess.invoke()
+            } else {
+                onFailed.invoke()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
             onFailed.invoke()
         }
 
-        finally.invoke()
+        onFinally.invoke()
     }
 
     //更新元数据map
@@ -203,20 +219,47 @@ object MetadataHelper {
             )
         )
 
+        //Meta.json的自引用哈希条目永远无法与自己匹配(修改该文件必然使其失效),剔除以避免误判更新失败
+        hashMap.remove(MetaFileName)
+
+        //只保留本程序实际使用的元数据:检查列表内的文件与散装角色文件
+        //镜像仓库中其余文件(如BeyondItem等)未被使用,且可能存在与实际文件不同步的哈希记录
+        val usedKeys = hashMap.keys.filter { key ->
+            key != null && (key in metadataCheckList || key.startsWith("$DirNameAvatar/"))
+        }
+        hashMap.keys.retainAll(usedKeys.toSet())
+
         latestCheckHashMapTime = System.currentTimeMillis()
     }
 
     //重新载入单个文件
-    private suspend fun loadAndSaveFile(name: String) {
-        val pair = buildRequest {
-            url(HutaoEndpoints.metadata(LocaleNames.CHS, "${name}.json"))
-        }.getAsTextResult(applicationOkHttpClient)
-
-        if (pair.first) {
-            FileHelper.getMetadataSaveFile(name).apply {
-                writeText(pair.second)
+    //注意:getAsText在请求失败时会返回伪造的retcode错误JSON且不抛异常,
+    //若不校验会把错误占位符当作元数据写入本地文件,导致功能损坏与校验永久失败
+    private suspend fun loadAndSaveFile(name: String): Boolean {
+        HutaoEndpoints.metadataSources(LocaleNames.CHS, "${name}.json").forEach { url ->
+            val success = withContext(Dispatchers.IO) {
+                try {
+                    applicationOkHttpClient.newCall(buildRequest { url(url) }).execute().use { response ->
+                        val text = response.body?.string()
+                        if (text.isNullOrBlank() || !response.isSuccessful) {
+                            return@use false
+                        }
+                        val trimmed = text.trimStart()
+                        if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
+                            return@use false
+                        }
+                        FileHelper.getMetadataSaveFile(name).writeText(text)
+                        true
+                    }
+                } catch (e: Exception) {
+                    false
+                }
+            }
+            if (success) {
+                return true
             }
         }
+        return false
     }
 
     private const val MetaFileName = "Meta"

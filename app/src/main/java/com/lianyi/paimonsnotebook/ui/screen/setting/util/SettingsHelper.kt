@@ -37,6 +37,8 @@ object SettingsHelper {
                         ?: ConfigurationData.ENABLE_CHECK_NEW_VERSION_DEFAULT
                     enableMetadata = preferences[PreferenceKeys.EnableMetadata]
                         ?: ConfigurationData.ENABLE_METADATA_DEFAULT
+                    enableAutoSignIn = preferences[PreferenceKeys.EnableAutoSignIn]
+                        ?: ConfigurationData.ENABLE_AUTO_SIGN_IN_DEFAULT
                 }
 
                 _ConfigurationData.emit(configurationData)

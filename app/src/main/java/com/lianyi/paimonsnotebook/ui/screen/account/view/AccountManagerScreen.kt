@@ -41,7 +41,7 @@ import com.lianyi.paimonsnotebook.common.database.user.util.AccountHelper
 import com.lianyi.paimonsnotebook.common.extension.modifier.padding.paddingStart
 import com.lianyi.paimonsnotebook.common.extension.modifier.state.isScrollToEnd
 import com.lianyi.paimonsnotebook.ui.screen.account.components.AccountItemV2
-import com.lianyi.paimonsnotebook.ui.screen.account.components.QRCodeLoginPopup
+import com.lianyi.paimonsnotebook.ui.screen.account.components.PassportQRCodeLoginPopup
 import com.lianyi.paimonsnotebook.ui.screen.account.components.dialog.CookieInputDialog
 import com.lianyi.paimonsnotebook.ui.screen.account.components.popup.IconTextClickableItem
 import com.lianyi.paimonsnotebook.ui.screen.account.viewmodel.AccountManagerScreenViewModel
@@ -152,7 +152,7 @@ class AccountManagerScreen : BaseActivity() {
                                     text = "通过米游社扫码",
                                     onClick = {
                                         viewModel.dismissMenu()
-                                        viewModel.showQRCodePopup()
+                                        viewModel.startPassportQRCodeLogin()
                                     }
                                 )
                                 IconTextClickableItem(
@@ -206,12 +206,12 @@ class AccountManagerScreen : BaseActivity() {
                         )
                     }
 
-                    QRCodeLoginPopup(
-                        visible = viewModel.showQRCodePopup,
-                        bitmap = viewModel.loginQrCodeBitmap,
-                        requestStoragePermission = this@AccountManagerScreen::requestStoragePermission,
-                        onRequestDismiss = viewModel::onRequestQRCodePopupDismiss,
-                        goLoginPage = viewModel::goHoyolabSelfPage
+                    PassportQRCodeLoginPopup(
+                        visible = viewModel.showPassportQRCodePopup,
+                        bitmap = viewModel.passportQrCodeBitmap,
+                        statusText = viewModel.passportQrStatusText,
+                        onRequestDismiss = viewModel::onRequestPassportQRCodePopupDismiss,
+                        onOpenMiyoushe = viewModel::openPassportQRCodeUrl
                     )
 
                     if (viewModel.showPhoneNumberInputDialog) {

@@ -3,6 +3,7 @@ package com.lianyi.paimonsnotebook.ui.screen.account.viewmodel
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
+import android.net.Uri
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.util.Base64
@@ -20,6 +21,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import com.lianyi.paimonsnotebook.common.components.helper_text.data.HelperTextData
+import com.lianyi.paimonsnotebook.common.data.ResultData
 import com.lianyi.paimonsnotebook.common.data.hoyolab.user.User
 import com.lianyi.paimonsnotebook.common.database.disk_cache.entity.DiskCache
 import com.lianyi.paimonsnotebook.common.database.disk_cache.util.DiskCacheDataType
@@ -37,6 +39,7 @@ import com.lianyi.paimonsnotebook.common.util.json.JSON
 import com.lianyi.paimonsnotebook.common.util.system_service.SystemService
 import com.lianyi.paimonsnotebook.common.util.system_service.sdkVersionLessThanOrEqualTo29
 import com.lianyi.paimonsnotebook.common.web.hoyolab.api_sdk.combo_panda.QRCodeClient
+import com.lianyi.paimonsnotebook.common.web.hoyolab.passport.QrLoginStatusData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.cookie.CookieHelper
 import com.lianyi.paimonsnotebook.common.web.hoyolab.passport.PassportClient
 import com.lianyi.paimonsnotebook.common.web.hoyolab.passport.XRpcAigisData
@@ -85,6 +88,19 @@ class AccountManagerScreenViewModel : ViewModel() {
 
     //显示二维码popup
     var showQRCodePopup by mutableStateOf(false)
+
+    //通行证扫码登录
+    var showPassportQRCodePopup by mutableStateOf(false)
+    var passportQrCodeBitmap by mutableStateOf<Bitmap?>(null)
+    var passportQrStatusText by mutableStateOf("等待扫码")
+
+    //通行证扫码登录设备id,53位随机小写字母与数字,创建与查询必须一致
+    private val passportQrDeviceId by lazy {
+        val chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+        (1..53).map { chars.random() }.joinToString("")
+    }
+
+    private var passportQrUrl = "" 
         private set
 
     private val cookieMap by lazy {
@@ -422,6 +438,106 @@ class AccountManagerScreenViewModel : ViewModel() {
 
             loopQueryQrCodeState(ticket)
         }
+    }
+
+    /*
+    * 通行证扫码登录
+    * 生成二维码 -> 米游社App扫码并确认 -> 轮询拿到stoken入库
+    * 二维码过期时自动重新生成,关闭弹窗即终止流程
+    * */
+    fun startPassportQRCodeLogin() {
+        showPassportQRCodePopup = true
+
+        viewModelScope.launchIO {
+            while (showPassportQRCodePopup) {
+                val createRes = passportClient.createQRLogin(passportQrDeviceId)
+
+                if (!createRes.success) {
+                    "获取二维码失败:${createRes.message}".errorNotify()
+                    showPassportQRCodePopup = false
+                    return@launchIO
+                }
+
+                passportQrUrl = createRes.data.url
+                passportQrStatusText = "等待扫码"
+                passportQrCodeBitmap = createQrCode(passportQrUrl, 200)
+
+                val result = loopQueryPassportQRCodeStatus(createRes.data.ticket)
+
+                if (!showPassportQRCodePopup) {
+                    return@launchIO
+                }
+
+                if (result == null) {
+                    //二维码过期或弹窗已关闭,过期时重新生成
+                    continue
+                }
+
+                val sToken = result.tokens.firstOrNull { it.token_type == 1 }?.token
+
+                if (sToken == null) {
+                    "登录结果中没有stoken".errorNotify()
+                    showPassportQRCodePopup = false
+                    return@launchIO
+                }
+
+                addUserBySTokenString(
+                    sToken = sToken,
+                    mid = result.user_info.mid,
+                    aid = result.user_info.aid
+                )
+
+                showPassportQRCodePopup = false
+                passportQrCodeBitmap = null
+                return@launchIO
+            }
+        }
+    }
+
+    private suspend fun loopQueryPassportQRCodeStatus(ticket: String): QrLoginStatusData? {
+        while (showPassportQRCodePopup) {
+            delay(3000)
+
+            val res = passportClient.queryQRLoginStatus(ticket, passportQrDeviceId)
+
+            when {
+                !showPassportQRCodePopup -> return null
+
+                res.success -> when (res.data.status) {
+                    "Scanned" -> passportQrStatusText = "已扫码,请在米游社中确认"
+                    "Confirmed" -> return res.data
+                }
+
+                res.retcode == ResultData.RET_QR_URL_EXPIRED -> {
+                    passportQrStatusText = "二维码已过期,正在刷新"
+                    return null
+                }
+
+                else -> {
+                    "扫码登录失败:${res.message}".errorNotify()
+                    showPassportQRCodePopup = false
+                    return null
+                }
+            }
+        }
+        return null
+    }
+
+    //在本机打开扫码确认链接,米游社App会拦截该链接并弹出确认页
+    fun openPassportQRCodeUrl() {
+        try {
+            HomeHelper.goActivityByIntentNewTask {
+                action = Intent.ACTION_VIEW
+                data = Uri.parse(passportQrUrl)
+            }
+        } catch (e: Exception) {
+            "打开失败,可截图后使用米游社扫一扫从相册选择二维码".errorNotify()
+        }
+    }
+
+    fun onRequestPassportQRCodePopupDismiss() {
+        showPassportQRCodePopup = false
+        passportQrCodeBitmap = null
     }
 
     //循环检查二维码状态

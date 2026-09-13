@@ -94,6 +94,33 @@ class PassportClient {
     }.getAsJson<GetTokenByGameTokenData>(emptyOkHttpClient)
 
 
+    /*
+    * 通行证扫码登录
+    * 生成二维码后由米游社App扫码并在App内确认,轮询queryQRLoginStatus获取stoken
+    * device_id要求53位,创建与查询必须使用同一个值
+    * */
+    suspend fun createQRLogin(deviceId: String) = buildRequest {
+        url(ApiEndpoints.AccountCreateQRLogin)
+
+        addHeader("x-rpc-device_id", deviceId)
+        addHeader("x-rpc-app_id", ApiEndpoints.BbsAppId)
+
+        buildMap<String, String> {}.post(this)
+
+    }.getAsJson<QrLoginData>(emptyOkHttpClient)
+
+    suspend fun queryQRLoginStatus(ticket: String, deviceId: String) = buildRequest {
+        url(ApiEndpoints.AccountQueryQRLoginStatus)
+
+        addHeader("x-rpc-device_id", deviceId)
+        addHeader("x-rpc-app_id", ApiEndpoints.BbsAppId)
+
+        buildMap {
+            put("ticket", ticket)
+        }.post(this)
+
+    }.getAsJson<QrLoginStatusData>(emptyOkHttpClient)
+
     suspend fun getCookieTokenBySToken(stokenV2: Cookie) =
         buildRequest {
             url(ApiEndpoints.AccountGetCookieTokenBySToken)

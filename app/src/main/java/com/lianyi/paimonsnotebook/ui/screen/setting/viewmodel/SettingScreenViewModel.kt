@@ -28,6 +28,7 @@ import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
 import com.lianyi.paimonsnotebook.common.extension.string.notify
 import com.lianyi.paimonsnotebook.common.extension.string.show
 import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
+import com.lianyi.paimonsnotebook.common.service.sign_in.AutoSignInScheduler
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
 import com.lianyi.paimonsnotebook.common.util.enums.DownloadState
 import com.lianyi.paimonsnotebook.common.util.image.PaimonsNotebookImageLoader
@@ -220,6 +221,22 @@ class SettingScreenViewModel : ViewModel() {
             slot = {
                 SettingsOptionSwitch(
                     checked = configurationData.enableCheckNewVersion
+                )
+            }
+        ),
+        OptionListData(
+            name = "米游社自动签到",
+            description = "默认关闭,开启后每天自动为所有已登录用户完成米游社签到,触发风控时会通知手动签到。存在账号被风控限制的风险,请谨慎开启",
+            onClick = {
+                viewModelScope.launchIO {
+                    val newValue = !configurationData.enableAutoSignIn
+                    PreferenceKeys.EnableAutoSignIn.editValue(newValue)
+                    AutoSignInScheduler.setEnabled(newValue)
+                }
+            },
+            slot = {
+                SettingsOptionSwitch(
+                    checked = configurationData.enableAutoSignIn
                 )
             }
         ),

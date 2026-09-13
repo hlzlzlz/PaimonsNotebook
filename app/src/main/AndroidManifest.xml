@@ -105,6 +105,12 @@
             android:name=".ui.screen.abyss.view.AbyssScreen"
             android:theme="@style/Theme.PaimonsNotebook" />
         <activity
+            android:name=".ui.screen.travelers_diary.view.TravelersDiaryScreen"
+            android:theme="@style/Theme.PaimonsNotebook" />
+        <activity
+            android:name=".ui.screen.role_combat.view.RoleCombatScreen"
+            android:theme="@style/Theme.PaimonsNotebook" />
+        <activity
             android:name=".common.view.HoyolabWebActivity"
             android:theme="@style/Theme.PaimonsNotebook" />
         <activity

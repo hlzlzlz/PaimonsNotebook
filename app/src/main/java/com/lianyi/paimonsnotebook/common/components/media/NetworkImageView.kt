@@ -8,6 +8,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import coil.load
 import com.lianyi.paimonsnotebook.common.database.disk_cache.entity.DiskCache
 import com.lianyi.paimonsnotebook.common.database.util.PaimonsNoteBookDatabaseHelper
+import com.lianyi.paimonsnotebook.common.util.image.ImageErrorLogger
 import com.lianyi.paimonsnotebook.common.util.image.PaimonsNotebookImageLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -36,6 +37,9 @@ fun NetworkImageView(
                 crossfade(true)
                 diskCacheKey(url)
                 memoryCacheKey(url)
+                listener(onError = { _, result ->
+                    ImageErrorLogger.log(url, result.throwable)
+                })
             }
         }
     }, modifier = modifier)

@@ -10,8 +10,10 @@ import kotlin.math.pow
 *
 * */
 object DynamicSecret {
-    const val K2 = "oqrJbPCoFhWhFBNDvVRuldbrbiVxyWsP"
-    const val LK2 = "zZDfHqEcwTqvvKDmqRcHyqqurxGgLfBV"
+    //K2/LK2盐与米游社版本绑定(x-rpc-app_version=2.95.1),与胡桃工具箱保持一致
+    //旧盐对应2.75.2,版本头更新后继续使用旧盐会导致DS校验失败(-10001)
+    const val K2 = "sfYPEgpxkOe1I3XVMLdwp1Lyt9ORgZsq"
+    const val LK2 = "sidQFEglajEz7FA0Aj7HQPV88zpf17SO"
     const val X4 = "xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs"
     const val X6 = "t0qEgfub6cvueAPgR5m9aQWWVciEer7v"
     const val PROD = "JwYDpKvLj6MrMqqYU6jTKF17KNO2PXoS"

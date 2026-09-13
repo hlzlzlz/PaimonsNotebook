@@ -31,6 +31,9 @@ class ConfigurationData {
     //启用元数据
     var enableMetadata by mutableStateOf(ENABLE_METADATA_DEFAULT)
 
+    //启用米游社自动签到(有风控风险,默认关闭)
+    var enableAutoSignIn by mutableStateOf(ENABLE_AUTO_SIGN_IN_DEFAULT)
+
     companion object {
         val homeScreenDisplayStateDefault = HomeScreenDisplayState.Community
         const val ENABLE_OVERLAY_DEFAULT = false
@@ -38,6 +41,7 @@ class ConfigurationData {
         const val ENABLE_AUTO_CLEAN_EXPIRED_IMAGES_DEFAULT = true
         const val ENABLE_CHECK_NEW_VERSION_DEFAULT = true
         const val ENABLE_METADATA_DEFAULT = true
+        const val ENABLE_AUTO_SIGN_IN_DEFAULT = false
 
         //重置选项
         suspend fun resetConfig() {
@@ -49,6 +53,7 @@ class ConfigurationData {
                     ENABLE_AUTO_CLEAN_EXPIRED_IMAGES_DEFAULT
                 it[PreferenceKeys.EnableCheckNewVersion] = ENABLE_CHECK_NEW_VERSION_DEFAULT
                 it[PreferenceKeys.EnableMetadata] = ENABLE_METADATA_DEFAULT
+                it[PreferenceKeys.EnableAutoSignIn] = ENABLE_AUTO_SIGN_IN_DEFAULT
             }
         }
     }

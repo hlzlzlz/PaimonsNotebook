@@ -134,6 +134,14 @@ object PreferenceKeys {
     }
 
     //staticResources渠道
+    //自动签到
+    val EnableAutoSignIn by lazy {
+        booleanPreferencesKey("enableAutoSignIn")
+    }
+    val AutoSignInLastCompletedMap by lazy {
+        stringPreferencesKey("autoSignInLastCompletedMap")
+    }
+
     val StaticResourcesChannel by lazy {
         stringPreferencesKey("staticResourcesChannel")
     }

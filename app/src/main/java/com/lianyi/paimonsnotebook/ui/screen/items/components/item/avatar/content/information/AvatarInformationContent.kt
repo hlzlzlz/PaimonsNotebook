@@ -1,6 +1,8 @@
 package com.lianyi.paimonsnotebook.ui.screen.items.components.item.avatar.content.information
 
 import androidx.compose.foundation.background
+import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
+import com.lianyi.paimonsnotebook.common.util.hoyolab.strategy.AvatarStrategyHelper
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -33,6 +35,10 @@ import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.Association
 import com.lianyi.paimonsnotebook.ui.screen.items.components.item.icon.ItemIconCard
 import com.lianyi.paimonsnotebook.ui.theme.Black_10
 import com.lianyi.paimonsnotebook.ui.theme.White_40
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.runtime.LaunchedEffect
+import com.lianyi.paimonsnotebook.common.components.widget.TextButton
 
 @Composable
 internal fun AvatarInformationContent(
@@ -107,6 +113,26 @@ internal fun AvatarInformationContent(
             }
         }
 
+
+        //角色攻略入口
+        var strategyUrl by remember(avatar) {
+            mutableStateOf<String?>(null)
+        }
+
+        LaunchedEffect(avatar) {
+            strategyUrl = AvatarStrategyHelper.getMysStrategyUrl(avatar.id)
+        }
+
+        strategyUrl?.let { url ->
+            TextButton(text = "查看角色攻略") {
+                try {
+                    PaimonsNotebookApplication.context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                } catch (_: Exception) {
+                }
+            }
+        }
 
         var costumeOpen by remember {
             mutableStateOf(false)

@@ -29,6 +29,8 @@ object ApiEndpoints {
     private const val ApiTakumiMiYouSheAuthApi = "${ApiTakumiMiYouShe}/auth/api"
 
     private const val ApiTakumiRecord = "https://api-takumi-record.mihoyo.com"
+
+    private const val ApiHk4eEvent = "https://hk4e-api.mihoyo.com"
     private const val ApiTakumiRecordApi = "${ApiTakumiRecord}/game_record/app/genshin/api"
 
     private const val ApiTakumiCardApi = "${ApiTakumiRecord}/game_record/app/card/api"
@@ -174,7 +176,8 @@ object ApiEndpoints {
     /// <summary>
     /// 发起验证码
     /// </summary>
-    const val CardCreateVerification = "${ApiTakumiCardWApi}/createVerification?is_high=false"
+    fun CardCreateVerification(highRisk: Boolean = false) =
+        "${ApiTakumiCardWApi}/createVerification?is_high=${if (highRisk) "true" else "false"}"
 
     /// <summary>
     /// 验证验证码
@@ -241,6 +244,24 @@ object ApiEndpoints {
     /// <returns>深渊信息字符串</returns>
     fun gameRecordSpiralAbyss(scheduleType: String, uid: PlayerUid) =
         "${ApiTakumiRecordApi}/spiralAbyss?role_id=${uid.value}&schedule_type=${scheduleType}&server=${uid.region}"
+
+    /// <summary>
+    /// 幻想真境剧诗
+    /// </summary>
+    fun gameRecordRoleCombat(uid: PlayerUid) =
+        "${ApiTakumiRecordApi}/role_combat?role_id=${uid.value}&server=${uid.region}&need_detail=true&active=1"
+
+    /// <summary>
+    /// 幽境危战
+    /// </summary>
+    fun gameRecordHardChallenge(uid: PlayerUid) =
+        "${ApiTakumiRecordApi}/hard_challenge?role_id=${uid.value}&server=${uid.region}&need_detail=true"
+
+    /// <summary>
+    /// 旅行者札记 当月原石摩拉收支 month=0表示当月
+    /// </summary>
+    fun gameRecordLedgerMonthInfo(month: Int, uid: PlayerUid) =
+        "${ApiHk4eEvent}/event/ys_ledger/monthInfo?month=${month}&bind_uid=${uid.value}&bind_region=${uid.region}&bbs_presentation_style=fullscreen&bbs_auth_required=true&utm_source=bbs&utm_medium=mys&utm_campaign=icon"
 
     /// <summary>
     /// 计算器角色列表 size 20
@@ -466,6 +487,26 @@ object ApiEndpoints {
     const val getTokenByGameToken = "${PassportApiAccountMaCnSession}/app/getTokenByGameToken"
 
     const val loginByMobileCaptcha = "${PassportApiAccountMaCnPassport}/app/loginByMobileCaptcha"
+
+    //通行证扫码登录
+    const val AccountCreateQRLogin = "${PassportApiAccountMaCnPassport}/app/createQRLogin"
+    const val AccountQueryQRLoginStatus = "${PassportApiAccountMaCnPassport}/app/queryQRLoginStatus"
+
+    //米游社AppId,通行证接口必需
+    const val BbsAppId = "bll8iq97cem8"
+
+
+    //米游社自动签到 luna
+    const val SignInActId = "e202311201442471"
+    const val SignInGameBiz = "hk4e"
+
+    fun SignInInfo(uid: PlayerUid) =
+        "https://api-takumi.mihoyo.com/event/luna/info?lang=zh-cn&act_id=${SignInActId}&uid=${uid.value}&region=${uid.region}"
+
+    fun SignInHome() =
+        "https://api-takumi.mihoyo.com/event/luna/home?lang=zh-cn&act_id=${SignInActId}"
+
+    const val SignInSign = "https://api-takumi.mihoyo.com/event/luna/sign"
 
     const val createLoginCaptcha = "${PassportApiMaCnVerifier}/verifier/createLoginCaptcha"
 

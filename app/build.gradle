@@ -27,11 +27,24 @@ android {
         }
     }
 
+    signingConfigs {
+        release {
+            def lp = new Properties()
+            lp.load(new FileInputStream(rootProject.file("local.properties")))
+
+            storeFile rootProject.file(lp.getProperty("keystore.file"))
+            storePassword lp.getProperty("keystore.password")
+            keyAlias lp.getProperty("keystore.alias")
+            keyPassword lp.getProperty("keystore.keyPassword")
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
         debug {
             //debug app共存
@@ -133,11 +146,13 @@ dependencies {
     //Datastore
     api 'androidx.datastore:datastore-preferences:1.0.0'
 
+    //WorkManager 自动签到后台任务
+    api 'androidx.work:work-runtime-ktx:2.9.0'
+
     //ColorPicker
     api("com.github.skydoves:colorpicker-compose:1.0.7")
 
-    //debugImplementation because LeakCanary should only run in debug builds.
-    debugApi 'com.squareup.leakcanary:leakcanary-android:2.12'
+    //LeakCanary已在功能移植版中移除:其堆转储分析会造成启动/切页的持续卡顿
 
     //zxing-lite AndroidX
     api 'com.github.jenly1314:zxing-lite:3.0.1'

@@ -25,6 +25,10 @@ import com.lianyi.paimonsnotebook.common.database.disk_cache.util.DiskCacheDataT
 import com.lianyi.paimonsnotebook.common.web.hoyolab.bbs.NearActivityData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.bbs.OfficialRecommendedPostsData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.bbs.WebHomeData
+import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.ledger.LedgerData
+import com.lianyi.paimonsnotebook.ui.screen.home.components.card.travelers_diary.TravelersDiaryCard
+import com.lianyi.paimonsnotebook.ui.screen.travelers_diary.view.TravelersDiaryScreen
+import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
 import com.lianyi.paimonsnotebook.ui.screen.home.components.BannerItem
 import com.lianyi.paimonsnotebook.ui.screen.home.components.WebHomeNearActivity
 import com.lianyi.paimonsnotebook.ui.screen.home.components.notice.HomeEventNotice
@@ -37,6 +41,7 @@ internal fun HomeContent(
     bannerList: List<WebHomeData.Carousel>,
     nearActivity: List<NearActivityData.Hots.Group2.Children.NearActivity>,
     noticeList: List<OfficialRecommendedPostsData.OfficialRecommendedPost>,
+    travelersDiaryData: LedgerData?,
     goPostDetail: (String, PostType) -> Unit,
 ) {
     Box {
@@ -82,6 +87,16 @@ internal fun HomeContent(
                 }
             }
 
+
+            //旅行者札记摘要
+            item {
+                TravelersDiaryCard(
+                    ledgerData = travelersDiaryData,
+                    onClick = {
+                        HomeHelper.goActivity(TravelersDiaryScreen::class.java)
+                    }
+                )
+            }
 
             //近期活动
             if (nearActivity.isNotEmpty()) {

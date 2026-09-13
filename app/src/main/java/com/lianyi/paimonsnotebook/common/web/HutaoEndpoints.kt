@@ -6,12 +6,14 @@ import com.lianyi.paimonsnotebook.common.core.enviroment.CoreEnvironment
 *
 * */
 object HutaoEndpoints {
-    private const val ApiSnapGenshin = "https://api.snapgenshin.com"
-    private const val ApiSnapGenshinMetadata = "${ApiSnapGenshin}/metadata"
-    const val ApiSnapGenshinStaticRaw = "${ApiSnapGenshin}/static/raw"
-    private const val ApiSnapGenshinStaticZip = "${ApiSnapGenshin}/static/zip"
+    //原官方元数据服务(api.snapgenshin.com)已随Snap.Hutao项目终止而关停,元数据改用社区镜像仓库
+    private const val ApiSnapMetadata =
+        "https://cdn.jsdelivr.net/gh/SnapHutaoRemasteringProject/Snap.Metadata@master"
 
-    private const val Host = "api.snapgenshin.com"
+    //社区接管的静态资源服务(重制版胡桃工具箱),原api.snapgenshin.com/static已关停
+    //api.snaphutaorp.org/static会对static.snaphutaorp.org做302跳转,此处直连最终图床
+    const val ApiSnapGenshinStaticRaw = "https://static.snaphutaorp.org/static/raw"
+    private const val ApiSnapGenshinStaticZip = "https://static.snaphutaorp.org/static/zip"
 
     //请求元数据时的header
     val Headers by lazy {
@@ -27,7 +29,15 @@ object HutaoEndpoints {
     /// <param name="fileName">文件名称</param>
     /// <returns>路径</returns>
     fun metadata(locale: String, fileName: String) =
-        "${ApiSnapGenshinMetadata}/Genshin/${locale}/${fileName}"
+        "${ApiSnapMetadata}/Genshin/${locale}/${fileName}"
+
+    /// <summary>
+    /// 元数据下载源列表,主源失败时可依次尝试备用源
+    /// </summary>
+    fun metadataSources(locale: String, fileName: String) = listOf(
+        "${ApiSnapMetadata}/Genshin/${locale}/${fileName}",
+        "https://fastly.jsdelivr.net/gh/SnapHutaoRemasteringProject/Snap.Metadata@master/Genshin/${locale}/${fileName}"
+    )
 
     /// <summary>
     /// 图片资源

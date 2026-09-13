@@ -1,6 +1,5 @@
 package com.lianyi.paimonsnotebook.common.util.image
 
-import coil.decode.GifDecoder
 import coil.request.ImageRequest
 import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
 import okio.ByteString.Companion.encodeUtf8
@@ -29,11 +28,6 @@ object PaimonsNotebookImageLoader {
             .crossfade(true)
             .diskCacheKey(url)
 //            .memoryCacheKey(url)
-            .apply {
-                if (url.endsWith(".gif")) {
-                    this.decoderFactory(GifDecoder.Factory())
-                }
-            }
             .build()
     }
 

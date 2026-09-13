@@ -43,6 +43,12 @@ class PublicDataApiClient {
     }.getAsJson<GetExtListData>()
 
 
+    //基于设备种子生成每次安装固定的伪随机值
+    private fun stableSeed(offset: Int, range: Int): Int {
+        val seed = CoreEnvironment.DeviceIdSeed.ifBlank { "paimonsnotebook" }
+        return ((seed.hashCode() + offset * 31).toLong().let { Math.floorMod(it, range) }).toInt()
+    }
+
     private fun getExtFields(): String {
         val stat = StatFs(Environment.getDataDirectory().path)
         val blockSize = stat.blockSizeLong
@@ -69,11 +75,11 @@ class PublicDataApiClient {
             put("board", Build.BOARD)
             put("brand", Build.BRAND)
             put("hardware", Build.HARDWARE)
-            put("cpuType", "arm64-v8a")
+            put("cpuType", Build.SUPPORTED_ABIS.firstOrNull() ?: "arm64-v8a")
             put("deviceType", Build.MODEL)
             put("display", Build.DISPLAY)
             put("hostname", Build.HOST)
-            put("manufacturer", "Xiaomi")
+            put("manufacturer", Build.MANUFACTURER)
             put("productName", Build.MODEL)
             put("model", Build.MODEL)
             put(
@@ -95,7 +101,7 @@ class PublicDataApiClient {
                 }
             )
             put("networkType", "WiFi")
-            put("vendor", "unknown")
+            put("vendor", Build.MANUFACTURER)
             put("romCapacity", "$romTotal")
             put("romRemain", "$romRemain")
             put("ramCapacity", "$ramTotal")
@@ -117,10 +123,11 @@ class PublicDataApiClient {
             put("isMockLocation", 0)
             put("ringMode", 2)
             put("isAirMode", 0)
-            put("batteryStatus", (60..100).random())
-            put("chargeStatus", (0..1).random())
-            put("appInstallTimeDiff", System.currentTimeMillis() - (9999..99999).random() * 100)
-            put("appUpdateTimeDiff", System.currentTimeMillis() - (1000..9999).random() * 10)
+            //以下字段必须保持稳定:每次请求随机变化会被风控判定为伪造指纹,导致验证结果不留存
+            put("batteryStatus", 60 + stableSeed(0, 40))
+            put("chargeStatus", stableSeed(1, 2))
+            put("appInstallTimeDiff", System.currentTimeMillis() - (9999 + stableSeed(2, 90000)) * 100)
+            put("appUpdateTimeDiff", System.currentTimeMillis() - (1000 + stableSeed(3, 9000)) * 10)
             put("deviceName", Build.MODEL)
             put("packageName", "com.mihoyo.hyperion")
             put("packageVersion", "2.29.0")

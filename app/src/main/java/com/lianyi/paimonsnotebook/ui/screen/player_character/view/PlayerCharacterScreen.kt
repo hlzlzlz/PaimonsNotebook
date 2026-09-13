@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import com.lianyi.core.ui.components.text.PrimaryText
 import com.lianyi.paimonsnotebook.R
+import com.lianyi.paimonsnotebook.common.components.dialog.ConfirmDialog
 import com.lianyi.paimonsnotebook.common.components.layout.column.TopSlotColumnLayout
 import com.lianyi.paimonsnotebook.common.components.lazy.ContentSpacerLazyColumn
 import com.lianyi.paimonsnotebook.common.components.loading.ContentLoadingLayout
@@ -96,6 +97,14 @@ class PlayerCharacterScreen : BaseActivity() {
                             }
                         }
                     }
+                }
+
+                if (viewModel.showConfirmDialog) {
+                    ConfirmDialog(
+                        content = "进行验证才能继续进行查询,点击确认前往验证界面,完成验证后重新进入本页面查询",
+                        onConfirm = viewModel::goValidateScreen,
+                        onCancel = viewModel::dismissConfirmDialog
+                    )
                 }
 
                 if (viewModel.showGameRoleDialog) {

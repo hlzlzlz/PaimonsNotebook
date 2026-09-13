@@ -125,6 +125,7 @@ class HomeScreen : BaseActivity() {
                                         bannerList = viewModel.bannerList,
                                         nearActivity = viewModel.nearActivity,
                                         noticeList = viewModel.noticeList,
+                                        travelersDiaryData = viewModel.travelersDiaryData,
                                         goPostDetail = viewModel::goPostDetail
                                     )
                                 }

@@ -190,7 +190,7 @@ suspend inline fun <reified T> Request.getAsJson(
     } catch (e: Exception) {
         e.printStackTrace()
         Gson().fromJson(
-            "{\"retcode\":${ResultData.RESPONSE_CONVERT_EXCEPTION},\"message\":\"请求结果转换异常\",\"data\":null}",
+            "{\"retcode\":${ResultData.RESPONSE_CONVERT_EXCEPTION},\"message\":\"请求结果转换异常:${e.message?.take(120)}\",\"data\":null}",
             getParameterizedType(ResultData::class.java, T::class.java)
         )
     }

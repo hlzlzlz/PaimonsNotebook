@@ -10,6 +10,8 @@
 -keep class com.lianyi.paimonsnotebook.common.web.hoyolab.** {*;}
 # 元数据数据类
 -keep class com.lianyi.paimonsnotebook.common.web.hutao.genshin.** {*;}
+# 胡桃全服统计数据类
+-keep class com.lianyi.paimonsnotebook.common.web.hutao.statistics.** {*;}
 # mihoyo webview
 -keep class com.lianyi.paimonsnotebook.common.web.bridge.model.** {*;}
 
