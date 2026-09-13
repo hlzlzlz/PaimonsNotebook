@@ -35,8 +35,8 @@
 
 #### 从本仓库获取
 
-- [点击此处下载最新版本 APK](https://cdn.jsdelivr.net/gh/hlzlzlz/PaimonsNotebook@master/app/release/app-release.apk)
-- 也可以直接在仓库的 `app/release` 目录下下载（jsDelivr 可能存在缓存延迟）
+- [点击此处下载最新版本](https://github.com/hlzlzlz/PaimonsNotebook/releases/latest)
+- 也可以直接在仓库的 `app/release` 目录下下载（jsDelivr 链接可能存在缓存延迟）
 
 ## 特别感谢
 
