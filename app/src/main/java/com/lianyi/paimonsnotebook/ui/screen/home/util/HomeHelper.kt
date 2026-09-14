@@ -21,6 +21,7 @@ import com.lianyi.paimonsnotebook.ui.screen.home.data.HomeCustomDrawerData
 import com.lianyi.paimonsnotebook.ui.screen.home.data.ModalItemData
 import com.lianyi.paimonsnotebook.ui.screen.items.view.AvatarScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.CultivationMaterialScreen
+import com.lianyi.paimonsnotebook.ui.screen.items.view.MonsterScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.ReliquaryScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.WeaponScreen
 import com.lianyi.paimonsnotebook.ui.screen.player_character.view.PlayerCharacterScreen
@@ -70,6 +71,13 @@ object HomeHelper {
             icon = R.drawable.ic_genshin_game_equip,
             target = WeaponScreen::class.java,
             sortIndex = 50,
+            requireMetadata = true
+        ),
+        ModalItemData(
+            name = "怪物资料",
+            icon = R.drawable.ic_genshin_game_biology,
+            target = MonsterScreen::class.java,
+            sortIndex = 55,
             requireMetadata = true
         ),
         ModalItemData(
