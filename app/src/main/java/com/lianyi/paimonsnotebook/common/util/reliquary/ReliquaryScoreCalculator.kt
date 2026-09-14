@@ -3,11 +3,13 @@ package com.lianyi.paimonsnotebook.common.util.reliquary
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.character.CharacterDetailData
 
 /*
-* 圣遗物评分计算器(移植自胡桃工具箱 ReliquaryScoreCalculator 自动模式)
+* 圣遗物评分计算器(基于胡桃工具箱 ReliquaryScoreCalculator 自动模式公式调整)
 *
 * 只对副词条计分,主词条不参与;
-* 权重:命中米游社推荐副词条记1.0(固定值类打5折),
-* 双爆对非心海角色强制有效,未推荐充能按有无元素爆发/有无双爆特判,其余记0不计分;
+* 权重:命中米游社推荐副词条记1.0,未命中记0.5(胡桃原版为清零,
+* 会导致低练度角色圣遗物普遍0分,观感如同功能损坏);
+* 固定值类(生命/攻击/防御小字)再打5折;双爆对非心海角色强制有效;
+* 未推荐充能:普通角色0.2,特殊能量角色(玛薇卡/丝柯克)0.5;
 * 得分 = Σ 数值 × 属性系数 × 权重
 * */
 object ReliquaryScoreCalculator {
@@ -98,11 +100,12 @@ object ReliquaryScoreCalculator {
 
         //未被推荐的充能按能量机制特判
         if (propertyType == FIGHT_PROP_CHARGE_EFFICIENCY && !isRecommended) {
-            return getChargeEfficiencyWeight(hasCritHurt, isSpecialEnergy)
+            return getChargeEfficiencyWeight(isSpecialEnergy)
         }
 
+        //胡桃原版未推荐清零,这里改为半权,避免未命中推荐的圣遗物普遍0分
         if (!isRecommended) {
-            return 0.0
+            return 0.5
         }
 
         var weight = 1.0
@@ -117,14 +120,9 @@ object ReliquaryScoreCalculator {
         return weight
     }
 
-    //特殊能量角色(玛薇卡/丝柯克)未推荐充能:吃双爆则0,否则1;
-    //普通角色未推荐充能:吃双爆则0.2,否则1
-    private fun getChargeEfficiencyWeight(hasCritHurt: Boolean, isSpecialEnergy: Boolean): Double =
-        if (isSpecialEnergy) {
-            if (hasCritHurt) 0.0 else 1.0
-        } else {
-            if (hasCritHurt) 0.2 else 1.0
-        }
+    //特殊能量角色(玛薇卡/丝柯克)未推荐充能:0.5;普通角色未推荐充能:0.2
+    private fun getChargeEfficiencyWeight(isSpecialEnergy: Boolean): Double =
+        if (isSpecialEnergy) 0.5 else 0.2
 
     //各属性数值系数,固定值类再打折
     private fun scoreStat(propertyType: Int, value: Double, weight: Double): Double =
