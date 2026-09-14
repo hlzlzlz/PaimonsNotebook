@@ -19,6 +19,10 @@ import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.binding.UserGameRole
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.GameRecordClient
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.hard_challenge.HardChallengeData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.role_combat.RoleCombatData
+import com.lianyi.paimonsnotebook.common.web.hutao.genshin.avatar.AvatarData
+import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.AvatarService
+import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoRoleCombatStatisticsData
+import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoStatisticsClient
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,7 +30,7 @@ import kotlinx.coroutines.withContext
 
 class RoleCombatScreenViewModel : ViewModel() {
 
-    //0剧诗 1幽境危战
+    //0剧诗 1幽境危战 2全服统计
     var currentPageIndex by mutableIntStateOf(0)
         private set
 
@@ -36,7 +40,18 @@ class RoleCombatScreenViewModel : ViewModel() {
     var hardChallengeData by mutableStateOf<HardChallengeData?>(null)
     var hardChallengeLoadingState by mutableStateOf(LoadingState.Loading)
 
+    //胡桃全服剧诗统计,不依赖登录用户
+    var statistics by mutableStateOf<HutaoRoleCombatStatisticsData?>(null)
+    var statisticsLoadingState by mutableStateOf(LoadingState.Loading)
+
+    //全服统计本期false/上期true
+    var statisticsLastPeriod by mutableStateOf(false)
+        private set
+
     private val gameRecordClient = GameRecordClient()
+    private val statisticsClient = HutaoStatisticsClient()
+
+    private val avatarMap = mutableMapOf<Int, AvatarData>()
 
     private var currentUser by mutableStateOf<User?>(null)
     var currentGameRole by mutableStateOf<UserGameRoleData.Role?>(null)
@@ -48,16 +63,32 @@ class RoleCombatScreenViewModel : ViewModel() {
     var showConfirmDialog by mutableStateOf(false)
         private set
 
-    val tabs = arrayOf("幻想真境剧诗", "幽境危战")
+    val tabs = arrayOf("幻想真境剧诗", "幽境危战", "全服统计")
 
     init {
         //Compose状态的写入必须在主线程,仅网络请求切换IO
         viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                avatarMap += AvatarService {}.avatarList.associateBy { it.id }
+            }
+
             AccountHelper.selectedUserFlow.collect {
                 currentUser = it
                 currentGameRole = it?.getSelectedGameRole()
                 load(currentPageIndex)
             }
+        }
+    }
+
+    fun getAvatarFromMetadata(avatarId: Int) = avatarMap[avatarId]
+
+    //切换全服统计的本期/上期并重新加载
+    fun toggleStatisticsPeriod() {
+        statisticsLastPeriod = !statisticsLastPeriod
+        statistics = null
+
+        if (currentPageIndex == 2) {
+            load(2)
         }
     }
 
@@ -88,7 +119,8 @@ class RoleCombatScreenViewModel : ViewModel() {
     }
 
     private fun load(page: Int) {
-        if (currentUser == null || currentGameRole == null) {
+        //全服统计页不依赖登录用户
+        if (page != 2 && (currentUser == null || currentGameRole == null)) {
             setLoadingState(page, LoadingState.Error)
             return
         }
@@ -97,11 +129,33 @@ class RoleCombatScreenViewModel : ViewModel() {
         when (page) {
             0 -> if (roleCombatData != null) return
             1 -> if (hardChallengeData != null) return
+            2 -> if (statistics != null) return
         }
 
         setLoadingState(page, LoadingState.Loading)
 
         viewModelScope.launch {
+            if (page == 2) {
+                val response = withContext(Dispatchers.IO) {
+                    statisticsClient.getRoleCombatStatistics(statisticsLastPeriod)
+                }
+
+                if (response?.retcode == 0) {
+                    statistics = response.data
+
+                    statisticsLoadingState =
+                        if (response.data == null || response.data.BackupAvatarRates.isEmpty())
+                            LoadingState.Empty
+                        else
+                            LoadingState.Success
+                } else {
+                    statisticsLoadingState = LoadingState.Error
+                    "获取全服剧诗统计失败:${response?.message ?: "网络错误"}".errorNotify()
+                }
+
+                return@launch
+            }
+
             val userAndUid = UserAndUid(
                 userEntity = currentUser!!.userEntity,
                 playerUid = PlayerUid.fromGameRole(currentGameRole!!)
@@ -193,6 +247,7 @@ class RoleCombatScreenViewModel : ViewModel() {
         when (page) {
             0 -> roleCombatLoadingState = state
             1 -> hardChallengeLoadingState = state
+            2 -> statisticsLoadingState = state
         }
     }
 

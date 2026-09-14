@@ -52,13 +52,25 @@ data class HutaoTeamCombinationData(
 //持有率与命座分布
 data class HutaoHoldingRateData(
     val HoldingRate: Double,
-    val Constellations: List<Rate>
+    val Constellations: List<Rate>,
+    val AvatarId: Int = 0
 ) {
     data class Rate(
         val Item: Int,
         val Rate: Double
     )
 }
+
+//本期持有率与上期环比的连接条目(客户端本地计算,非服务端响应)
+data class HutaoHoldingRateEntry(
+    val AvatarId: Int,
+    val HoldingRate: Double,
+    //与上期的差值(小数),无上期数据时为null
+    val HoldingDelta: Double?,
+    val Constellations: List<HutaoHoldingRateData.Rate>,
+    //命座持有率环比,与Constellations同序
+    val ConstellationDeltas: List<Double?>
+)
 
 //剧诗统计
 data class HutaoRoleCombatStatisticsData(

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -94,6 +95,15 @@ class RoleCombatScreen : BaseActivity() {
                                     loadingState = viewModel.hardChallengeLoadingState,
                                     successContent = {
                                         HardChallengePage()
+                                    }
+                                )
+                            }
+
+                            2 -> {
+                                ContentLoadingLayout(
+                                    loadingState = viewModel.statisticsLoadingState,
+                                    successContent = {
+                                        StatisticsPage()
                                     }
                                 )
                             }
@@ -372,5 +382,106 @@ class RoleCombatScreen : BaseActivity() {
         val minutes = second / 60
         val remainSeconds = second % 60
         return "${minutes}分${remainSeconds.toString().padStart(2, '0')}秒"
+    }
+
+    @Composable
+    private fun StatisticsPage() {
+        val statistics = viewModel.statistics ?: return
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp, 4.dp)
+                        .radius(2.dp)
+                        .background(White)
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "第 ${statistics.ScheduleId} 期 · 全服统计",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        Text(
+                            text = if (viewModel.statisticsLastPeriod) "上期" else "本期",
+                            fontSize = 14.sp,
+                            modifier = Modifier
+                                .radius(2.dp)
+                                .clickable { viewModel.toggleStatisticsPeriod() }
+                                .padding(10.dp, 4.dp)
+                        )
+                    }
+
+                    Text(
+                        text = "参与统计的记录总数 ${statistics.RecordTotal}",
+                        fontSize = 14.sp,
+                        color = Black_60
+                    )
+
+                    Text(
+                        text = "热门替补为全服记录中各角色作为后备队员的上阵比例",
+                        fontSize = 12.sp,
+                        color = Black_60
+                    )
+                }
+            }
+
+            itemsIndexed(
+                statistics.BackupAvatarRates.sortedByDescending { it.Rate }
+            ) { index, rate ->
+                val avatar = viewModel.getAvatarFromMetadata(rate.Item)
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp, 0.dp)
+                        .radius(2.dp)
+                        .background(White)
+                        .padding(10.dp, 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${index + 1}",
+                        fontSize = 13.sp,
+                        color = Black_60,
+                        modifier = Modifier.width(26.dp)
+                    )
+
+                    NetworkImage(
+                        url = avatar?.iconUrl ?: "",
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = avatar?.name ?: "${rate.Item}",
+                        fontSize = 14.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Text(
+                        text = String.format("%.2f%%", rate.Rate * 100),
+                        fontSize = 13.sp,
+                        color = Black_60
+                    )
+                }
+            }
+
+            item {
+                com.lianyi.core.ui.components.spacer.NavigationBarPaddingSpacer()
+            }
+        }
     }
 }

@@ -29,6 +29,7 @@ import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.common.components.loading.ContentLoadingLayout
 import com.lianyi.paimonsnotebook.ui.screen.abyss.components.page.AbyssRecordPage
 import com.lianyi.paimonsnotebook.ui.screen.abyss.components.page.HutaoAvatarRatePage
+import com.lianyi.paimonsnotebook.ui.screen.abyss.components.page.HutaoHoldingRatePage
 import com.lianyi.paimonsnotebook.ui.screen.abyss.components.page.HutaoOverviewPage
 import com.lianyi.paimonsnotebook.ui.screen.abyss.components.page.HutaoTeamPage
 import com.lianyi.paimonsnotebook.ui.screen.abyss.viewmodel.AbyssScreenViewModel
@@ -81,8 +82,8 @@ class AbyssScreen : BaseActivity() {
 
                         Spacer(modifier = Modifier.weight(1f))
 
-                        //全服数据标签页显示本期/上期切换
-                        if (viewModel.currentPageIndex >= 2) {
+                        //全服数据标签页显示本期/上期切换(持有率固定为本期与上期环比,不显示切换)
+                        if (viewModel.currentPageIndex in 2..5) {
                             Text(
                                 text = if (viewModel.lastPeriod) "上期" else "本期",
                                 fontSize = 14.sp,
@@ -157,6 +158,18 @@ class AbyssScreen : BaseActivity() {
                                     successContent = {
                                         HutaoTeamPage(
                                             teams = viewModel.teamCombination,
+                                            getAvatar = viewModel::getAvatarFromMetadata
+                                        )
+                                    }
+                                )
+                            }
+
+                            6 -> {
+                                ContentLoadingLayout(
+                                    loadingState = viewModel.holdingRateLoadingState,
+                                    successContent = {
+                                        HutaoHoldingRatePage(
+                                            entries = viewModel.holdingRate,
                                             getAvatar = viewModel::getAvatarFromMetadata
                                         )
                                     }

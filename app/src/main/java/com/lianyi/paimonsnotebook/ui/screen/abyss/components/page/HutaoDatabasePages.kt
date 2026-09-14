@@ -22,9 +22,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.TextUnit
 import com.lianyi.paimonsnotebook.common.components.media.NetworkImage
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoAvatarFloorRateData
+import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoHoldingRateEntry
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoOverviewData
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoTeamCombinationData
 import com.lianyi.paimonsnotebook.ui.theme.Black_60
@@ -159,6 +165,123 @@ internal fun HutaoAvatarRatePage(
 }
 
 @Composable
+internal fun HutaoHoldingRatePage(
+    entries: List<HutaoHoldingRateEntry>?,
+    getAvatar: (Int) -> com.lianyi.paimonsnotebook.common.web.hutao.genshin.avatar.AvatarData?
+) {
+    val list = entries ?: return
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp, 4.dp)
+                    .radius(2.dp)
+                    .background(White)
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "角色持有率 · 本期(与上期环比)",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Text(
+                    text = "持有率为全服记录中拥有该角色的比例,百分比数字为参与统计的分布",
+                    fontSize = 12.sp,
+                    color = Black_60
+                )
+            }
+        }
+
+        itemsIndexed(list) { index, entry ->
+            val avatar = getAvatar(entry.AvatarId)
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp, 2.dp)
+                    .radius(2.dp)
+                    .background(White)
+                    .padding(10.dp, 8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${index + 1}",
+                        fontSize = 13.sp,
+                        color = Black_60,
+                        modifier = Modifier.width(26.dp)
+                    )
+
+                    NetworkImage(
+                        url = avatar?.iconUrl ?: "",
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = avatar?.name ?: "${entry.AvatarId}",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    DeltaText(
+                        text = String.format("%.1f%%", entry.HoldingRate * 100),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        delta = null
+                    )
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    DeltaText(
+                        text = "",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Normal,
+                        delta = entry.HoldingDelta
+                    )
+                }
+
+                Row {
+                    Spacer(modifier = Modifier.width(26.dp))
+
+                    entry.Constellations.sortedBy { it.Item }.forEachIndexed { cIndex, constellation ->
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "C${constellation.Item}",
+                                fontSize = 10.sp,
+                                color = Black_60
+                            )
+
+                            DeltaText(
+                                text = String.format("%.1f", constellation.Rate * 100),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Normal,
+                                delta = entry.ConstellationDeltas.getOrNull(cIndex)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 internal fun HutaoTeamPage(
     teams: List<HutaoTeamCombinationData>?,
     getAvatar: (Int) -> com.lianyi.paimonsnotebook.common.web.hutao.genshin.avatar.AvatarData?
@@ -225,4 +348,59 @@ internal fun HutaoTeamPage(
             }
         }
     }
+}
+
+/*
+* delta为null时只显示text;
+* text为空时显示纯环比("环比 +x.x"或"环比 —");
+* 否则显示 "text (+x.x)",括号内环比按涨跌着色
+* */
+@Composable
+private fun DeltaText(
+    text: String,
+    fontSize: TextUnit,
+    fontWeight: FontWeight,
+    delta: Double?
+) {
+    val deltaColor = when {
+        delta == null -> Black_60
+        delta >= 0 -> Color(0xFF2E7D32)
+        else -> Color(0xFFC62828)
+    }
+
+    if (text.isEmpty()) {
+        Text(
+            text = if (delta == null) "环比 —"
+            else String.format(
+                if (delta >= 0) "环比 +%.1f%%" else "环比 %.1f%%",
+                delta * 100
+            ),
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            color = deltaColor
+        )
+        return
+    }
+
+    if (delta == null) {
+        Text(text = text, fontSize = fontSize, fontWeight = fontWeight)
+        return
+    }
+
+    Text(
+        text = buildAnnotatedString {
+            append(text)
+
+            withStyle(
+                SpanStyle(
+                    color = deltaColor,
+                    fontWeight = FontWeight.Normal
+                )
+            ) {
+                append(String.format(if (delta >= 0) " (+%.1f%%)" else " (%.1f%%)", delta * 100))
+            }
+        },
+        fontSize = fontSize,
+        fontWeight = fontWeight
+    )
 }

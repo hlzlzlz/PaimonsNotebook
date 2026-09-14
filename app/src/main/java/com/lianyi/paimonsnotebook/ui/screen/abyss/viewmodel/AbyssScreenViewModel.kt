@@ -17,6 +17,8 @@ import com.lianyi.paimonsnotebook.common.util.enums.LoadingState
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.AvatarService
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.MonsterService
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoAvatarFloorRateData
+import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoHoldingRateData
+import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoHoldingRateEntry
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoOverviewData
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoStatisticsClient
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoTeamCombinationData
@@ -33,11 +35,11 @@ import kotlinx.coroutines.withContext
 
 class AbyssScreenViewModel : ViewModel() {
 
-    //0本期 1上期 2总览 3出场率 4使用率 5配队
+    //0本期 1上期 2总览 3出场率 4使用率 5配队 6持有率
     var currentPageIndex by mutableIntStateOf(0)
 
     val tabs = arrayOf(
-        "本期", "上期", "全服总览", "出场率", "使用率", "配队"
+        "本期", "上期", "全服总览", "出场率", "使用率", "配队", "持有率"
     )
 
     //本期与上期深渊记录
@@ -63,6 +65,10 @@ class AbyssScreenViewModel : ViewModel() {
 
     var teamCombination by mutableStateOf<List<HutaoTeamCombinationData>?>(null)
     var teamCombinationLoadingState by mutableStateOf(LoadingState.Loading)
+
+    //持有率不受本期/上期切换影响,始终显示本期与上期的环比
+    var holdingRate by mutableStateOf<List<HutaoHoldingRateEntry>?>(null)
+    var holdingRateLoadingState by mutableStateOf(LoadingState.Loading)
 
     private val gameRecordClient = GameRecordClient()
     private val statisticsClient = HutaoStatisticsClient()
@@ -172,6 +178,7 @@ class AbyssScreenViewModel : ViewModel() {
             3 -> if (appearanceRate != null) return
             4 -> if (usageRate != null) return
             5 -> if (teamCombination != null) return
+            6 -> if (holdingRate != null) return
         }
 
         setLoadingState(page, LoadingState.Loading)
@@ -239,8 +246,59 @@ class AbyssScreenViewModel : ViewModel() {
                         "获取配队数据失败:${response?.message ?: "网络错误"}".errorNotify()
                     }
                 }
+
+                6 -> {
+                    //同时拉取本期与上期用于计算环比
+                    val responses = withContext(Dispatchers.IO) {
+                        statisticsClient.getHoldingRate(false) to
+                                statisticsClient.getHoldingRate(true)
+                    }
+
+                    val current = responses.first
+                    val previous = responses.second
+
+                    if (current?.retcode == 0) {
+                        val joined = joinHoldingRate(
+                            current = current.data.orEmpty(),
+                            previous = previous?.data
+                        )
+
+                        holdingRate = joined
+                        holdingRateLoadingState =
+                            if (joined.isEmpty()) LoadingState.Empty else LoadingState.Success
+                    } else {
+                        holdingRateLoadingState = LoadingState.Error
+                        "获取持有率失败:${current?.message ?: "网络错误"}".errorNotify()
+                    }
+                }
             }
         }
+    }
+
+    //把本期与上期的持有率按角色Id连接,计算总持有率与各命座持有率的环比差值
+    private fun joinHoldingRate(
+        current: List<HutaoHoldingRateData>,
+        previous: List<HutaoHoldingRateData>?
+    ): List<HutaoHoldingRateEntry> {
+        val previousMap = previous?.associateBy { it.AvatarId }
+
+        return current.map { entry ->
+            val last = previousMap?.get(entry.AvatarId)
+
+            HutaoHoldingRateEntry(
+                AvatarId = entry.AvatarId,
+                HoldingRate = entry.HoldingRate,
+                HoldingDelta = last?.let { entry.HoldingRate - it.HoldingRate },
+                Constellations = entry.Constellations,
+                ConstellationDeltas = entry.Constellations.map { constellation ->
+                    val lastConstellation =
+                        last?.Constellations?.firstOrNull { it.Item == constellation.Item }
+
+                    if (lastConstellation == null) null
+                    else constellation.Rate - lastConstellation.Rate
+                }
+            )
+        }.sortedByDescending { it.HoldingRate }
     }
 
     private fun setLoadingState(page: Int, state: LoadingState) {
@@ -249,6 +307,7 @@ class AbyssScreenViewModel : ViewModel() {
             3 -> appearanceRateLoadingState = state
             4 -> usageRateLoadingState = state
             5 -> teamCombinationLoadingState = state
+            6 -> holdingRateLoadingState = state
         }
     }
 

@@ -44,8 +44,8 @@ class HutaoStatisticsClient {
         getList("/Statistics/Team/Combination?Last=$last", HutaoTeamCombinationData::class.java)
 
     //持有率与命座分布
-    suspend fun getHoldingRate(): HutaoResponseData<List<HutaoHoldingRateData>>? =
-        getList("/Statistics/Avatar/HoldingRate", HutaoHoldingRateData::class.java)
+    suspend fun getHoldingRate(last: Boolean = false): HutaoResponseData<List<HutaoHoldingRateData>>? =
+        getList("/Statistics/Avatar/HoldingRate?Last=$last", HutaoHoldingRateData::class.java)
 
     //剧诗统计
     suspend fun getRoleCombatStatistics(last: Boolean = false): HutaoResponseData<HutaoRoleCombatStatisticsData>? =
