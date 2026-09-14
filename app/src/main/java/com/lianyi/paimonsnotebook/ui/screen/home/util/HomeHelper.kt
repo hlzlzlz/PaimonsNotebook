@@ -24,6 +24,7 @@ import com.lianyi.paimonsnotebook.ui.screen.items.view.CultivationMaterialScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.MonsterScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.ReliquaryScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.WeaponScreen
+import com.lianyi.paimonsnotebook.ui.screen.weekly.view.WeeklyCalendarScreen
 import com.lianyi.paimonsnotebook.ui.screen.player_character.view.PlayerCharacterScreen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -99,6 +100,13 @@ object HomeHelper {
             icon = R.drawable.ic_genshin_game_material,
             target = CultivationMaterialScreen::class.java,
             sortIndex = 80,
+            requireMetadata = true
+        ),
+        ModalItemData(
+            name = "素材日历",
+            icon = R.drawable.ic_clock_outline,
+            target = WeeklyCalendarScreen::class.java,
+            sortIndex = 85,
             requireMetadata = true
         ),
         ModalItemData(
