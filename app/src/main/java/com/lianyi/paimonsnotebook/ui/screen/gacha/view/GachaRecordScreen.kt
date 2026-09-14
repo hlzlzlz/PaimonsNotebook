@@ -25,7 +25,9 @@ import com.lianyi.paimonsnotebook.common.components.placeholder.ErrorPlaceholder
 import com.lianyi.paimonsnotebook.common.components.widget.button.TitleAndDescriptionActionButton
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.common.util.metadata.genshin.uigf.UIGFHelper
+import com.lianyi.paimonsnotebook.ui.screen.gacha.components.page.GachaCountdownPage
 import com.lianyi.paimonsnotebook.ui.screen.gacha.components.page.GachaItemsPage
+import com.lianyi.paimonsnotebook.ui.screen.gacha.components.page.GachaPityPage
 import com.lianyi.paimonsnotebook.ui.screen.gacha.components.page.GachaRecordOverviewPage
 import com.lianyi.paimonsnotebook.ui.screen.gacha.viewmodel.GachaRecordScreenViewModel
 import com.lianyi.paimonsnotebook.ui.theme.PaimonsNotebookTheme
@@ -98,8 +100,26 @@ class GachaRecordScreen : ComponentActivity() {
             ) {
                 Crossfade(targetState = viewModel.currentPageIndex, label = "") {
                     when (it) {
-                        1 -> GachaItemsPage(viewModel.itemsList, UIGFHelper.ItemType.Avatar)
-                        2 -> GachaItemsPage(viewModel.itemsList, UIGFHelper.ItemType.Weapon)
+                        1 -> ContentLoadingLayout(
+                            loadingState = viewModel.pityLoadingState,
+                            successContent = {
+                                GachaPityPage(pities = viewModel.pityList)
+                            }
+                        )
+
+                        2 -> ContentLoadingLayout(
+                            loadingState = viewModel.countdownLoadingState,
+                            successContent = {
+                                GachaCountdownPage(
+                                    groups = viewModel.countdownGroups,
+                                    getItemName = viewModel::getGachaItemName,
+                                    getItemIconUrl = viewModel::getGachaItemIconUrl
+                                )
+                            }
+                        )
+
+                        3 -> GachaItemsPage(viewModel.itemsList, UIGFHelper.ItemType.Avatar)
+                        4 -> GachaItemsPage(viewModel.itemsList, UIGFHelper.ItemType.Weapon)
                         else -> {
                             if (viewModel.gachaRecordOverview != null) {
                                 GachaRecordOverviewPage(

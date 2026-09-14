@@ -117,6 +117,13 @@ class GachaRecordService {
     suspend fun getHistoryWishByUIGFGachaTypeAndUid(uigfGachaType: String, uid: String) =
         dao.getHistoryWishByUIGFGachaTypeAndUid(uigfGachaType = uigfGachaType, uid = uid)
 
+    //当前选中的祈愿uid
+    fun currentUid() = CurrentGachaRecordGameUidFlow.value
+
+    //按uid取全部祈愿记录(保底统计用)
+    fun getGachaItemsByUid(uid: String): List<com.lianyi.paimonsnotebook.common.database.gacha.entity.GachaItems> =
+        dao.getGachaLogItemByUid(uid)
+
     //获取记录总览
     private suspend fun getGachaRecordOverviewByUid() {
         val map = dao.getOverviews().groupBy { it.uid }

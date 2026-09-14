@@ -41,7 +41,8 @@ object MetadataHelper {
             FileNameAchievement,
             FileNameAchievementGoal,
             FileNameReliquary,
-            FileNameReliquarySet
+            FileNameReliquarySet,
+            FileNameGachaEvent
         )
     }
 

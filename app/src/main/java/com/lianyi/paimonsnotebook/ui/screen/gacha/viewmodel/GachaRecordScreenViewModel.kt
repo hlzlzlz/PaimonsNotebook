@@ -8,11 +8,15 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lianyi.paimonsnotebook.common.database.gacha.data.GachaRecordOverview
+import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
 import com.lianyi.paimonsnotebook.common.util.enums.LoadingState
 import com.lianyi.paimonsnotebook.common.util.metadata.genshin.uigf.UIGFHelper
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.AvatarService
+import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.GachaEventService
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.WeaponService
+import com.lianyi.paimonsnotebook.common.web.hutao.genshin.gacha_event.GachaEventEntry
 import com.lianyi.paimonsnotebook.ui.screen.gacha.data.GachaOverviewListItem
+import com.lianyi.paimonsnotebook.ui.screen.gacha.service.GachaPityCalculator
 import com.lianyi.paimonsnotebook.ui.screen.gacha.service.GachaRecordService
 import com.lianyi.paimonsnotebook.ui.screen.gacha.view.GachaRecordOptionScreen
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
@@ -24,7 +28,16 @@ class GachaRecordScreenViewModel : ViewModel() {
 
     var currentPageIndex by mutableIntStateOf(0)
 
-    val tabs = arrayOf("总览", "角色", "武器")
+    //0总览 1保底 2复刻 3角色 4武器
+    val tabs = arrayOf("总览", "保底", "复刻", "角色", "武器")
+
+    //保底统计
+    var pityList by mutableStateOf<List<GachaPityCalculator.PoolPity>?>(null)
+    var pityLoadingState by mutableStateOf(LoadingState.Loading)
+
+    //复刻倒计时
+    var countdownGroups by mutableStateOf<Map<String, List<GachaPityCalculator.CountdownEntry>>?>(null)
+    var countdownLoadingState by mutableStateOf(LoadingState.Loading)
 
     var loadingState by mutableStateOf(LoadingState.Loading)
 
@@ -82,6 +95,86 @@ class GachaRecordScreenViewModel : ViewModel() {
     private val avatarMap by lazy {
         avatarNameService.avatarList.associateBy {
             it.name
+        }
+    }
+
+    //id为键的映射,供复刻倒计时展示头像与名称
+    private val avatarById by lazy {
+        avatarNameService.avatarList.associateBy { it.id }
+    }
+
+    private val weaponById by lazy {
+        weaponService.weaponList.associateBy { it.id }
+    }
+
+    //8位id为角色,5位为武器
+    fun getGachaItemName(itemId: Int) =
+        if (itemId >= 10000000) avatarById[itemId]?.name else weaponById[itemId]?.name
+
+    fun getGachaItemIconUrl(itemId: Int) =
+        if (itemId >= 10000000) avatarById[itemId]?.iconUrl else weaponById[itemId]?.iconUrl
+
+    //读取GachaEvent元数据,文件缺失返回null
+    private suspend fun loadGachaEvents(): List<GachaEventEntry>? =
+        withContext(Dispatchers.IO) {
+            var missing = false
+
+            val list = GachaEventService { missing = true }.eventList
+
+            if (missing) null else list
+        }
+
+    private fun loadPity() {
+        if (pityList != null) {
+            return
+        }
+
+        viewModelScope.launch {
+            pityLoadingState = LoadingState.Loading
+
+            val uid = gachaRecordService.currentUid()
+
+            val events = loadGachaEvents()
+
+            if (events == null) {
+                pityLoadingState = LoadingState.Empty
+                "缺少卡池元数据,请在设置中同步元数据后重试".warnNotify()
+                return@launch
+            }
+
+            val records = withContext(Dispatchers.IO) {
+                gachaRecordService.getGachaItemsByUid(uid)
+            }
+
+            val result = GachaPityCalculator.calculate(records, events)
+
+            pityList = result
+            pityLoadingState =
+                if (uid.isEmpty() || result.isEmpty()) LoadingState.Empty else LoadingState.Success
+        }
+    }
+
+    private fun loadCountdown() {
+        if (countdownGroups != null) {
+            return
+        }
+
+        viewModelScope.launch {
+            countdownLoadingState = LoadingState.Loading
+
+            val events = loadGachaEvents()
+
+            if (events == null) {
+                countdownLoadingState = LoadingState.Empty
+                "缺少卡池元数据,请在设置中同步元数据后重试".warnNotify()
+                return@launch
+            }
+
+            val result = GachaPityCalculator.buildCountdown(events)
+
+            countdownGroups = result
+            countdownLoadingState =
+                if (result.isEmpty()) LoadingState.Empty else LoadingState.Success
         }
     }
 
@@ -156,6 +249,11 @@ class GachaRecordScreenViewModel : ViewModel() {
 
     fun setSelectedPageIndex(pageIndex: Int) {
         this.currentPageIndex = pageIndex
+
+        when (pageIndex) {
+            1 -> loadPity()
+            2 -> loadCountdown()
+        }
     }
 
     fun goOptionScreen() {
