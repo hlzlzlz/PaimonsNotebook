@@ -47,7 +47,9 @@ fun PlayerCharacterRelicCard(
     relicList: List<CharacterDetailData.Relic>,
     getRelicById: (Int) -> ReliquaryData?,
     recommendRelicProperty: CharacterDetailData.RecommendRelicProperty,
-    onClickRelicIcon: (ReliquaryData, IntSize, Offset) -> Unit
+    onClickRelicIcon: (ReliquaryData, IntSize, Offset) -> Unit,
+    //各部位副词条评分(胡桃自动模式公式),为空则不显示
+    relicScoreMap: Map<Int, Double> = mapOf()
 ) {
     //如果为空直接跳过渲染
     if (relicList.isEmpty()) return
@@ -68,6 +70,13 @@ fun PlayerCharacterRelicCard(
             .fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        if (relicScoreMap.isNotEmpty()) {
+            PrimaryText(
+                text = String.format("圣遗物总评分 %.1f", relicScoreMap.values.sum()),
+                textSize = 13.sp
+            )
+        }
+
         relicList.split(2).forEach { relics ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -214,6 +223,20 @@ fun PlayerCharacterRelicCard(
                                 PrimaryText(
                                     text = subProperty.value, color = color,
                                     textSize = 12.sp
+                                )
+                            }
+                        }
+
+                        relicScoreMap[relic.pos]?.let { score ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                Text(
+                                    text = String.format("评分 %.1f", score),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = GachaStar5Color2
                                 )
                             }
                         }

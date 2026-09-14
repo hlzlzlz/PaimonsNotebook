@@ -16,6 +16,7 @@ import com.lianyi.paimonsnotebook.common.extension.scope.launchIO
 import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
 import com.lianyi.paimonsnotebook.common.util.enums.LoadingState
 import com.lianyi.paimonsnotebook.common.util.json.JSON
+import com.lianyi.paimonsnotebook.common.util.reliquary.ReliquaryScoreCalculator
 import com.lianyi.paimonsnotebook.common.util.parameter.getParameterizedType
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.GameRecordClient
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.character.CharacterDetailData
@@ -204,6 +205,26 @@ class PlayerCharacterDetailScreenViewModel : ItemBaseViewModel<AvatarData>() {
     fun getWeaponDataById(id: Int) = weaponService.weaponMap[id]
 
     fun getRelicById(id: Int) = reliquaryService.reliquaryFullMap[id]
+
+    /*
+    * 圣遗物评分(移植胡桃自动模式公式):以部位pos为键返回每件副词条得分
+    * 副词条数据与推荐词条均来自米游社角色详情接口,纯本地计算
+    * */
+    fun getRelicScoreMap(relics: List<CharacterDetailData.Relic>): Map<Int, Double> {
+        val detail = currentCharacterDetail ?: return mapOf()
+
+        val context = ReliquaryScoreCalculator.Context(
+            recommendedSubProperties =
+                detail.recommend_relic_property.recommend_properties.sub_property_list,
+            isSpecialEnergy =
+                (currentItem?.skillDepot?.EnergySkill?.SpecialEnergyType ?: 0) != 0,
+            isCritEffective = ReliquaryScoreCalculator.isCritEffective(detail.base.id)
+        )
+
+        return relics.associate { relic ->
+            relic.pos to ReliquaryScoreCalculator.calculate(relic, context)
+        }
+    }
 
     fun getWeaponFightPropertyFormatList(
         weaponData: WeaponData,

@@ -206,7 +206,8 @@ class PlayerCharacterDetailScreen : BaseActivity() {
                                     relicList = relics,
                                     getRelicById = viewModel::getRelicById,
                                     recommendRelicProperty = recommendRelicProperty,
-                                    onClickRelicIcon = viewModel::onClickRelicIcon
+                                    onClickRelicIcon = viewModel::onClickRelicIcon,
+                                    relicScoreMap = viewModel.getRelicScoreMap(relics)
                                 )
                             }
                         }

@@ -184,7 +184,9 @@ data class AvatarData(
         val Icon: String,
         val Id: Int,
         val Name: String,
-        val Proud: Proud
+        val Proud: Proud,
+        //特殊能量机制:0无(绝大多数角色),1玛薇卡,2丝柯克;Gson反射缺失时为0
+        val SpecialEnergyType: Int = 0
     ) {
         val iconUrl: String
             get() = SkillIconConverter.iconNameToUrl(name = Icon)
