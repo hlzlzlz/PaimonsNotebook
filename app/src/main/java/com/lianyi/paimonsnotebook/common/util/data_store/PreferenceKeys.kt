@@ -142,6 +142,19 @@ object PreferenceKeys {
         stringPreferencesKey("autoSignInLastCompletedMap")
     }
 
+    //便笺提醒
+    val EnableDailyNoteNotify by lazy {
+        booleanPreferencesKey("enableDailyNoteNotify")
+    }
+    //提醒检查间隔(分钟)
+    val DailyNoteNotifyInterval by lazy {
+        intPreferencesKey("dailyNoteNotifyInterval")
+    }
+    //已提醒条件抑制表 JSON Map<"$uid:$condition", true>
+    val DailyNoteNotifySuppressed by lazy {
+        stringPreferencesKey("dailyNoteNotifySuppressed")
+    }
+
     val StaticResourcesChannel by lazy {
         stringPreferencesKey("staticResourcesChannel")
     }

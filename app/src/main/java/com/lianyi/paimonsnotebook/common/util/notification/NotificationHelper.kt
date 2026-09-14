@@ -9,6 +9,7 @@ import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.lianyi.paimonsnotebook.R
 import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
 
@@ -17,13 +18,13 @@ object NotificationHelper {
     enum class Type {
         Normal,
         HighImportance,
-        Progress
+        Progress,
+        DailyNote
     }
 
     private const val NormalChannelId = "100"
     private const val HighImportanceNormalChannelId = "200"
-//    private const val DailyNoteChannelId = "1"
-//    private const val TravellerNoteChannelId = "2"
+    private const val DailyNoteChannelId = "300"
 
     const val NormalNotificationId = 10000
     const val HighNotificationId = 20000
@@ -54,6 +55,12 @@ object NotificationHelper {
                         NotificationManager.IMPORTANCE_HIGH,
                         "派蒙笔记本重要通知频道",
                         true),
+                    getNotificationChannel(
+                        DailyNoteChannelId,
+                        "便笺提醒",
+                        NotificationManager.IMPORTANCE_HIGH,
+                        "实时便笺树脂、委托、派遣等状态提醒",
+                        true),
                 ).forEach {
                     createNotificationChannel(it)
                 }
@@ -62,16 +69,29 @@ object NotificationHelper {
     }
 
 
+    //通知权限被用户关闭时直接跳过,避免无效的notify调用
+    private fun canPost(): Boolean =
+        NotificationManagerCompat.from(mContext).areNotificationsEnabled()
+
     fun buildNormalNotification(
         title: String,
         content: String,
         type: Type = Type.Normal,
         intent: Intent = Intent(),
         autoCancel: Boolean = false,
+        notificationId: Int = NormalNotificationId,
     ): Int {
 
-        val pendingIntent =
-            PendingIntent.getActivity(mContext, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        if (!canPost()) {
+            return notificationId
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            mContext,
+            notificationId,
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_IMMUTABLE
+        )
 
         val channelId = getChannelIdByType(type)
 
@@ -83,9 +103,9 @@ object NotificationHelper {
             .setContentIntent(pendingIntent)
             .build()
 
-        mManager.notify(NormalNotificationId, build)
+        mManager.notify(notificationId, build)
 
-        return NormalNotificationId
+        return notificationId
     }
 
     fun buildHighImportanceNotification(
@@ -94,10 +114,19 @@ object NotificationHelper {
         type: Type = Type.HighImportance,
         intent: Intent = Intent(),
         autoCancel: Boolean = false,
+        notificationId: Int = HighNotificationId,
     ): Int {
 
-        val pendingIntent =
-            PendingIntent.getActivity(mContext, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        if (!canPost()) {
+            return notificationId
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            mContext,
+            notificationId,
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_IMMUTABLE
+        )
 
         val channelId = getChannelIdByType(type)
 
@@ -112,9 +141,9 @@ object NotificationHelper {
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)// 屏幕可见性，锁屏时，显示icon和标题，内容隐藏
             .build()
 
-        mManager.notify(NormalNotificationId, build)
+        mManager.notify(notificationId, build)
 
-        return NormalNotificationId
+        return notificationId
     }
 
     fun buildProgressNotification(
@@ -144,11 +173,20 @@ object NotificationHelper {
         type: Type = Type.Normal,
         intent: Intent =Intent(),
         autoCancel: Boolean = false,
+        notificationId: Int = LargeTextNotificationId,
     ):Pair<Int,NotificationCompat.Builder> {
         val channelId = getChannelIdByType(type)
 
-        val pendingIntent =
-            PendingIntent.getActivity(mContext, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        if (!canPost()) {
+            return notificationId to NotificationCompat.Builder(mContext, channelId)
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            mContext,
+            notificationId,
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_IMMUTABLE
+        )
 
         val builder = NotificationCompat.Builder(mContext, channelId)
             .setContentTitle(title)
@@ -158,9 +196,9 @@ object NotificationHelper {
             .setAutoCancel(autoCancel)
             .setContentIntent(pendingIntent)
 
-        mManager.notify(LargeTextNotificationId, builder.build())
+        mManager.notify(notificationId, builder.build())
 
-        return LargeTextNotificationId to builder
+        return notificationId to builder
     }
 
     fun sendNotify(notificationId: Int, builder: NotificationCompat.Builder) {
@@ -190,8 +228,7 @@ object NotificationHelper {
 
     private fun getChannelIdByType(type: Type) =
         when (type) {
-//            Type.DailyNote -> DailyNoteChannelId
-//            Type.TravellerNote -> TravellerNoteChannelId
+            Type.DailyNote -> DailyNoteChannelId
             Type.HighImportance -> HighImportanceNormalChannelId
             else -> NormalChannelId
         }

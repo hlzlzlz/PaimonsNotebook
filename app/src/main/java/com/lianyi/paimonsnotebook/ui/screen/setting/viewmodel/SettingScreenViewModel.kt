@@ -1,12 +1,18 @@
 package com.lianyi.paimonsnotebook.ui.screen.setting.viewmodel
 
+import android.Manifest
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.Icon
+import androidx.compose.material.Text
+import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +34,7 @@ import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
 import com.lianyi.paimonsnotebook.common.extension.string.notify
 import com.lianyi.paimonsnotebook.common.extension.string.show
 import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
+import com.lianyi.paimonsnotebook.common.service.daily_note_notify.DailyNoteNotifyScheduler
 import com.lianyi.paimonsnotebook.common.service.sign_in.AutoSignInScheduler
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
 import com.lianyi.paimonsnotebook.common.util.enums.DownloadState
@@ -73,6 +80,26 @@ class SettingScreenViewModel : ViewModel() {
     }
 
     private var downloadJob: Job? = null
+
+    //API33+通知权限未授予时向当前前台Activity发起系统授权弹窗
+    //Android13以下无运行时通知权限,areNotificationsEnabled反映的是总开关
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return
+        }
+
+        if (NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+            return
+        }
+
+        PaimonsNotebookApplication.currentActivity?.let {
+            ActivityCompat.requestPermissions(
+                it,
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                10086
+            )
+        }
+    }
 
     val settings = listOf(
         OptionListData(
@@ -237,6 +264,52 @@ class SettingScreenViewModel : ViewModel() {
             slot = {
                 SettingsOptionSwitch(
                     checked = configurationData.enableAutoSignIn
+                )
+            }
+        ),
+        OptionListData(
+            name = "实时便笺提醒",
+            description = "默认关闭,开启后App将在后台定期检查树脂、家园币、每日委托、参量物质、探索派遣,满足条件时发送系统通知(每种条件只提醒一次,不会重复打扰)",
+            onClick = {
+                viewModelScope.launchIO {
+                    val newValue = !configurationData.enableDailyNoteNotify
+                    PreferenceKeys.EnableDailyNoteNotify.editValue(newValue)
+
+                    if (newValue) {
+                        requestNotificationPermissionIfNeeded()
+                    }
+
+                    DailyNoteNotifyScheduler.setEnabled(
+                        newValue,
+                        configurationData.dailyNoteNotifyInterval
+                    )
+                }
+            },
+            slot = {
+                SettingsOptionSwitch(
+                    checked = configurationData.enableDailyNoteNotify
+                )
+            }
+        ),
+        OptionListData(
+            name = "便笺提醒间隔",
+            description = "点击在30分钟与1小时之间切换(受系统调度影响,实际触发时间可能略有延迟)",
+            onClick = {
+                viewModelScope.launchIO {
+                    val newInterval =
+                        if (configurationData.dailyNoteNotifyInterval <= 30) 60 else 30
+
+                    PreferenceKeys.DailyNoteNotifyInterval.editValue(newInterval)
+
+                    if (configurationData.enableDailyNoteNotify) {
+                        DailyNoteNotifyScheduler.setEnabled(true, newInterval)
+                    }
+                }
+            },
+            slot = {
+                Text(
+                    text = if (configurationData.dailyNoteNotifyInterval <= 30) "每30分钟" else "每1小时",
+                    fontSize = 14.sp
                 )
             }
         ),

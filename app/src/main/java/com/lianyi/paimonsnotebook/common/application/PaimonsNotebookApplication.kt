@@ -17,6 +17,7 @@ import coil.disk.DiskCache
 import com.lianyi.paimonsnotebook.BuildConfig
 import com.lianyi.paimonsnotebook.R
 import com.lianyi.paimonsnotebook.common.core.enviroment.CoreEnvironment
+import com.lianyi.paimonsnotebook.common.service.daily_note_notify.DailyNoteNotifyScheduler
 import com.lianyi.paimonsnotebook.common.service.sign_in.AutoSignInScheduler
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
 import com.lianyi.paimonsnotebook.common.extension.scope.launchIO
@@ -83,6 +84,9 @@ class PaimonsNotebookApplication : Application(), ImageLoaderFactory {
 
         //自动签到任务调度
         AutoSignInScheduler.ensureScheduled()
+
+        //便笺提醒任务调度
+        DailyNoteNotifyScheduler.ensureScheduled()
 
         //跟踪前台Activity
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
