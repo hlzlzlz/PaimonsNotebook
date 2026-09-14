@@ -516,6 +516,9 @@ object ApiEndpoints {
     //游戏角色详情
     const val gameRecordCharacterDetail = "${ApiTakumiRecordApi}/character/detail"
 
+    //活动与卡池日历(POST role_id/server)
+    const val gameRecordActCalendar = "${ApiTakumiRecordApi}/act_calendar"
+
 
     //保存设备
     const val saveDevice = "${BbsApiMiYouSheApiHub}/api/saveDevice"

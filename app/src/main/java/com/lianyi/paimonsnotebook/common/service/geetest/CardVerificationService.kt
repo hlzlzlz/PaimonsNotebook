@@ -41,6 +41,7 @@ object CardVerificationService {
     const val PATH_CHARACTER_LIST = "https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/character/list"
     const val PATH_ROLE_COMBAT = "https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/role_combat"
     const val PATH_HARD_CHALLENGE = "https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/hard_challenge"
+    const val PATH_ACT_CALENDAR = "https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/act_calendar"
 
     private val client = GameRecordClient()
 

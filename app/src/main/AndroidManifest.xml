@@ -70,6 +70,9 @@
             android:name=".ui.screen.weekly.view.WeeklyCalendarScreen"
             android:theme="@style/Theme.PaimonsNotebook" />
         <activity
+            android:name=".ui.screen.activity_calendar.view.ActivityCalendarScreen"
+            android:theme="@style/Theme.PaimonsNotebook" />
+        <activity
             android:name=".ui.screen.player_character.view.PlayerCharacterDetailScreen"
             android:theme="@style/Theme.PaimonsNotebook" />
         <activity

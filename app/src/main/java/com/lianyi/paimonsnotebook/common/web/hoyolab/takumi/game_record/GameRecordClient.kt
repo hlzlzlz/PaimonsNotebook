@@ -18,6 +18,7 @@ import com.lianyi.paimonsnotebook.common.web.ApiEndpoints
 import com.lianyi.paimonsnotebook.common.web.hoyolab.cookie.CookieHelper
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.binding.UserGameRoleData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.abyss.SpiralAbyssData
+import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.act_calendar.ActCalendarData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.character.CharacterDetailData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.character.CharacterListData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.daily_note.DailyNoteData
@@ -232,5 +233,27 @@ class GameRecordClient {
         }.post(this)
 
     }.getAsJson<CharacterDetailData>()
+
+    //活动与卡池日历
+    suspend fun getActCalendar(
+        user: UserAndUid,
+        challenge: String = "",
+    ) = buildRequest {
+        url(ApiEndpoints.gameRecordActCalendar)
+
+        setUserWithFp(user.userEntity, CookieHelper.Type.Cookie)
+
+        setDynamicSecret(DynamicSecret.SaltType.X6, DynamicSecret.Version.Gen2)
+
+        if (challenge.isNotBlank() && challenge != "error") {
+            setXRpcChallenge(challenge)
+        }
+
+        buildMap {
+            put("role_id", user.playerUid.value)
+            put("server", user.playerUid.region)
+        }.post(this)
+
+    }.getAsJson<ActCalendarData>()
 
 }

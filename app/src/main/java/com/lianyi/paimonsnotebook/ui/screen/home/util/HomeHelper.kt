@@ -24,6 +24,7 @@ import com.lianyi.paimonsnotebook.ui.screen.items.view.CultivationMaterialScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.MonsterScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.ReliquaryScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.WeaponScreen
+import com.lianyi.paimonsnotebook.ui.screen.activity_calendar.view.ActivityCalendarScreen
 import com.lianyi.paimonsnotebook.ui.screen.weekly.view.WeeklyCalendarScreen
 import com.lianyi.paimonsnotebook.ui.screen.player_character.view.PlayerCharacterScreen
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -131,9 +132,15 @@ object HomeHelper {
         ),
         ModalItemData(
             name = "旅行者札记",
-            icon = R.drawable.ic_genshin_game_material,
+            icon = R.drawable.ic_genshin_game_ggc_book,
             target = TravelersDiaryScreen::class.java,
             sortIndex = 95
+        ),
+        ModalItemData(
+            name = "活动日历",
+            icon = R.drawable.ic_list_square,
+            target = ActivityCalendarScreen::class.java,
+            sortIndex = 96
         ),
         ModalItemData(
             name = "战斗记录",
