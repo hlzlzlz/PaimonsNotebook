@@ -2,6 +2,7 @@ package com.lianyi.paimonsnotebook.ui.screen.setting.viewmodel
 
 import android.Manifest
 import android.content.Intent
+import android.provider.Settings
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
@@ -35,6 +36,7 @@ import com.lianyi.paimonsnotebook.common.extension.string.notify
 import com.lianyi.paimonsnotebook.common.extension.string.show
 import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
 import com.lianyi.paimonsnotebook.common.service.daily_note_notify.DailyNoteNotifyScheduler
+import com.lianyi.paimonsnotebook.common.service.daily_note_notify.ForegroundGameHelper
 import com.lianyi.paimonsnotebook.common.service.sign_in.AutoSignInScheduler
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
 import com.lianyi.paimonsnotebook.common.util.enums.DownloadState
@@ -325,6 +327,49 @@ class SettingScreenViewModel : ViewModel() {
                 Text(
                     text = if (configurationData.dailyNoteNotifyInterval <= 30) "每30分钟" else "每1小时",
                     fontSize = 14.sp
+                )
+            }
+        ),
+        OptionListData(
+            name = "树脂提醒阈值",
+            description = "点击在80/120/160/200之间循环切换,树脂达到该值时发送提醒",
+            onClick = {
+                viewModelScope.launchIO {
+                    val thresholds = listOf(80, 120, 160, 200)
+
+                    val newThreshold =
+                        thresholds[(thresholds.indexOf(configurationData.dailyNoteResinNotifyThreshold) + 1) % thresholds.size]
+
+                    PreferenceKeys.DailyNoteResinNotifyThreshold.editValue(newThreshold)
+                }
+            },
+            slot = {
+                Text(
+                    text = "≥${configurationData.dailyNoteResinNotifyThreshold}",
+                    fontSize = 14.sp
+                )
+            }
+        ),
+        OptionListData(
+            name = "游戏运行时免打扰",
+            description = "默认关闭。开启后原神运行时不发送便笺提醒,退出游戏后的下一轮检查会重新提醒。开启需要授予使用情况访问权限",
+            onClick = {
+                viewModelScope.launchIO {
+                    val newValue = !configurationData.enableDailyNoteNotifyDndGaming
+                    PreferenceKeys.DailyNoteNotifyDndGaming.editValue(newValue)
+
+                    if (newValue && !ForegroundGameHelper.hasUsageAccess(context)) {
+                        //引导到系统"使用情况访问"授权页
+                        PaimonsNotebookApplication.currentActivity?.startActivity(
+                            Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }
+                }
+            },
+            slot = {
+                SettingsOptionSwitch(
+                    checked = configurationData.enableDailyNoteNotifyDndGaming
                 )
             }
         ),

@@ -45,6 +45,12 @@ object SettingsHelper {
                         ?: ConfigurationData.ENABLE_DAILY_NOTE_NOTIFY_DEFAULT
                     dailyNoteNotifyInterval = preferences[PreferenceKeys.DailyNoteNotifyInterval]
                         ?: ConfigurationData.DAILY_NOTE_NOTIFY_INTERVAL_DEFAULT
+                    dailyNoteResinNotifyThreshold =
+                        preferences[PreferenceKeys.DailyNoteResinNotifyThreshold]
+                            ?: ConfigurationData.DAILY_NOTE_RESIN_THRESHOLD_DEFAULT
+                    enableDailyNoteNotifyDndGaming =
+                        preferences[PreferenceKeys.DailyNoteNotifyDndGaming]
+                            ?: ConfigurationData.ENABLE_DAILY_NOTE_DND_GAMING_DEFAULT
                 }
 
                 _ConfigurationData.emit(configurationData)

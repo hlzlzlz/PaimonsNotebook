@@ -43,6 +43,12 @@ class ConfigurationData {
     //便笺提醒检查间隔(分钟)
     var dailyNoteNotifyInterval by mutableStateOf(DAILY_NOTE_NOTIFY_INTERVAL_DEFAULT)
 
+    //树脂提醒阈值
+    var dailyNoteResinNotifyThreshold by mutableStateOf(DAILY_NOTE_RESIN_THRESHOLD_DEFAULT)
+
+    //原神运行时免打扰
+    var enableDailyNoteNotifyDndGaming by mutableStateOf(ENABLE_DAILY_NOTE_DND_GAMING_DEFAULT)
+
     companion object {
         val homeScreenDisplayStateDefault = HomeScreenDisplayState.Community
         const val ENABLE_OVERLAY_DEFAULT = false
@@ -54,6 +60,8 @@ class ConfigurationData {
         const val ENABLE_AUTO_RESIGN_DEFAULT = false
         const val ENABLE_DAILY_NOTE_NOTIFY_DEFAULT = false
         const val DAILY_NOTE_NOTIFY_INTERVAL_DEFAULT = 30
+        const val DAILY_NOTE_RESIN_THRESHOLD_DEFAULT = 120
+        const val ENABLE_DAILY_NOTE_DND_GAMING_DEFAULT = false
 
         //重置选项
         suspend fun resetConfig() {
@@ -69,6 +77,8 @@ class ConfigurationData {
                 it[PreferenceKeys.EnableAutoReSign] = ENABLE_AUTO_RESIGN_DEFAULT
                 it[PreferenceKeys.EnableDailyNoteNotify] = ENABLE_DAILY_NOTE_NOTIFY_DEFAULT
                 it[PreferenceKeys.DailyNoteNotifyInterval] = DAILY_NOTE_NOTIFY_INTERVAL_DEFAULT
+                it[PreferenceKeys.DailyNoteResinNotifyThreshold] = DAILY_NOTE_RESIN_THRESHOLD_DEFAULT
+                it[PreferenceKeys.DailyNoteNotifyDndGaming] = ENABLE_DAILY_NOTE_DND_GAMING_DEFAULT
             }
         }
     }

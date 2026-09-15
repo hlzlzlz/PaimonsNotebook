@@ -179,6 +179,16 @@ object PreferenceKeys {
         stringPreferencesKey("dailyNoteNotifySuppressed")
     }
 
+    //树脂提醒阈值
+    val DailyNoteResinNotifyThreshold by lazy {
+        intPreferencesKey("dailyNoteResinNotifyThreshold")
+    }
+
+    //原神运行时免打扰
+    val DailyNoteNotifyDndGaming by lazy {
+        booleanPreferencesKey("dailyNoteNotifyDndGaming")
+    }
+
     val StaticResourcesChannel by lazy {
         stringPreferencesKey("staticResourcesChannel")
     }

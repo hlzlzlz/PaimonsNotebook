@@ -22,11 +22,11 @@ import kotlinx.coroutines.flow.map
 * */
 object DailyNoteNotifyService {
 
-    //树脂提醒阈值(绝对值)
-    private const val RESIN_NOTIFY_THRESHOLD = 120
-
     //家园币提醒阈值
     private const val HOME_COIN_NOTIFY_THRESHOLD = 1800
+
+    //树脂提醒阈值默认值(可在设置中调整)
+    private const val RESIN_NOTIFY_THRESHOLD_DEFAULT = 120
 
     //通知id起点,按uid散列分配不同通知槽,避免多账号互相覆盖
     private const val NOTIFY_ID_BASE = 30000
@@ -38,8 +38,14 @@ object DailyNoteNotifyService {
     )
 
     suspend fun checkAndNotify() {
-        val enabled = PaimonsNotebookApplication.context.datastorePf.data.map {
-            it[PreferenceKeys.EnableDailyNoteNotify] ?: false
+        val context = PaimonsNotebookApplication.context
+
+        val (enabled, resinThreshold, dndGaming) = context.datastorePf.data.map {
+            Triple(
+                it[PreferenceKeys.EnableDailyNoteNotify] ?: false,
+                it[PreferenceKeys.DailyNoteResinNotifyThreshold] ?: RESIN_NOTIFY_THRESHOLD_DEFAULT,
+                it[PreferenceKeys.DailyNoteNotifyDndGaming] ?: false
+            )
         }.first()
 
         if (!enabled) {
@@ -52,6 +58,9 @@ object DailyNoteNotifyService {
         if (dailyNotes.isEmpty()) {
             return
         }
+
+        //免打扰:原神前台时本周期不写抑制也不通知,退出游戏后下一周期重新评估
+        val gamingDnd = dndGaming && ForegroundGameHelper.isGameForeground(context)
 
         val suppressed = readSuppressed().toMutableMap()
         var changed = false
@@ -78,7 +87,7 @@ object DailyNoteNotifyService {
             //逐项评估,满足则记录条件键与提醒文案
             val triggered = mutableListOf<Pair<String, String>>()
 
-            if (data.current_resin >= RESIN_NOTIFY_THRESHOLD) {
+            if (data.current_resin >= resinThreshold) {
                 triggered += "resin" to
                         "树脂 ${data.current_resin}/${data.max_resin}" +
                         (if (data.current_resin >= data.max_resin) "（已满）" else "")
@@ -108,11 +117,11 @@ object DailyNoteNotifyService {
             val lines = mutableListOf<String>()
             val triggeredKeys = triggered.map { it.first }.toSet()
 
-            //上升沿:满足且未提醒过 -> 提醒并抑制
+            //上升沿:满足且未提醒过 -> 提醒并抑制;免打扰期间保持未武装,退出游戏后再提醒
             triggered.forEach { (key, text) ->
                 val suppressKey = "$uid:$key"
 
-                if (suppressKey !in suppressed) {
+                if (suppressKey !in suppressed && !gamingDnd) {
                     suppressed[suppressKey] = true
                     changed = true
                     lines += text
