@@ -127,6 +127,7 @@ class HomeScreen : BaseActivity() {
                                         noticeList = viewModel.noticeList,
                                         travelersDiaryData = viewModel.travelersDiaryData,
                                         cardPools = viewModel.cardPools,
+                                        miyoliveCodes = viewModel.miyoliveCodes,
                                         goPostDetail = viewModel::goPostDetail
                                     )
                                 }

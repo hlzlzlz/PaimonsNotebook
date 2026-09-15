@@ -433,6 +433,13 @@ object ApiEndpoints {
     //近期活动与攻略
     const val NearActivity = "${ApiStaticCommon}/blackboard/ys_obc/v1/home/position?app_sn=ys_obc"
 
+    //米游社首页信息(内含前瞻直播入口)
+    const val BbsHomeNew = "${BbsApiMiYouShe}/apihub/api/home/new?gids=2"
+
+    //前瞻直播兑换码(header: x-rpc-act_id)
+    fun MiyoliveRefreshCode() =
+        "https://api-takumi-static.mihoyo.com/event/miyolive/refreshCode?time=${System.currentTimeMillis() / 1000}"
+
     //祈愿记录卡池
     const val GachaPool = "${ApiTakumiCommon}/blackboard/ys_obc/v1/gacha_pool?app_sn=ys_obc"
 

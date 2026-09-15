@@ -18,6 +18,7 @@ import com.lianyi.paimonsnotebook.common.data.hoyolab.user.User
 import com.lianyi.paimonsnotebook.common.data.hoyolab.user.UserAndUid
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.GameRecordClient
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.act_calendar.ActCalendarData
+import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.event.miyolive.MiyoliveCodeData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.ledger.LedgerData
 import com.lianyi.paimonsnotebook.common.database.daily_note.util.DailyNoteHelper
 import com.lianyi.paimonsnotebook.common.database.user.util.AccountHelper
@@ -70,6 +71,9 @@ class HomeScreenViewModel : ViewModel() {
 
     //当期卡池(活动日历页已删除,卡池改在首页展示)
     val cardPools = mutableStateListOf<ActCalendarData.CardPool>()
+
+    //前瞻直播兑换码(miyolive接口,非直播时段为空)
+    val miyoliveCodes = mutableStateListOf<MiyoliveCodeData.CodeWrapper>()
 
     private val gameRecordClient by lazy {
         GameRecordClient()
@@ -163,6 +167,44 @@ class HomeScreenViewModel : ViewModel() {
             getWebHome()
             getOfficialRecommendedPosts()
             getNearActivity()
+            getMiyoliveCodes()
+        }
+    }
+
+    /*
+    * 获取前瞻直播兑换码
+    * 从米游社首页信息中取直播入口,提取act_id后调miyolive接口;
+    * 非前瞻时段或任一步失败都静默跳过
+    * */
+    private suspend fun getMiyoliveCodes() {
+        val homeNew = webHomeClient.getNewHomeInfo()
+
+        if (!homeNew.success) {
+            return
+        }
+
+        val liveUrl = homeNew.data?.lives?.firstOrNull()?.data?.live_url
+            ?: homeNew.data?.navigator?.firstOrNull {
+                it.name == "直播兑换码" || it.name == "前瞻直播"
+            }?.app_path
+
+        if (liveUrl.isNullOrBlank()) {
+            return
+        }
+
+        val actId = Regex("act_id=([^&]+)").find(liveUrl)?.groupValues?.get(1)
+
+        if (actId.isNullOrBlank()) {
+            return
+        }
+
+        val codeResult = webHomeClient.refreshMiyoliveCode(actId)
+
+        if (codeResult.success) {
+            val codes = codeResult.data?.code_list.orEmpty().filterNot { it.code.isNullOrBlank() }
+
+            miyoliveCodes.clear()
+            miyoliveCodes.addAll(codes)
         }
     }
 
@@ -293,7 +335,8 @@ class HomeScreenViewModel : ViewModel() {
             listOf(
                 async { getWebHome() },
                 async { getOfficialRecommendedPosts() },
-                async { getNearActivity() }
+                async { getNearActivity() },
+                async { getMiyoliveCodes() }
             ).joinAll()
 
             isRefreshing = false

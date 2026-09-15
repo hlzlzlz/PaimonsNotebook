@@ -26,8 +26,10 @@ import com.lianyi.paimonsnotebook.common.web.hoyolab.bbs.NearActivityData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.bbs.OfficialRecommendedPostsData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.bbs.WebHomeData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.act_calendar.ActCalendarData
+import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.event.miyolive.MiyoliveCodeData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.ledger.LedgerData
 import com.lianyi.paimonsnotebook.ui.screen.home.components.card.card_pool.CardPoolCard
+import com.lianyi.paimonsnotebook.ui.screen.home.components.card.miyolive.MiyoliveCodeCard
 import com.lianyi.paimonsnotebook.ui.screen.home.components.card.travelers_diary.TravelersDiaryCard
 import com.lianyi.paimonsnotebook.ui.screen.travelers_diary.view.TravelersDiaryScreen
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
@@ -45,6 +47,7 @@ internal fun HomeContent(
     noticeList: List<OfficialRecommendedPostsData.OfficialRecommendedPost>,
     travelersDiaryData: LedgerData?,
     cardPools: List<ActCalendarData.CardPool>,
+    miyoliveCodes: List<MiyoliveCodeData.CodeWrapper>,
     goPostDetail: (String, PostType) -> Unit,
 ) {
     Box {
@@ -104,6 +107,11 @@ internal fun HomeContent(
             //当期卡池
             item {
                 CardPoolCard(pools = cardPools)
+            }
+
+            //前瞻直播兑换码
+            item {
+                MiyoliveCodeCard(codes = miyoliveCodes)
             }
 
             //近期活动
