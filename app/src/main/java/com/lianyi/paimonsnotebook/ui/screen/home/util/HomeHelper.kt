@@ -24,6 +24,7 @@ import com.lianyi.paimonsnotebook.ui.screen.items.view.MonsterScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.ReliquaryScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.WeaponScreen
 import com.lianyi.paimonsnotebook.ui.screen.weekly.view.WeeklyCalendarScreen
+import com.lianyi.paimonsnotebook.ui.screen.sign_in_status.view.SignInStatusScreen
 import com.lianyi.paimonsnotebook.ui.screen.player_character.view.PlayerCharacterScreen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,6 +45,12 @@ object HomeHelper {
             icon = R.drawable.ic_moon,
             target = DailyNoteScreen::class.java,
             sortIndex = 10
+        ),
+        ModalItemData(
+            name = "签到记录",
+            icon = R.drawable.ic_gift,
+            target = SignInStatusScreen::class.java,
+            sortIndex = 15
         ),
         ModalItemData(
             name = "我的角色",

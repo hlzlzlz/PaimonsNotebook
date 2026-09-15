@@ -67,6 +67,9 @@
             android:name=".ui.screen.items.view.MonsterScreen"
             android:theme="@style/Theme.PaimonsNotebook" />
         <activity
+            android:name=".ui.screen.sign_in_status.view.SignInStatusScreen"
+            android:theme="@style/Theme.PaimonsNotebook" />
+        <activity
             android:name=".ui.screen.weekly.view.WeeklyCalendarScreen"
             android:theme="@style/Theme.PaimonsNotebook" />
         <activity
