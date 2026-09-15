@@ -30,6 +30,7 @@ import com.lianyi.paimonsnotebook.common.extension.string.notify
 import com.lianyi.paimonsnotebook.common.extension.string.show
 import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
 import com.lianyi.paimonsnotebook.common.util.file.FileHelper
+import com.lianyi.paimonsnotebook.common.util.system_service.SystemService
 import com.lianyi.paimonsnotebook.common.util.metadata.genshin.uiaf.UIAFHelper
 import com.lianyi.paimonsnotebook.common.util.time.TimeHelper
 import com.lianyi.paimonsnotebook.ui.screen.achievement.service.AchievementExportService
@@ -155,6 +156,13 @@ class AchievementOptionScreenViewModel : ViewModel() {
             onClick = {
                 onImportAchievementUIAFJson()
             }
+        ),
+        OptionListData(
+            name = "UIAF Json剪贴板导入",
+            description = "读取剪贴板中的UIAF Json数据导入(先在其他设备或软件中复制UIAF内容)",
+            onClick = {
+                onImportAchievementUIAFFromClipboard()
+            }
         )
     )
 
@@ -166,6 +174,50 @@ class AchievementOptionScreenViewModel : ViewModel() {
         }
 
         launchSelectJsonActivity()
+    }
+
+    //从剪贴板导入UIAF:内容写入临时文件后走统一导入流程
+    private fun onImportAchievementUIAFFromClipboard() {
+        if (userList.isEmpty()) {
+            "看来你还没有添加成就用户,添加一个成就用户以指定导入的目标".warnNotify(false)
+            return
+        }
+
+        val text = SystemService.getClipBoardText()
+
+        if (text.isNullOrBlank() || !text.contains("uiaf_version")) {
+            "剪贴板内容不是有效的UIAF数据".errorNotify()
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val file = FileHelper.getUIAFJsonSaveFile("clipboard_${System.currentTimeMillis()}")
+
+            file.writeText(text)
+
+            activityResultFile = file
+
+            val resultInfo = importService.tryGetUIAFJsonInfo(file)
+
+            if (resultInfo == null) {
+                "剪贴板内容解析失败,请确认复制的是完整的UIAF Json".errorNotify()
+                return@launch
+            }
+
+            resultInfo.apply {
+                importPropertyList.clear()
+
+                importPropertyList +=
+                    listOf(
+                        "UIAF版本" to uiaf_version,
+                        "记录来源" to export_app,
+                        "导出程序版本" to export_app_version,
+                        "导出时间" to TimeHelper.getTime(export_timestamp),
+                    )
+
+                showImportResultDialog = true
+            }
+        }
     }
 
     val exportList = listOf(

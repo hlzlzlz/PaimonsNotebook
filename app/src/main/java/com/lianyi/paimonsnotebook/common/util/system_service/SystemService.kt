@@ -59,6 +59,10 @@ object SystemService {
         clipboardManager.setPrimaryClip(ClipData.newPlainText(label, text))
     }
 
+    //读取剪贴板文本(无文本内容时返回null)
+    fun getClipBoardText(): String? =
+        clipboardManager.primaryClip?.getItemAt(0)?.text?.toString()
+
     //安装程序
     fun installAndroidApplication(file: File) {
         context.startActivity(
