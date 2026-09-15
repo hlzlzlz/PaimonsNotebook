@@ -16,6 +16,7 @@ import com.lianyi.paimonsnotebook.common.database.cultivate.entity.CultivateEnti
 import com.lianyi.paimonsnotebook.common.database.cultivate.entity.CultivateItemMaterials
 import com.lianyi.paimonsnotebook.common.database.cultivate.entity.CultivateItems
 import com.lianyi.paimonsnotebook.common.extension.scope.launchIO
+import com.lianyi.paimonsnotebook.common.util.cultivation.ResinStatisticsCalculator
 import com.lianyi.paimonsnotebook.common.extension.scope.withContextMain
 import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
@@ -85,6 +86,10 @@ class CultivateProjectScreenViewModel : ViewModel() {
     val overallMaterialBaseInfoGroupList = mutableStateListOf<List<MaterialBaseInfo>>()
 
     val overallMaterialBaseInfoGroupListFlatten = mutableStateListOf<MaterialBaseInfo>()
+
+    //树脂预估(胡桃公式,世界等级9期望)
+    var resinStatisticsResult by mutableStateOf<ResinStatisticsCalculator.ResinResult?>(null)
+        private set
 
     /*
     * 材料总览实体分组
@@ -541,6 +546,10 @@ class CultivateProjectScreenViewModel : ViewModel() {
             overallMaterialBaseInfoGroupListFlatten += tempOverallMaterialBaseInfoGroupListFlatten
             overallEntityBaseInfoMap += tempOverallEntityBaseInfoMap
             entityCultivateItemsPairList += tempPairList
+
+            resinStatisticsResult = ResinStatisticsCalculator.calculate(
+                tempOverallMaterialBaseInfoGroupListFlatten.map { it.material to it.lackCount }
+            )
 
             loadingState = LoadingState.Success
         }

@@ -123,7 +123,8 @@ class CultivateProjectScreen : BaseActivity() {
                                     overallMaterialBaseInfoGroupListFlatten = viewModel.overallMaterialBaseInfoGroupListFlatten,
                                     onShowMaterialInfoPopupDialog = viewModel::onShowMaterialInfoPopupDialog,
                                     onShowEntityInfoPopupDialog = viewModel::onShowEntityInfoPopupDialog,
-                                    getOverallEntityBaseInfoListByMaterialId = viewModel::getOverallEntityBaseInfoListByMaterialId
+                                    getOverallEntityBaseInfoListByMaterialId = viewModel::getOverallEntityBaseInfoListByMaterialId,
+                                    resinStatisticsResult = viewModel.resinStatisticsResult
                                 )
 
                                 else -> CultivateProjectPage()
