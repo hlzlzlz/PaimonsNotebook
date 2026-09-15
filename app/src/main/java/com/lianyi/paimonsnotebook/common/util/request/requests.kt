@@ -4,9 +4,7 @@ import android.os.Build
 import com.google.gson.Gson
 import com.lianyi.paimonsnotebook.common.core.enviroment.CoreEnvironment
 import com.lianyi.paimonsnotebook.common.data.ResultData
-import com.lianyi.paimonsnotebook.common.extension.request.setDeviceInfoHeaders
 import com.lianyi.paimonsnotebook.common.extension.request.setUserAgent
-import com.lianyi.paimonsnotebook.common.extension.request.setXRpcAppInfo
 import com.lianyi.paimonsnotebook.common.util.parameter.getParameterizedType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -37,14 +35,29 @@ val defaultOkHttpClient by lazy {
         retryOnConnectionFailure(true)
 
         addInterceptor {
-            val request = it.request().newBuilder()
-            request.addHeader("x-rpc-sys_version", Build.VERSION.RELEASE)
-            request.addHeader("x-rpc-channel", "miyousheluodi")
-            request.addHeader("User-Agent", CoreEnvironment.HoyolabMobileUA)
+            val original = it.request()
+            val request = original.newBuilder()
 
-            request.setXRpcAppInfo()
+            //只补缺失的默认头:请求自己声明过的值不重复追加,
+            //否则device_fp/client_type等会发两份互相矛盾,反而被风控判定为脚本特征
+            fun addIfAbsent(name: String, value: String) {
+                if (original.header(name) == null) {
+                    request.addHeader(name, value)
+                }
+            }
 
-            request.setDeviceInfoHeaders()
+            addIfAbsent("x-rpc-sys_version", Build.VERSION.RELEASE)
+            addIfAbsent("x-rpc-channel", "miyousheluodi")
+            addIfAbsent("User-Agent", CoreEnvironment.HoyolabMobileUA)
+
+            addIfAbsent("x-rpc-app_version", CoreEnvironment.XrpcVersion)
+            addIfAbsent("x-rpc-client_type", CoreEnvironment.ClientType)
+            addIfAbsent("x-rpc-app_id", "bll8iq97cem8")
+
+            addIfAbsent("x-rpc-device_fp", CoreEnvironment.DeviceFp)
+            addIfAbsent("x-rpc-device_name", "${Build.BRAND}%20${Build.MODEL}")
+            addIfAbsent("x-rpc-device_id", CoreEnvironment.DeviceId)
+            addIfAbsent("x-rpc-device_model", Build.MODEL)
 
             it.proceed(request.build())
         }

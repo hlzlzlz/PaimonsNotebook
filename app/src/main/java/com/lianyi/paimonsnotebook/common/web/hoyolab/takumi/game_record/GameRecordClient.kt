@@ -33,14 +33,15 @@ import com.lianyi.paimonsnotebook.common.database.user.entity.User as UserEntity
 class GameRecordClient {
 
     //携带Cookie的同时附带设备指纹,缺少指纹会被风控判定为不信任设备导致频繁触发1034验证
+    //用header()而非addHeader():覆盖式设置,避免与拦截器默认头叠加出重复值
     private fun Request.Builder.setUserWithFp(
         user: UserEntity,
         cookieType: Int,
     ): Request.Builder {
         setUser(user, cookieType)
-        addHeader("x-rpc-device_fp", CoreEnvironment.DeviceFp)
-        addHeader("x-rpc-device_id", CoreEnvironment.DeviceId)
-        addHeader("Referer", "https://webstatic.mihoyo.com")
+        header("x-rpc-device_fp", CoreEnvironment.DeviceFp)
+        header("x-rpc-device_id", CoreEnvironment.DeviceId)
+        header("Referer", "https://webstatic.mihoyo.com")
         return this
     }
 

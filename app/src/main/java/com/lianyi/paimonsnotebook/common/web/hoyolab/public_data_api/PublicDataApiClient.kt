@@ -19,12 +19,16 @@ import org.json.JSONObject
 class PublicDataApiClient {
 
     //获取fp
-    suspend fun getFp(fp: String = "${(1000000000..9999999999).random()}") = buildRequest {
+    suspend fun getFp(
+        fp: String = (1..13).map { "0123456789abcdef".random() }.joinToString("")
+    ) = buildRequest {
         url(ApiEndpoints.getFp)
 
         post(
             JSONObject().apply {
-                put("device_id", CoreEnvironment.BBSDeviceId)
+                //服务端校验收紧:device_id必须为16位十六进制(胡桃同为16位hex),
+                //使用36位UUID或16位随机字母数字会得到-502或空device_fp
+                put("device_id", CoreEnvironment.FpDeviceId)
                 put("seed_id", CoreEnvironment.DeviceIdSeed)
                 put("seed_time", "${CoreEnvironment.DeviceIdSeedTime}")
                 put("platform", CoreEnvironment.ClientType)
@@ -130,7 +134,8 @@ class PublicDataApiClient {
             put("appUpdateTimeDiff", System.currentTimeMillis() - (1000 + stableSeed(3, 9000)) * 10)
             put("deviceName", Build.MODEL)
             put("packageName", "com.mihoyo.hyperion")
-            put("packageVersion", "2.29.0")
+            //与请求头x-rpc-app_version/UA声明的米游社版本保持一致,版本号自相矛盾是低信任画像
+            put("packageVersion", CoreEnvironment.XrpcVersion)
             put("aaid", "")
             put("oaid", "")
             put("vaid", "")

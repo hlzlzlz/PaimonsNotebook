@@ -11,6 +11,16 @@ object PreferenceKeys {
         stringPreferencesKey("device_fp")
     }
 
+    //getFp接口专用device_id(16位十六进制)
+    val FpDeviceId by lazy {
+        stringPreferencesKey("fp_device_id")
+    }
+
+    //指纹最近一次成功签发时间,7天内启动跳过getFp(胡桃同款静默续期策略)
+    val DeviceFpUpdateTime by lazy {
+        longPreferencesKey("device_fp_update_time")
+    }
+
     //device_id
     val DeviceId by lazy {
         stringPreferencesKey("device_id")
