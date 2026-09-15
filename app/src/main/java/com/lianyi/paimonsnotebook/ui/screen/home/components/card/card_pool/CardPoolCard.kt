@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lianyi.core.ui.components.text.InfoText
 import com.lianyi.core.ui.components.text.PrimaryText
 import com.lianyi.paimonsnotebook.common.components.media.NetworkImage
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
@@ -54,24 +55,22 @@ fun CardPoolCard(pools: List<ActCalendarData.CardPool>) {
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
+                PrimaryText(
                     text = pool.pool_name,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f)
+                    textSize = 15.sp
                 )
 
                 Text(
                     text = formatCountdown(pool.countdown_seconds),
                     fontSize = 12.sp,
-                    color = Color(0xFFE65100)
+                    color = Color(0xFFE65100),
+                    fontWeight = FontWeight.SemiBold
                 )
             }
 
-            Text(
+            InfoText(
                 text = "${pool.version_name}版本 · ${pool.end_time?.format() ?: ""} 结束",
-                fontSize = 12.sp,
-                color = Black_60
+                fontSize = 12.sp
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

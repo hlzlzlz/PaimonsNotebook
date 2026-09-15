@@ -12,28 +12,25 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.AlertDialog
 import androidx.compose.material.Text
-import androidx.compose.material.TextButton
-import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import com.lianyi.paimonsnotebook.R
 import com.lianyi.paimonsnotebook.common.components.popup.IconTitleInformationPopupWindow
+import com.lianyi.core.ui.components.text.InfoText
+import com.lianyi.paimonsnotebook.common.components.dialog.LazyColumnDialog
+import com.lianyi.paimonsnotebook.common.components.widget.TextSlider
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.common.util.reliquary.ReliquaryScoreWeight
@@ -56,6 +53,7 @@ import com.lianyi.paimonsnotebook.ui.theme.PaimonsNotebookTheme
 import com.lianyi.paimonsnotebook.ui.theme.Primary
 import com.lianyi.paimonsnotebook.ui.theme.White
 import com.lianyi.paimonsnotebook.ui.theme.White_40
+import kotlin.math.roundToInt
 
 class PlayerCharacterDetailScreen : BaseActivity() {
 
@@ -276,91 +274,80 @@ class PlayerCharacterDetailScreen : BaseActivity() {
         )
 
         val values = remember {
-            mutableStateOf(weightLabels.associate { it.first to it.second.toString() })
+            mutableStateOf(weightLabels.associate { it.first to it.second.toFloat() })
         }
 
         var enableCustom by remember {
             mutableStateOf(viewModel.enableReliquaryScoreCustomWeight)
         }
 
-        AlertDialog(
+        LazyColumnDialog(
+            title = "圣遗物评分权重",
+            buttons = arrayOf("取消", "保存"),
             onDismissRequest = onDismiss,
-            title = { Text(text = "圣遗物评分权重", fontSize = 17.sp) },
-            text = {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("自动(推荐词条)" to false, "手动权重" to true).forEach { (label, mode) ->
-                            Text(
-                                text = label,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (enableCustom == mode) White else Black,
-                                modifier = Modifier
-                                    .radius(4.dp)
-                                    .background(if (enableCustom == mode) Primary else White_40)
-                                    .clickable { enableCustom = mode }
-                                    .padding(8.dp, 4.dp)
-                            )
-                        }
-                    }
-
-                    if (enableCustom) {
-                        Text(text = "各项0以上,0表示该项不计分", fontSize = 11.sp, color = Black_60)
-
-                        weightLabels.forEach { (label, _) ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(text = label, fontSize = 13.sp, modifier = Modifier.weight(1f))
-
-                                TextField(
-                                    value = values.value[label] ?: "",
-                                    onValueChange = { input ->
-                                        values.value = values.value.toMutableMap().apply {
-                                            put(label, input)
-                                        }
-                                    },
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                    modifier = Modifier.width(110.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
+            onClickButton = { index ->
+                if (index == 1) {
                     if (enableCustom) {
                         val weight = ReliquaryScoreWeight(
-                            critRate = values.value.getValue("暴击率").trim().toDoubleOrNull() ?: 0.0,
-                            critDmg = values.value.getValue("暴击伤害").trim().toDoubleOrNull() ?: 0.0,
-                            atkPercent = values.value.getValue("攻击%").trim().toDoubleOrNull() ?: 0.0,
-                            hpPercent = values.value.getValue("生命%").trim().toDoubleOrNull() ?: 0.0,
-                            defPercent = values.value.getValue("防御%").trim().toDoubleOrNull() ?: 0.0,
-                            chargeEfficiency = values.value.getValue("充能效率").trim().toDoubleOrNull() ?: 0.0,
-                            elementMastery = values.value.getValue("元素精通").trim().toDoubleOrNull() ?: 0.0
+                            critRate = values.value.getValue("暴击率").toDouble(),
+                            critDmg = values.value.getValue("暴击伤害").toDouble(),
+                            atkPercent = values.value.getValue("攻击%").toDouble(),
+                            hpPercent = values.value.getValue("生命%").toDouble(),
+                            defPercent = values.value.getValue("防御%").toDouble(),
+                            chargeEfficiency = values.value.getValue("充能效率").toDouble(),
+                            elementMastery = values.value.getValue("元素精通").toDouble()
                         )
 
                         viewModel.saveReliquaryScoreWeight(weight, enableCustom)
                     } else {
                         viewModel.saveReliquaryScoreWeight(viewModel.reliquaryScoreWeight, false)
                     }
-
-                    onDismiss.invoke()
-                }) {
-                    Text(text = "保存", color = Primary)
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismiss) {
-                    Text(text = "取消")
+
+                onDismiss.invoke()
+            }
+        ) {
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("自动(推荐词条)" to false, "手动权重" to true).forEach { (label, mode) ->
+                        Text(
+                            text = label,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (enableCustom == mode) White else Black,
+                            modifier = Modifier
+                                .radius(4.dp)
+                                .background(if (enableCustom == mode) Primary else White_40)
+                                .clickable { enableCustom = mode }
+                                .padding(8.dp, 4.dp)
+                        )
+                    }
                 }
             }
-        )
+
+            if (enableCustom) {
+                item {
+                    InfoText(text = "各项0以上,0表示该项不计分")
+                }
+            }
+
+            if (enableCustom) {
+                items(weightLabels.size) { index ->
+                    val (label, _) = weightLabels[index]
+
+                    TextSlider(
+                        value = values.value.getValue(label),
+                        onValueChange = { input ->
+                            values.value = values.value.toMutableMap().apply {
+                                put(label, (input * 10).roundToInt() / 10f)
+                            }
+                        },
+                        text = { "%.1f".format(it) },
+                        title = label,
+                        range = 0f..2f
+                    )
+                }
+            }
+        }
     }
 }

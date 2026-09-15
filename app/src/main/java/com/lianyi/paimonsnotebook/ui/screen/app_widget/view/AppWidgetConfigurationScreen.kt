@@ -1,5 +1,7 @@
 package com.lianyi.paimonsnotebook.ui.screen.app_widget.view
 
+import android.appwidget.AppWidgetManager
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -62,9 +64,19 @@ class AppWidgetConfigurationScreen : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+
+        //configure流程默认返回取消,保存成功后再置为OK
+        setResult(RESULT_CANCELED)
         viewModel.init(intent)
 
-        viewModel.finishActivity = this::finish
+        viewModel.finishActivity = {
+            //configure流程:保存成功后携带组件id返回RESULT_OK
+            setResult(
+                RESULT_OK,
+                Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, viewModel.configuration.appWidgetId)
+            )
+            finish()
+        }
 
         setContent {
             PaimonsNotebookTheme(this) {

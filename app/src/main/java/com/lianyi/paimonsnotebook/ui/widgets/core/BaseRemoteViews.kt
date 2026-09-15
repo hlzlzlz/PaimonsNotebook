@@ -284,18 +284,6 @@ open class BaseRemoteViews(
             }
         }
 
-        val textPaint = Paint().apply {
-            color = Color.RED
-            textSize = spToPx(30)
-            textAlign = Paint.Align.LEFT
-            isStrikeThruText = true
-            isUnderlineText = true
-
-            typeface = Typeface.create(Typeface.DEFAULT,Typeface.BOLD)
-        }
-
-        canvas.drawText("id:${appWidgetId}", bitmap.width / 2f, bitmap.height / 2f, textPaint)
-
         setImageViewBitmap(R.id.background, bitmap)
         bitmap.recycle()
     }

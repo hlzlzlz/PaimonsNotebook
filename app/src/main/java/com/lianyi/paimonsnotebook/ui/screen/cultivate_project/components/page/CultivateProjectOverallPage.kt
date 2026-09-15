@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lianyi.core.ui.components.text.InfoText
 import com.lianyi.core.ui.components.text.PrimaryText
 import com.lianyi.paimonsnotebook.ui.theme.Black
 import com.lianyi.paimonsnotebook.common.components.lazy.ContentSpacerLazyVerticalGrid
@@ -173,26 +174,22 @@ private fun ResinSummaryCard(result: ResinStatisticsCalculator.ResinResult?) {
             )
         }
 
+
         result.items.forEach { item ->
             Row(modifier = Modifier.fillMaxWidth()) {
-                Text(
+                InfoText(
                     text = item.title,
                     fontSize = 12.sp,
                     modifier = Modifier.weight(1f)
                 )
 
-                Text(
+                InfoText(
                     text = "${item.runCount}次 · ${item.totalResin}树脂",
-                    fontSize = 12.sp,
-                    color = Color.Gray
+                    fontSize = 12.sp
                 )
             }
         }
 
-        Text(
-            text = "按世界等级9单次掉落期望估算,仅供参考",
-            fontSize = 10.sp,
-            color = Color.Gray
-        )
+        InfoText(text = "按世界等级9单次掉落期望估算,仅供参考")
     }
 }

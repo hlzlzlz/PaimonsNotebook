@@ -42,6 +42,7 @@ import com.lianyi.paimonsnotebook.common.components.layout.column.TabBarColumnLa
 import com.lianyi.paimonsnotebook.common.components.loading.ContentLoadingLayout
 import com.lianyi.paimonsnotebook.common.components.media.NetworkImage
 import com.lianyi.paimonsnotebook.common.components.popup.IconTitleInformationPopupWindow
+import com.lianyi.paimonsnotebook.common.components.widget.RoundedTag
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.ui.screen.items.components.item.list_card.ItemGridListCard
@@ -258,14 +259,10 @@ class WeeklyCalendarScreen : BaseActivity() {
                 Spacer(modifier = Modifier.width(8.dp))
 
                 if (day.isToday) {
-                    Text(
+                    RoundedTag(
                         text = "今天",
-                        fontSize = 11.sp,
-                        color = Color.White,
-                        modifier = Modifier
-                            .radius(2.dp)
-                            .background(Color(0xFFFFB300))
-                            .padding(4.dp, 1.dp)
+                        backGroundColor = Color(0xFFFFB300),
+                        textColor = Color.White
                     )
                 }
 

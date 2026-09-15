@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="com.lianyi.paimonsnotebook.ui.screen.app_widget.view.AppWidgetConfigurationScreen"
+    android:widgetCategory="home_screen"
     android:description="@string/appwidget_label_common_1_1"
     android:initialLayout="@layout/widget_layout_common"
     android:minWidth="40dp"

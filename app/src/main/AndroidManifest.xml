@@ -124,7 +124,12 @@
             android:theme="@style/Theme.PaimonsNotebook" />
         <activity
             android:name=".ui.screen.app_widget.view.AppWidgetConfigurationScreen"
-            android:theme="@style/Theme.PaimonsNotebook" />
+            android:exported="true"
+            android:theme="@style/Theme.PaimonsNotebook">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".ui.screen.app_widget.view.AppWidgetScreen"
             android:theme="@style/Theme.PaimonsNotebook" />

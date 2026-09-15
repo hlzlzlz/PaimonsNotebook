@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lianyi.core.ui.components.text.InfoText
 import com.lianyi.core.ui.components.text.PrimaryText
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.common.util.system_service.SystemService
@@ -81,10 +82,9 @@ fun MiyoliveCodeCard(codes: List<MiyoliveCodeData.CodeWrapper>) {
                     maxLines = 1
                 )
 
-                Text(
+                PrimaryText(
                     text = wrapper.code ?: "",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    textSize = 14.sp,
                     modifier = Modifier.weight(1.4f),
                     maxLines = 1
                 )
@@ -103,10 +103,6 @@ fun MiyoliveCodeCard(codes: List<MiyoliveCodeData.CodeWrapper>) {
             }
         }
 
-        Text(
-            text = "兑换码有时效性,请尽快在游戏内兑换",
-            fontSize = 10.sp,
-            color = Black_60
-        )
+        InfoText(text = "兑换码有时效性,请尽快在游戏内兑换")
     }
 }

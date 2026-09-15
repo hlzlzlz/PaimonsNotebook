@@ -123,8 +123,13 @@ class AppWidgetConfigurationScreenViewModel : ViewModel() {
         configuration.appWidgetClassName =
             intent?.getStringExtra(AppWidgetHelper.PARAM_APPWIDGET_CLASS_NAME) ?: ""
 
+        //标准configure流程(intent-filter APPWIDGET_CONFIGURE)携带EXTRA_APPWIDGET_ID,
+        //应用内入口携带自定义key,两者兼容
+        val configureWidgetId = intent?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: -1
+
         configuration.appWidgetId =
-            intent?.getIntExtra(AppWidgetHelper.PARAM_APPWIDGET_ID, -1) ?: -1
+            if (configureWidgetId != -1) configureWidgetId
+            else intent?.getIntExtra(AppWidgetHelper.PARAM_APPWIDGET_ID, -1) ?: -1
 
         if (configuration.remoteViewsClassName.isEmpty()) {
             val list =
@@ -405,6 +410,11 @@ class AppWidgetConfigurationScreenViewModel : ViewModel() {
 
             if (success) {
                 "桌面组件修改完毕".notify()
+
+                //configure流程要求保存成功后返回RESULT_OK,否则系统会移除组件
+                if (this@AppWidgetConfigurationScreenViewModel::finishActivity.isInitialized) {
+                    finishActivity.invoke()
+                }
             } else {
                 "修改桌面组件时发生错误".errorNotify()
             }
