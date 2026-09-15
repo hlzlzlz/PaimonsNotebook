@@ -37,6 +37,7 @@ import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.FightProper
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.ReliquaryType
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.reliquary.ReliquaryData
 import com.lianyi.paimonsnotebook.ui.theme.Black
+import com.lianyi.paimonsnotebook.ui.theme.Primary
 import com.lianyi.paimonsnotebook.ui.theme.GachaStar5Color
 import com.lianyi.paimonsnotebook.ui.theme.GachaStar5Color2
 import com.lianyi.paimonsnotebook.ui.theme.White_40
@@ -49,7 +50,9 @@ fun PlayerCharacterRelicCard(
     recommendRelicProperty: CharacterDetailData.RecommendRelicProperty,
     onClickRelicIcon: (ReliquaryData, IntSize, Offset) -> Unit,
     //各部位副词条评分(胡桃自动模式公式),为空则不显示
-    relicScoreMap: Map<Int, Double> = mapOf()
+    relicScoreMap: Map<Int, Double> = mapOf(),
+    //评分权重设置入口,为空则不显示
+    onWeightSettingClick: (() -> Unit)? = null
 ) {
     //如果为空直接跳过渲染
     if (relicList.isEmpty()) return
@@ -71,10 +74,25 @@ fun PlayerCharacterRelicCard(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         if (relicScoreMap.isNotEmpty()) {
-            PrimaryText(
-                text = String.format("圣遗物总评分 %.1f", relicScoreMap.values.sum()),
-                textSize = 13.sp
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PrimaryText(
+                    text = String.format("圣遗物总评分 %.1f", relicScoreMap.values.sum()),
+                    textSize = 13.sp
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                if (onWeightSettingClick != null) {
+                    Text(
+                        text = "权重设置",
+                        fontSize = 12.sp,
+                        color = Primary,
+                        modifier = Modifier
+                            .clickable { onWeightSettingClick.invoke() }
+                            .padding(4.dp, 2.dp)
+                    )
+                }
+            }
         }
 
         relicList.split(2).forEach { relics ->

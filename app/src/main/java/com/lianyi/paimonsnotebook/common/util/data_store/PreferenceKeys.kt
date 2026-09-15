@@ -21,6 +21,15 @@ object PreferenceKeys {
         longPreferencesKey("device_fp_update_time")
     }
 
+    //圣遗物评分手动权重模式
+    val EnableReliquaryScoreCustomWeight by lazy {
+        booleanPreferencesKey("enableReliquaryScoreCustomWeight")
+    }
+    //圣遗物评分手动权重JSON
+    val ReliquaryScoreWeightJson by lazy {
+        stringPreferencesKey("reliquaryScoreWeight")
+    }
+
     //device_id
     val DeviceId by lazy {
         stringPreferencesKey("device_id")

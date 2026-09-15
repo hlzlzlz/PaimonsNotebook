@@ -14,9 +14,13 @@ import com.lianyi.paimonsnotebook.common.data.popup.IconTitleInformationPopupWin
 import com.lianyi.paimonsnotebook.common.data.popup.PopupWindowPositionProvider
 import com.lianyi.paimonsnotebook.common.extension.scope.launchIO
 import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
+import com.lianyi.paimonsnotebook.common.extension.data_store.editValue
+import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
+import com.lianyi.paimonsnotebook.common.util.data_store.dataStoreValuesFirst
 import com.lianyi.paimonsnotebook.common.util.enums.LoadingState
 import com.lianyi.paimonsnotebook.common.util.json.JSON
 import com.lianyi.paimonsnotebook.common.util.reliquary.ReliquaryScoreCalculator
+import com.lianyi.paimonsnotebook.common.util.reliquary.ReliquaryScoreWeight
 import com.lianyi.paimonsnotebook.common.util.parameter.getParameterizedType
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.GameRecordClient
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.character.CharacterDetailData
@@ -122,6 +126,7 @@ class PlayerCharacterDetailScreenViewModel : ItemBaseViewModel<AvatarData>() {
 
         viewModelScope.launchIO {
             initService()
+            loadReliquaryScoreWeight()
             setCharacterDetail(selectedCharacterId)
         }
     }
@@ -130,6 +135,38 @@ class PlayerCharacterDetailScreenViewModel : ItemBaseViewModel<AvatarData>() {
         avatarService.avatarList
         weaponService.weaponList
         reliquaryService.reliquaryFullMap
+    }
+
+    //圣遗物评分手动权重(全局配置)
+    var enableReliquaryScoreCustomWeight by mutableStateOf(false)
+        private set
+
+    var reliquaryScoreWeight by mutableStateOf(ReliquaryScoreWeight())
+        private set
+
+    private suspend fun loadReliquaryScoreWeight() {
+        dataStoreValuesFirst {
+            enableReliquaryScoreCustomWeight =
+                it[PreferenceKeys.EnableReliquaryScoreCustomWeight] ?: false
+
+            val json = it[PreferenceKeys.ReliquaryScoreWeightJson]
+
+            if (!json.isNullOrBlank()) {
+                ReliquaryScoreWeight.fromJson(json)?.let { weight ->
+                    reliquaryScoreWeight = weight
+                }
+            }
+        }
+    }
+
+    fun saveReliquaryScoreWeight(weight: ReliquaryScoreWeight, enableCustom: Boolean) {
+        reliquaryScoreWeight = weight
+        enableReliquaryScoreCustomWeight = enableCustom
+
+        viewModelScope.launchIO {
+            PreferenceKeys.ReliquaryScoreWeightJson.editValue(weight.stringify())
+            PreferenceKeys.EnableReliquaryScoreCustomWeight.editValue(enableCustom)
+        }
     }
 
     private suspend fun setCharacterDetail(characterId: Int) {
@@ -209,6 +246,7 @@ class PlayerCharacterDetailScreenViewModel : ItemBaseViewModel<AvatarData>() {
     /*
     * 圣遗物评分(移植胡桃自动模式公式):以部位pos为键返回每件副词条得分
     * 副词条数据与推荐词条均来自米游社角色详情接口,纯本地计算
+    * 手动权重模式开启时按用户配置权重计分
     * */
     fun getRelicScoreMap(relics: List<CharacterDetailData.Relic>): Map<Int, Double> {
         val detail = currentCharacterDetail ?: return mapOf()
@@ -221,8 +259,15 @@ class PlayerCharacterDetailScreenViewModel : ItemBaseViewModel<AvatarData>() {
             isCritEffective = ReliquaryScoreCalculator.isCritEffective(detail.base.id)
         )
 
+        val customWeights =
+            if (enableReliquaryScoreCustomWeight) {
+                ReliquaryScoreCalculator.customWeightMap(reliquaryScoreWeight)
+            } else {
+                null
+            }
+
         return relics.associate { relic ->
-            relic.pos to ReliquaryScoreCalculator.calculate(relic, context)
+            relic.pos to ReliquaryScoreCalculator.calculate(relic, context, customWeights)
         }
     }
 

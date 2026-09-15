@@ -34,12 +34,16 @@ object ReliquaryScoreCalculator {
     /**
      * isSpecialEnergy = 角色拥有特殊能量机制
      * (SkillDepot.EnergySkill.SpecialEnergyType非NONE,目前仅玛薇卡/丝柯克)
+     *
+     * customWeights非空时走手动权重模式(胡桃手动模式):权重直接查表,
+     * 忽略推荐词条命中/双爆强制/充能特判;小字固定值等未列出的属性权重为0
      */
     fun calculate(
         recommendedSubProperties: List<Int>,
         subProperties: List<CharacterDetailData.SubProperty>,
         isSpecialEnergy: Boolean,
-        isCritEffective: Boolean
+        isCritEffective: Boolean,
+        customWeights: Map<Int, Double>? = null
     ): Double {
         val hasCritHurt =
             isCritEffective || recommendedSubProperties.contains(FIGHT_PROP_CRITICAL_HURT)
@@ -47,7 +51,7 @@ object ReliquaryScoreCalculator {
         var totalScore = 0.0
 
         subProperties.forEach { subProperty ->
-            val weight = getWeight(
+            val weight = customWeights?.get(subProperty.property_type) ?: getWeight(
                 subProperty.property_type,
                 recommendedSubProperties,
                 hasCritHurt,
@@ -74,13 +78,29 @@ object ReliquaryScoreCalculator {
         val isCritEffective: Boolean
     )
 
-    fun calculate(relic: CharacterDetailData.Relic, context: Context): Double =
+    fun calculate(
+        relic: CharacterDetailData.Relic,
+        context: Context,
+        customWeights: Map<Int, Double>? = null
+    ): Double =
         calculate(
             recommendedSubProperties = context.recommendedSubProperties,
             subProperties = relic.sub_property_list,
             isSpecialEnergy = context.isSpecialEnergy,
-            isCritEffective = context.isCritEffective
+            isCritEffective = context.isCritEffective,
+            customWeights = customWeights
         )
+
+    //手动权重模式:ReliquaryScoreWeight各字段映射到FightProperty
+    fun customWeightMap(weight: ReliquaryScoreWeight): Map<Int, Double> = mapOf(
+        FIGHT_PROP_CRITICAL to weight.critRate,
+        FIGHT_PROP_CRITICAL_HURT to weight.critDmg,
+        FIGHT_PROP_ATTACK_PERCENT to weight.atkPercent,
+        FIGHT_PROP_HP_PERCENT to weight.hpPercent,
+        FIGHT_PROP_DEFENSE_PERCENT to weight.defPercent,
+        FIGHT_PROP_CHARGE_EFFICIENCY to weight.chargeEfficiency,
+        FIGHT_PROP_ELEMENT_MASTERY to weight.elementMastery
+    )
 
     private fun getWeight(
         propertyType: Int,
