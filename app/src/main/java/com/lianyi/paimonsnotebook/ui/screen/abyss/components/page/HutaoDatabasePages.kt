@@ -27,6 +27,8 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
+import com.lianyi.core.ui.components.text.InfoText
+import com.lianyi.core.ui.components.text.PrimaryText
 import com.lianyi.paimonsnotebook.common.components.media.NetworkImage
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoAvatarFloorRateData
@@ -34,7 +36,7 @@ import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoHoldingRateEn
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoOverviewData
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoTeamCombinationData
 import com.lianyi.paimonsnotebook.ui.theme.Black_60
-import com.lianyi.paimonsnotebook.ui.theme.White
+import com.lianyi.paimonsnotebook.ui.theme.CardBackGroundColor
 
 /*
 * 胡桃API全服数据页面(总览/出场率/使用率/配队)
@@ -51,16 +53,15 @@ internal fun HutaoOverviewPage(overview: HutaoOverviewData?) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp, 4.dp)
-                    .radius(2.dp)
-                    .background(White)
+                    .padding(8.dp, 2.dp)
+                    .radius(6.dp)
+                    .background(CardBackGroundColor)
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(
+                PrimaryText(
                     text = "第 ${overview.ScheduleId} 期深渊数据",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
+                    textSize = 16.sp
                 )
 
                 OverviewRow("记录总数", "${overview.RecordTotal}")
@@ -81,13 +82,12 @@ internal fun HutaoOverviewPage(overview: HutaoOverviewData?) {
 @Composable
 private fun OverviewRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth()) {
-        Text(
+        InfoText(
             text = label,
             fontSize = 14.sp,
-            color = Black_60,
             modifier = Modifier.weight(1f)
         )
-        Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        PrimaryText(text = value, textSize = 14.sp)
     }
 }
 
@@ -108,16 +108,15 @@ internal fun HutaoAvatarRatePage(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(8.dp, 4.dp)
-                        .radius(2.dp)
-                        .background(White)
+                        .padding(8.dp, 2.dp)
+                        .radius(6.dp)
+                        .background(CardBackGroundColor)
                         .padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
+                    PrimaryText(
                         text = "${floorRate.Floor} 层",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold
+                        textSize = 15.sp
                     )
 
                     floorRate.Ranks.sortedByDescending { it.Rate }.take(15)
@@ -128,10 +127,9 @@ internal fun HutaoAvatarRatePage(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
+                                InfoText(
                                     text = "${index + 1}",
                                     fontSize = 13.sp,
-                                    color = Black_60,
                                     modifier = Modifier.width(24.dp)
                                 )
 
@@ -145,16 +143,16 @@ internal fun HutaoAvatarRatePage(
 
                                 Spacer(modifier = Modifier.width(8.dp))
 
-                                Text(
+                                PrimaryText(
                                     text = avatar?.name ?: "${rank.Item}",
-                                    fontSize = 14.sp,
+                                    textSize = 14.sp,
+                                    bold = false,
                                     modifier = Modifier.weight(1f)
                                 )
 
-                                Text(
+                                InfoText(
                                     text = String.format("%.2f%%", rank.Rate * 100),
-                                    fontSize = 13.sp,
-                                    color = Black_60
+                                    fontSize = 13.sp
                                 )
                             }
                         }
@@ -179,23 +177,18 @@ internal fun HutaoHoldingRatePage(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp, 4.dp)
-                    .radius(2.dp)
-                    .background(White)
+                    .padding(8.dp, 2.dp)
+                    .radius(6.dp)
+                    .background(CardBackGroundColor)
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
+                PrimaryText(
                     text = "角色持有率 · 本期(与上期环比)",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold
+                    textSize = 15.sp
                 )
 
-                Text(
-                    text = "持有率为全服记录中拥有该角色的比例,百分比数字为参与统计的分布",
-                    fontSize = 12.sp,
-                    color = Black_60
-                )
+                InfoText(text = "持有率为全服记录中拥有该角色的比例,百分比数字为参与统计的分布")
             }
         }
 
@@ -206,8 +199,8 @@ internal fun HutaoHoldingRatePage(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(8.dp, 2.dp)
-                    .radius(2.dp)
-                    .background(White)
+                    .radius(6.dp)
+                    .background(CardBackGroundColor)
                     .padding(10.dp, 8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
@@ -229,10 +222,10 @@ internal fun HutaoHoldingRatePage(
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    Text(
+                    PrimaryText(
                         text = avatar?.name ?: "${entry.AvatarId}",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
+                        textSize = 14.sp,
+                        bold = false,
                         modifier = Modifier.weight(1f)
                     )
 
@@ -261,11 +254,7 @@ internal fun HutaoHoldingRatePage(
                             modifier = Modifier.weight(1f),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text(
-                                text = "C${constellation.Item}",
-                                fontSize = 10.sp,
-                                color = Black_60
-                            )
+                            InfoText(text = "C${constellation.Item}", fontSize = 10.sp)
 
                             DeltaText(
                                 text = String.format("%.1f", constellation.Rate * 100),
@@ -297,16 +286,15 @@ internal fun HutaoTeamPage(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(8.dp, 4.dp)
-                        .radius(2.dp)
-                        .background(White)
+                        .padding(8.dp, 2.dp)
+                        .radius(6.dp)
+                        .background(CardBackGroundColor)
                         .padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
+                    PrimaryText(
                         text = "${floorTeam.Floor} 层",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold
+                        textSize = 15.sp
                     )
 
                     floorTeam.Up.take(5).forEachIndexed { index, team ->
@@ -337,10 +325,9 @@ internal fun HutaoTeamPage(
 
                             Spacer(modifier = Modifier.weight(1f))
 
-                            Text(
+                            InfoText(
                                 text = String.format("%.2f%%", team.Rate * 100),
-                                fontSize = 13.sp,
-                                color = Black_60
+                                fontSize = 13.sp
                             )
                         }
                     }

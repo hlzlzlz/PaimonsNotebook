@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,7 +36,12 @@ import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.ui.screen.account.components.dialog.UserGameRolesDialog
 import com.lianyi.paimonsnotebook.ui.screen.role_combat.viewmodel.RoleCombatScreenViewModel
+import com.lianyi.core.ui.components.text.InfoText
+import com.lianyi.core.ui.components.text.PrimaryText
 import com.lianyi.paimonsnotebook.ui.theme.Black_60
+import com.lianyi.paimonsnotebook.common.components.widget.RoundedTag
+import com.lianyi.paimonsnotebook.ui.theme.CardBackGroundColor
+import com.lianyi.paimonsnotebook.ui.theme.CardBackGroundColor_Gray_Dark
 import com.lianyi.paimonsnotebook.ui.theme.Success
 import com.lianyi.paimonsnotebook.ui.theme.PaimonsNotebookTheme
 import com.lianyi.paimonsnotebook.ui.theme.White
@@ -66,10 +72,9 @@ class RoleCombatScreen : BaseActivity() {
                                     },
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
+                                PrimaryText(
                                     text = viewModel.currentGameRole?.game_uid ?: "",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    textSize = 16.sp
                                 )
 
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -150,20 +155,18 @@ class RoleCombatScreen : BaseActivity() {
                         .padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
+                    InfoText(
                         text = "${entry.schedule.start_date_time?.format() ?: ""} ~ ${entry.schedule.end_date_time?.format() ?: ""}",
-                        fontSize = 14.sp,
-                        color = Black_60
+                        fontSize = 14.sp
                     )
 
                     entry.stat?.let { stat ->
-                        Text(text = "战绩徽章 ${stat.medal_num} 枚", fontSize = 15.sp)
-                        Text(text = "幻象币 ${stat.coin_num}", fontSize = 15.sp)
-                        Text(text = "角色支援 ${stat.rent_cnt} 次", fontSize = 15.sp)
-                        Text(
+                        InfoText(text = "战绩徽章 ${stat.medal_num} 枚", fontSize = 15.sp)
+                        InfoText(text = "幻象币 ${stat.coin_num}", fontSize = 15.sp)
+                        InfoText(text = "角色支援 ${stat.rent_cnt} 次", fontSize = 15.sp)
+                        InfoText(
                             text = "难度 ${stat.difficulty_id} · 最高回合 ${stat.max_round_id}",
-                            fontSize = 15.sp,
-                            color = Black_60
+                            fontSize = 15.sp
                         )
                     }
                 }
@@ -181,26 +184,24 @@ class RoleCombatScreen : BaseActivity() {
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
+                            PrimaryText(
                                 text = "第 ${round.round_id} 幕",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold
+                                textSize = 15.sp
                             )
 
                             Spacer(modifier = Modifier.weight(1f))
 
-                            Text(
+                            RoundedTag(
                                 text = if (round.is_get_medal) "已获徽章" else "未获徽章",
-                                fontSize = 13.sp,
-                                color = if (round.is_get_medal) Success else Black_60
+                                backGroundColor = if (round.is_get_medal) Success else CardBackGroundColor_Gray_Dark,
+                                textColor = if (round.is_get_medal) Color.White else Black_60
                             )
                         }
 
                         if (round.enemies.isNotEmpty()) {
-                            Text(
+                            InfoText(
                                 text = "敌方:${round.enemies.joinToString("、") { "${it.name}(Lv.${it.level})" }}",
-                                fontSize = 13.sp,
-                                color = Black_60
+                                fontSize = 13.sp
                             )
                         }
 
@@ -219,20 +220,18 @@ class RoleCombatScreen : BaseActivity() {
                                             .clip(CircleShape),
                                         contentScale = ContentScale.Crop
                                     )
-                                    Text(
+                                    InfoText(
                                         text = "Lv.${avatar.level}",
-                                        fontSize = 11.sp,
-                                        color = Black_60
+                                        fontSize = 11.sp
                                     )
                                 }
                             }
                         }
 
                         if (round.buffs.isNotEmpty()) {
-                            Text(
+                            InfoText(
                                 text = "增益:${round.buffs.take(3).joinToString("、") { it.name }}",
-                                fontSize = 13.sp,
-                                color = Black_60
+                                fontSize = 13.sp
                             )
                         }
                     }
@@ -250,7 +249,7 @@ class RoleCombatScreen : BaseActivity() {
                             .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(text = "后备队员", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        PrimaryText(text = "后备队员", textSize = 15.sp)
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             backups.take(10).forEach { avatar ->
@@ -291,15 +290,14 @@ class RoleCombatScreen : BaseActivity() {
                         .padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(text = entry.schedule.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                    Text(
+                    PrimaryText(text = entry.schedule.name, textSize = 16.sp)
+                    InfoText(
                         text = "${entry.schedule.start_date_time?.format() ?: ""} ~ ${entry.schedule.end_date_time?.format() ?: ""}",
-                        fontSize = 14.sp,
-                        color = Black_60
+                        fontSize = 14.sp
                     )
 
                     entry.single?.best?.let { best ->
-                        Text(
+                        InfoText(
                             text = "最高难度 ${best.difficulty} · 最快通关 ${formatSecond(best.second)}",
                             fontSize = 15.sp
                         )
@@ -319,24 +317,21 @@ class RoleCombatScreen : BaseActivity() {
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
+                            PrimaryText(
                                 text = challenge.name,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                textSize = 15.sp,
                                 modifier = Modifier.weight(1f)
                             )
 
-                            Text(
+                            InfoText(
                                 text = formatSecond(challenge.second),
-                                fontSize = 14.sp,
-                                color = Black_60
+                                fontSize = 14.sp
                             )
                         }
 
-                        Text(
+                        InfoText(
                             text = "${challenge.monster.name} Lv.${challenge.monster.level}",
-                            fontSize = 13.sp,
-                            color = Black_60
+                            fontSize = 13.sp
                         )
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -352,20 +347,18 @@ class RoleCombatScreen : BaseActivity() {
                                             .clip(CircleShape),
                                         contentScale = ContentScale.Crop
                                     )
-                                    Text(
+                                    InfoText(
                                         text = "Lv.${avatar.level}",
-                                        fontSize = 11.sp,
-                                        color = Black_60
+                                        fontSize = 11.sp
                                     )
                                 }
                             }
                         }
 
                         challenge.best_avatar.firstOrNull()?.let { bestAvatar ->
-                            Text(
+                            InfoText(
                                 text = "输出最高:${bestAvatar.dps}",
-                                fontSize = 13.sp,
-                                color = Black_60
+                                fontSize = 13.sp
                             )
                         }
                     }
@@ -403,16 +396,15 @@ class RoleCombatScreen : BaseActivity() {
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
+                        PrimaryText(
                             text = "第 ${statistics.ScheduleId} 期 · 全服统计",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            textSize = 16.sp,
                             modifier = Modifier.weight(1f)
                         )
 
-                        Text(
+                        PrimaryText(
                             text = if (viewModel.statisticsLastPeriod) "上期" else "本期",
-                            fontSize = 14.sp,
+                            textSize = 14.sp,
                             modifier = Modifier
                                 .radius(2.dp)
                                 .clickable { viewModel.toggleStatisticsPeriod() }
@@ -420,16 +412,14 @@ class RoleCombatScreen : BaseActivity() {
                         )
                     }
 
-                    Text(
+                    InfoText(
                         text = "参与统计的记录总数 ${statistics.RecordTotal}",
-                        fontSize = 14.sp,
-                        color = Black_60
+                        fontSize = 14.sp
                     )
 
-                    Text(
+                    InfoText(
                         text = "热门替补为全服记录中各角色作为后备队员的上阵比例",
-                        fontSize = 12.sp,
-                        color = Black_60
+                        fontSize = 12.sp
                     )
                 }
             }
@@ -443,15 +433,14 @@ class RoleCombatScreen : BaseActivity() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(8.dp, 0.dp)
-                        .radius(2.dp)
-                        .background(White)
+                        .radius(6.dp)
+                        .background(CardBackGroundColor)
                         .padding(10.dp, 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
+                    InfoText(
                         text = "${index + 1}",
                         fontSize = 13.sp,
-                        color = Black_60,
                         modifier = Modifier.width(26.dp)
                     )
 
@@ -465,16 +454,16 @@ class RoleCombatScreen : BaseActivity() {
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    Text(
+                    PrimaryText(
                         text = avatar?.name ?: "${rate.Item}",
-                        fontSize = 14.sp,
+                        textSize = 14.sp,
+                        bold = false,
                         modifier = Modifier.weight(1f)
                     )
 
-                    Text(
+                    InfoText(
                         text = String.format("%.2f%%", rate.Rate * 100),
-                        fontSize = 13.sp,
-                        color = Black_60
+                        fontSize = 13.sp
                     )
                 }
             }

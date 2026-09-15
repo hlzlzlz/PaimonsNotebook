@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lianyi.core.ui.components.text.InfoText
+import com.lianyi.core.ui.components.text.PrimaryText
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.ledger.LedgerData
 import com.lianyi.paimonsnotebook.ui.theme.BackGroundColor
@@ -47,57 +49,47 @@ fun TravelersDiaryCard(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
+            PrimaryText(
                 text = "旅行者札记 · ${ledgerData.nickname}",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold
+                textSize = 15.sp
             )
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Text(
-                text = "详情 >",
-                fontSize = 13.sp,
-                color = Black_60
-            )
+            InfoText(text = "详情 >", fontSize = 13.sp)
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
+            InfoText(
                 text = "原石",
                 fontSize = 13.sp,
-                color = Black_60,
                 modifier = Modifier.padding(end = 6.dp)
             )
 
-            Text(
+            PrimaryText(
                 text = "${ledgerData.month_data.current_primogems}",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
+                textSize = 16.sp,
                 color = Primary_2
             )
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Text(
+            InfoText(
                 text = "摩拉",
                 fontSize = 13.sp,
-                color = Black_60,
                 modifier = Modifier.padding(end = 6.dp)
             )
 
-            Text(
+            PrimaryText(
                 text = "${ledgerData.month_data.current_mora}",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
+                textSize = 16.sp,
                 color = Primary_2
             )
         }
 
-        Text(
+        InfoText(
             text = "今日获取原石 ${ledgerData.day_data.current_primogems}",
-            fontSize = 13.sp,
-            color = Black_60
+            fontSize = 13.sp
         )
     }
 }

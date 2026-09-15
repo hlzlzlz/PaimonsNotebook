@@ -22,10 +22,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lianyi.core.ui.components.text.InfoText
+import com.lianyi.core.ui.components.text.PrimaryText
+import com.lianyi.paimonsnotebook.common.components.lazy.ContentSpacerLazyColumn
+import com.lianyi.paimonsnotebook.common.components.widget.RoundedTag
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.ui.screen.gacha.service.GachaPityCalculator
-import com.lianyi.paimonsnotebook.ui.theme.Black_60
-import com.lianyi.paimonsnotebook.ui.theme.White
+import com.lianyi.paimonsnotebook.ui.theme.CardBackGroundColor
 
 private val GuaranteeRed = Color(0xFFC62828)
 private val PityTrack = Color(0xFFE8E8E8)
@@ -40,15 +43,13 @@ private val PityFillGuarantee = Color(0xFFFF9800)
 internal fun GachaPityPage(pities: List<GachaPityCalculator.PoolPity>?) {
     val list = pities ?: return
 
-    LazyColumn(
+    ContentSpacerLazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
-            Text(
+            InfoText(
                 text = "出金概率与预计抽数为本地估算模型,非全服统计",
-                fontSize = 12.sp,
-                color = Black_60,
                 modifier = Modifier.padding(12.dp, 8.dp, 12.dp, 0.dp)
             )
         }
@@ -68,29 +69,24 @@ private fun PityCard(pity: GachaPityCalculator.PoolPity) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp, 4.dp)
-            .radius(2.dp)
-            .background(White)
+            .padding(8.dp, 2.dp)
+            .radius(6.dp)
+            .background(CardBackGroundColor)
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
+            PrimaryText(
                 text = pity.pool.label,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
+                textSize = 16.sp,
                 modifier = Modifier.weight(1f)
             )
 
             if (pity.isGuaranteed) {
-                Text(
+                RoundedTag(
                     text = "大保底",
-                    fontSize = 12.sp,
-                    color = Color.White,
-                    modifier = Modifier
-                        .radius(2.dp)
-                        .background(GuaranteeRed)
-                        .padding(6.dp, 2.dp)
+                    backGroundColor = GuaranteeRed,
+                    textColor = Color.White
                 )
             }
         }
@@ -109,29 +105,19 @@ private fun PityCard(pity: GachaPityCalculator.PoolPity) {
             guarantee = false
         )
 
-        Text(
-            text = "累计 ${pity.totalPulls} 抽 · 五星 ${pity.totalOrange} 个",
-            fontSize = 13.sp,
-            color = Black_60
-        )
+        InfoText(text = "累计 ${pity.totalPulls} 抽 · 五星 ${pity.totalOrange} 个")
 
         if (pity.lastOrangeName.isNotEmpty()) {
-            Text(
-                text = "上期出金:${pity.lastOrangeName} (${pity.lastOrangeTime})",
-                fontSize = 13.sp,
-                color = Black_60
-            )
+            InfoText(text = "上期出金:${pity.lastOrangeName} (${pity.lastOrangeTime})")
         }
 
         if (pity.pool.hasGuarantee && pity.totalOrange > 0) {
-            Text(
+            InfoText(
                 text = String.format(
                     "下一抽出金约 %.1f%% · 预计还需 %.1f 抽",
                     pity.nextPullOrangeProbability * 100,
                     pity.expectedPullsToOrange
-                ),
-                fontSize = 13.sp,
-                color = Black_60
+                )
             )
         }
     }
@@ -146,17 +132,13 @@ private fun PityProgressRow(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
+            InfoText(
                 text = label,
                 fontSize = 13.sp,
                 modifier = Modifier.weight(1f)
             )
 
-            Text(
-                text = "$current / $max",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium
-            )
+            PrimaryText(text = "$current / $max", textSize = 13.sp)
         }
 
         val progress = (current.toFloat() / max).coerceIn(0f, 1f)

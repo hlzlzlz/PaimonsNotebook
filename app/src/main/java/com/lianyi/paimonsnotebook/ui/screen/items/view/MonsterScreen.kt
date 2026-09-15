@@ -20,13 +20,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Text
-import androidx.compose.material.TextField
-import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,10 +37,12 @@ import com.lianyi.paimonsnotebook.common.components.lazy.ContentSpacerLazyColumn
 import com.lianyi.paimonsnotebook.common.components.loading.ContentLoadingLayout
 import com.lianyi.paimonsnotebook.common.components.media.NetworkImage
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
+import com.lianyi.paimonsnotebook.common.components.widget.InputTextFiled
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.ui.screen.items.components.item.icon.ItemIconCard
 import com.lianyi.paimonsnotebook.ui.screen.items.viewmodel.MonsterScreenViewModel
 import com.lianyi.paimonsnotebook.ui.theme.BackGroundColor
+import com.lianyi.paimonsnotebook.ui.theme.Black
 import com.lianyi.paimonsnotebook.ui.theme.CardBackGroundColor
 import com.lianyi.paimonsnotebook.ui.theme.PaimonsNotebookTheme
 import com.lianyi.paimonsnotebook.ui.theme.White
@@ -62,20 +63,15 @@ class MonsterScreen : BaseActivity() {
                             .fillMaxSize()
                             .background(BackGroundColor)
                     ) {
-                        TextField(
+                        InputTextFiled(
                             value = viewModel.searchKeyword,
                             onValueChange = {
                                 viewModel.searchKeyword = it
                             },
-                            placeholder = {
-                                Text(text = "搜索怪物名称", fontSize = 14.sp)
-                            },
-                            singleLine = true,
-                            colors = TextFieldDefaults.textFieldColors(
-                                backgroundColor = CardBackGroundColor,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
+                            placeholder = "搜索怪物名称",
+                            backgroundColor = CardBackGroundColor,
+                            borderColor = Color.Transparent,
+                            textStyle = TextStyle(fontSize = 14.sp, color = Black),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(12.dp, 6.dp)
@@ -173,17 +169,12 @@ class MonsterScreen : BaseActivity() {
                     Spacer(modifier = Modifier.width(10.dp))
 
                     Column {
-                        Text(
+                        PrimaryText(
                             text = monster.name,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold
+                            textSize = 18.sp
                         )
 
-                        Text(
-                            text = monster.title,
-                            fontSize = 12.sp,
-                            color = Color.Gray
-                        )
+                        InfoText(text = monster.title, fontSize = 12.sp)
                     }
                 }
 
@@ -193,7 +184,7 @@ class MonsterScreen : BaseActivity() {
                     InfoRow("基础攻击", formatBaseValue(baseValue.AttackBase))
                     InfoRow("基础防御", formatBaseValue(baseValue.DefenseBase.toFloat()))
 
-                    Text(text = "抗性", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    PrimaryText(text = "抗性", textSize = 14.sp)
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         InfoRow("物理", formatResist(baseValue.PhysicalSubHurt))
                         InfoRow("火", formatResist(baseValue.FireSubHurt))
@@ -209,7 +200,7 @@ class MonsterScreen : BaseActivity() {
                 val drops = monster.drops.orEmpty()
 
                 if (drops.isNotEmpty()) {
-                    Text(text = "掉落", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    PrimaryText(text = "掉落", textSize = 14.sp)
 
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -226,10 +217,9 @@ class MonsterScreen : BaseActivity() {
                                     modifier = Modifier.size(40.dp)
                                 )
 
-                                Text(
+                                InfoText(
                                     text = material.Name,
                                     fontSize = 10.sp,
-                                    color = Color.Gray,
                                     maxLines = 1
                                 )
                             }
@@ -240,7 +230,7 @@ class MonsterScreen : BaseActivity() {
                 val description = monster.description.orEmpty()
 
                 if (description.isNotBlank()) {
-                    Text(text = "描述", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    PrimaryText(text = "描述", textSize = 14.sp)
                     InfoText(text = description)
                 }
 
@@ -252,14 +242,13 @@ class MonsterScreen : BaseActivity() {
     @Composable
     private fun InfoRow(label: String, value: String) {
         Row(modifier = Modifier.fillMaxWidth()) {
-            Text(
+            InfoText(
                 text = label,
                 fontSize = 13.sp,
-                color = Color.Gray,
                 modifier = Modifier.weight(1f)
             )
 
-            Text(text = value, fontSize = 13.sp)
+            PrimaryText(text = value, textSize = 13.sp)
         }
     }
 

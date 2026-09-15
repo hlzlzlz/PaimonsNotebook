@@ -43,6 +43,7 @@ import com.lianyi.paimonsnotebook.ui.theme.Black
 import com.lianyi.paimonsnotebook.ui.theme.Black_60
 import com.lianyi.paimonsnotebook.ui.theme.PaimonsNotebookTheme
 import com.lianyi.paimonsnotebook.ui.theme.White
+import com.lianyi.core.ui.components.text.InfoText
 import com.lianyi.core.ui.components.text.PrimaryText
 
 class TravelersDiaryScreen : BaseActivity() {
@@ -60,10 +61,9 @@ class TravelersDiaryScreen : BaseActivity() {
                             modifier = Modifier.fillMaxSize(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
+                            PrimaryText(
                                 text = "旅行者札记",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.SemiBold
+                                textSize = 18.sp
                             )
 
                             Spacer(modifier = Modifier.weight(1f))
@@ -76,10 +76,9 @@ class TravelersDiaryScreen : BaseActivity() {
                                     },
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
+                                PrimaryText(
                                     text = viewModel.currentGameRole?.game_uid ?: "",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    textSize = 16.sp
                                 )
 
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -121,11 +120,11 @@ class TravelersDiaryScreen : BaseActivity() {
 
                                     items(months) { (month, label) ->
                                         val selected = viewModel.currentMonth == month
-                                        Text(
+                                        PrimaryText(
                                             text = label,
-                                            fontSize = 14.sp,
+                                            textSize = 14.sp,
+                                            bold = selected,
                                             color = if (selected) White else Black,
-                                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                                             modifier = Modifier
                                                 .radius(2.dp)
                                                 .background(if (selected) PrimaryColor else White)
@@ -173,10 +172,9 @@ class TravelersDiaryScreen : BaseActivity() {
 
                                 if (data.month_data.group_by.isNotEmpty()) {
                                     StatCard {
-                                        Text(
+                                        PrimaryText(
                                             text = "当月原石来源",
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.SemiBold
+                                            textSize = 16.sp
                                         )
 
                                         val pieData = buildGroupByPieData(data.month_data.group_by)
@@ -209,10 +207,9 @@ class TravelersDiaryScreen : BaseActivity() {
 
                                                         Spacer(modifier = Modifier.width(6.dp))
 
-                                                        Text(
+                                                        InfoText(
                                                             text = "${group.action} ${group.num} (${group.percent}%)",
-                                                            fontSize = 13.sp,
-                                                            color = Black_60
+                                                            fontSize = 13.sp
                                                         )
                                                     }
                                                 }
@@ -294,17 +291,15 @@ class TravelersDiaryScreen : BaseActivity() {
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
+            InfoText(
                 text = label,
                 fontSize = 14.sp,
-                color = Black_60,
                 modifier = Modifier.width(36.dp)
             )
 
-            Text(
+            PrimaryText(
                 text = "$title $currentValue",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
+                textSize = 16.sp
             )
 
             Spacer(modifier = Modifier.weight(1f))
@@ -319,11 +314,7 @@ class TravelersDiaryScreen : BaseActivity() {
                 Spacer(modifier = Modifier.width(8.dp))
             }
 
-            Text(
-                text = "上月$lastValue",
-                fontSize = 13.sp,
-                color = Black_60
-            )
+            InfoText(text = "上月$lastValue", fontSize = 13.sp)
         }
     }
 

@@ -23,12 +23,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lianyi.core.ui.components.text.InfoText
+import com.lianyi.core.ui.components.text.PrimaryText
+import com.lianyi.paimonsnotebook.common.components.lazy.ContentSpacerLazyColumn
 import com.lianyi.paimonsnotebook.common.components.media.NetworkImage
+import com.lianyi.paimonsnotebook.common.components.widget.RoundedTag
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.ui.screen.gacha.service.GachaPityCalculator
-import com.lianyi.paimonsnotebook.ui.theme.Black_60
+import com.lianyi.paimonsnotebook.ui.theme.CardBackGroundColor
 import com.lianyi.paimonsnotebook.ui.theme.Success
-import com.lianyi.paimonsnotebook.ui.theme.White
 
 private val GroupOrder = listOf("五星角色", "四星角色", "五星武器", "四星武器")
 
@@ -44,15 +47,13 @@ internal fun GachaCountdownPage(
 ) {
     val data = groups ?: return
 
-    LazyColumn(
+    ContentSpacerLazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
-            Text(
+            InfoText(
                 text = "距上次进入UP池的天数,用于观察复刻规律",
-                fontSize = 12.sp,
-                color = Black_60,
                 modifier = Modifier.padding(12.dp, 8.dp, 12.dp, 0.dp)
             )
         }
@@ -64,16 +65,15 @@ internal fun GachaCountdownPage(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(8.dp, 4.dp)
-                        .radius(2.dp)
-                        .background(White)
+                        .padding(8.dp, 2.dp)
+                        .radius(6.dp)
+                        .background(CardBackGroundColor)
                         .padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
+                    PrimaryText(
                         text = groupName,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold
+                        textSize = 15.sp
                     )
 
                     list.forEach { entry ->
@@ -113,35 +113,26 @@ private fun CountdownRow(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Text(
+            PrimaryText(
                 text = getItemName(entry.itemId) ?: "${entry.itemId}",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
+                textSize = 14.sp,
+                bold = false
             )
 
-            Text(
+            InfoText(
                 text = "${entry.versionText} · 第${entry.appearances}次UP · 上次至 ${entry.lastTime}",
-                fontSize = 11.sp,
-                color = Black_60
+                fontSize = 11.sp
             )
         }
 
         if (entry.isCurrent) {
-            Text(
+            RoundedTag(
                 text = "本期",
-                fontSize = 13.sp,
-                color = Color.White,
-                modifier = Modifier
-                    .radius(2.dp)
-                    .background(Success)
-                    .padding(6.dp, 2.dp)
+                backGroundColor = Success,
+                textColor = Color.White
             )
         } else {
-            Text(
-                text = "距今 ${entry.daysSinceLast} 天",
-                fontSize = 13.sp,
-                color = Black_60
-            )
+            InfoText(text = "距今 ${entry.daysSinceLast} 天", fontSize = 13.sp)
         }
     }
 }
