@@ -49,6 +49,16 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
     var days by mutableStateOf<List<DayInfo>>(listOf())
         private set
 
+    //0刷新日历 1养成材料
+    var tabIndex by mutableStateOf(0)
+        private set
+
+    val tabs = arrayOf("刷新日历", "养成材料")
+
+    fun onTabIndexChange(index: Int) {
+        tabIndex = index
+    }
+
     private val dayNames = arrayOf("周一", "周二", "周三", "周四", "周五", "周六", "周日")
 
     private val avatarService by lazy {

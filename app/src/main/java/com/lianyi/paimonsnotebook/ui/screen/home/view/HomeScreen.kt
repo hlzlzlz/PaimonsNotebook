@@ -126,6 +126,7 @@ class HomeScreen : BaseActivity() {
                                         nearActivity = viewModel.nearActivity,
                                         noticeList = viewModel.noticeList,
                                         travelersDiaryData = viewModel.travelersDiaryData,
+                                        cardPools = viewModel.cardPools,
                                         goPostDetail = viewModel::goPostDetail
                                     )
                                 }

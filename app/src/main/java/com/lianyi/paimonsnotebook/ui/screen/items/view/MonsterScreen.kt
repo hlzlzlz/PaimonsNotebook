@@ -108,7 +108,9 @@ class MonsterScreen : BaseActivity() {
                                     )
                                 }
 
-                                items(filtered, key = { "monster_${it.id}" }) { monster ->
+                                //Monster.json中存在大量Id=0的条目(机关系列等),
+                                //不能以id作key;名称在VM已按associateBy去重,必唯一
+                                items(filtered, key = { "monster_${it.name}" }) { monster ->
                                     Column(
                                         modifier = Modifier
                                             .radius(6.dp)

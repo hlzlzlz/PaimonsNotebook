@@ -20,11 +20,9 @@ import com.lianyi.paimonsnotebook.ui.screen.gacha.view.GachaRecordScreen
 import com.lianyi.paimonsnotebook.ui.screen.home.data.HomeCustomDrawerData
 import com.lianyi.paimonsnotebook.ui.screen.home.data.ModalItemData
 import com.lianyi.paimonsnotebook.ui.screen.items.view.AvatarScreen
-import com.lianyi.paimonsnotebook.ui.screen.items.view.CultivationMaterialScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.MonsterScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.ReliquaryScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.WeaponScreen
-import com.lianyi.paimonsnotebook.ui.screen.activity_calendar.view.ActivityCalendarScreen
 import com.lianyi.paimonsnotebook.ui.screen.weekly.view.WeeklyCalendarScreen
 import com.lianyi.paimonsnotebook.ui.screen.player_character.view.PlayerCharacterScreen
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -97,17 +95,10 @@ object HomeHelper {
             requireMetadata = true
         ),
         ModalItemData(
-            name = "养成材料",
-            icon = R.drawable.ic_genshin_game_material,
-            target = CultivationMaterialScreen::class.java,
-            sortIndex = 80,
-            requireMetadata = true
-        ),
-        ModalItemData(
             name = "素材日历",
-            icon = R.drawable.ic_clock_outline,
+            icon = R.drawable.ic_genshin_game_material,
             target = WeeklyCalendarScreen::class.java,
-            sortIndex = 85,
+            sortIndex = 80,
             requireMetadata = true
         ),
         ModalItemData(
@@ -135,12 +126,6 @@ object HomeHelper {
             icon = R.drawable.ic_genshin_game_ggc_book,
             target = TravelersDiaryScreen::class.java,
             sortIndex = 95
-        ),
-        ModalItemData(
-            name = "活动日历",
-            icon = R.drawable.ic_list_square,
-            target = ActivityCalendarScreen::class.java,
-            sortIndex = 96
         ),
         ModalItemData(
             name = "战斗记录",

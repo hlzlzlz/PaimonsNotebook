@@ -17,6 +17,7 @@ import com.lianyi.paimonsnotebook.common.data.hoyolab.PlayerUid
 import com.lianyi.paimonsnotebook.common.data.hoyolab.user.User
 import com.lianyi.paimonsnotebook.common.data.hoyolab.user.UserAndUid
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.GameRecordClient
+import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.act_calendar.ActCalendarData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.ledger.LedgerData
 import com.lianyi.paimonsnotebook.common.database.daily_note.util.DailyNoteHelper
 import com.lianyi.paimonsnotebook.common.database.user.util.AccountHelper
@@ -67,6 +68,9 @@ class HomeScreenViewModel : ViewModel() {
     //旅行者札记当月摘要
     var travelersDiaryData by mutableStateOf<LedgerData?>(null)
 
+    //当期卡池(活动日历页已删除,卡池改在首页展示)
+    val cardPools = mutableStateListOf<ActCalendarData.CardPool>()
+
     private val gameRecordClient by lazy {
         GameRecordClient()
     }
@@ -99,6 +103,7 @@ class HomeScreenViewModel : ViewModel() {
                 AccountHelper.selectedUserFlow.collect {
                     selectedUser = it
                     loadTravelersDiary(it)
+                    loadCardPools(it)
                 }
             }
             launch {
@@ -438,6 +443,44 @@ class HomeScreenViewModel : ViewModel() {
             if (result.success) {
                 travelersDiaryLoadedMid = user.userEntity.mid
                 travelersDiaryData = result.data
+            }
+        }
+    }
+
+    //记录上次已加载卡池的用户,避免用户流重复发射时反复发起网络请求
+    private var cardPoolsLoadedMid: String? = null
+
+    //加载当期卡池,首页仅作补充展示,失败静默不弹验证
+    private fun loadCardPools(user: User?) {
+        val role = user?.getSelectedGameRole()
+
+        if (role == null) {
+            cardPools.clear()
+            cardPoolsLoadedMid = null
+            return
+        }
+
+        if (cardPoolsLoadedMid == user.userEntity.mid && cardPools.isNotEmpty()) {
+            return
+        }
+
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    gameRecordClient.getActCalendar(
+                        UserAndUid(user.userEntity, PlayerUid.fromGameRole(role))
+                    )
+                }.getOrNull()
+            }
+
+            if (result?.success == true && result.data != null) {
+                cardPoolsLoadedMid = user.userEntity.mid
+                cardPools.clear()
+                cardPools.addAll(
+                    result.data.selected_avatar_card_pool_list +
+                            result.data.selected_mixed_card_pool_list +
+                            result.data.weapon_card_pool_list
+                )
             }
         }
     }
