@@ -187,29 +187,34 @@ class MonsterScreen : BaseActivity() {
                     }
                 }
 
-                InfoRow("基础生命", formatBaseValue(monster.baseValue.HpBase))
-                InfoRow("基础攻击", formatBaseValue(monster.baseValue.AttackBase))
-                InfoRow("基础防御", formatBaseValue(monster.baseValue.DefenseBase.toFloat()))
+                //机关/测试类条目没有BaseValue字段,缺失时整个属性区块不展示
+                monster.baseValue?.let { baseValue ->
+                    InfoRow("基础生命", formatBaseValue(baseValue.HpBase))
+                    InfoRow("基础攻击", formatBaseValue(baseValue.AttackBase))
+                    InfoRow("基础防御", formatBaseValue(baseValue.DefenseBase.toFloat()))
 
-                Text(text = "抗性", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    InfoRow("物理", formatResist(monster.baseValue.PhysicalSubHurt))
-                    InfoRow("火", formatResist(monster.baseValue.FireSubHurt))
-                    InfoRow("雷", formatResist(monster.baseValue.ElecSubHurt))
-                    InfoRow("水", formatResist(monster.baseValue.WaterSubHurt))
-                    InfoRow("草", formatResist(monster.baseValue.GrassSubHurt))
-                    InfoRow("风", formatResist(monster.baseValue.WindSubHurt))
-                    InfoRow("冰", formatResist(monster.baseValue.IceSubHurt))
-                    InfoRow("岩", formatResist(monster.baseValue.RockSubHurt))
+                    Text(text = "抗性", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        InfoRow("物理", formatResist(baseValue.PhysicalSubHurt))
+                        InfoRow("火", formatResist(baseValue.FireSubHurt))
+                        InfoRow("雷", formatResist(baseValue.ElecSubHurt))
+                        InfoRow("水", formatResist(baseValue.WaterSubHurt))
+                        InfoRow("草", formatResist(baseValue.GrassSubHurt))
+                        InfoRow("风", formatResist(baseValue.WindSubHurt))
+                        InfoRow("冰", formatResist(baseValue.IceSubHurt))
+                        InfoRow("岩", formatResist(baseValue.RockSubHurt))
+                    }
                 }
 
-                if (monster.drops.isNotEmpty()) {
+                val drops = monster.drops.orEmpty()
+
+                if (drops.isNotEmpty()) {
                     Text(text = "掉落", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
 
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        monster.drops.take(8).forEach { materialId ->
+                        drops.take(8).forEach { materialId ->
                             val material = viewModel.getMaterialById(materialId)
 
                             Column(
@@ -232,9 +237,11 @@ class MonsterScreen : BaseActivity() {
                     }
                 }
 
-                if (monster.description.isNotBlank()) {
+                val description = monster.description.orEmpty()
+
+                if (description.isNotBlank()) {
                     Text(text = "描述", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    InfoText(text = monster.description)
+                    InfoText(text = description)
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))

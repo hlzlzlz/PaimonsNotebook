@@ -6,14 +6,15 @@ import com.lianyi.paimonsnotebook.common.web.hutao.genshin.conveter.MonsterIconC
 data class MonsterData(
     @SerializedName("Arkhe")
     val arkhe: Int,
+    //机关系列/测试描述等条目没有BaseValue/Description/Drops字段,Gson解析后为null
     @SerializedName("BaseValue")
-    val baseValue: BaseValue,
+    val baseValue: BaseValue?,
     @SerializedName("DescribeId")
     val describeId: Int,
     @SerializedName("Description")
-    val description: String,
+    val description: String?,
     @SerializedName("Drops")
-    val drops: List<Int>,
+    val drops: List<Int>?,
     @SerializedName("GrowCurves")
     val growCurves: List<GrowCurve>,
     @SerializedName("Icon")
