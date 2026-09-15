@@ -39,6 +39,8 @@ object SettingsHelper {
                         ?: ConfigurationData.ENABLE_METADATA_DEFAULT
                     enableAutoSignIn = preferences[PreferenceKeys.EnableAutoSignIn]
                         ?: ConfigurationData.ENABLE_AUTO_SIGN_IN_DEFAULT
+                    enableAutoReSign = preferences[PreferenceKeys.EnableAutoReSign]
+                        ?: ConfigurationData.ENABLE_AUTO_RESIGN_DEFAULT
                     enableDailyNoteNotify = preferences[PreferenceKeys.EnableDailyNoteNotify]
                         ?: ConfigurationData.ENABLE_DAILY_NOTE_NOTIFY_DEFAULT
                     dailyNoteNotifyInterval = preferences[PreferenceKeys.DailyNoteNotifyInterval]

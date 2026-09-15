@@ -34,6 +34,9 @@ class ConfigurationData {
     //启用米游社自动签到(有风控风险,默认关闭)
     var enableAutoSignIn by mutableStateOf(ENABLE_AUTO_SIGN_IN_DEFAULT)
 
+    //自动签到补签(默认关闭)
+    var enableAutoReSign by mutableStateOf(ENABLE_AUTO_RESIGN_DEFAULT)
+
     //启用实时便笺后台提醒(默认关闭)
     var enableDailyNoteNotify by mutableStateOf(ENABLE_DAILY_NOTE_NOTIFY_DEFAULT)
 
@@ -48,6 +51,7 @@ class ConfigurationData {
         const val ENABLE_CHECK_NEW_VERSION_DEFAULT = true
         const val ENABLE_METADATA_DEFAULT = true
         const val ENABLE_AUTO_SIGN_IN_DEFAULT = false
+        const val ENABLE_AUTO_RESIGN_DEFAULT = false
         const val ENABLE_DAILY_NOTE_NOTIFY_DEFAULT = false
         const val DAILY_NOTE_NOTIFY_INTERVAL_DEFAULT = 30
 
@@ -62,6 +66,7 @@ class ConfigurationData {
                 it[PreferenceKeys.EnableCheckNewVersion] = ENABLE_CHECK_NEW_VERSION_DEFAULT
                 it[PreferenceKeys.EnableMetadata] = ENABLE_METADATA_DEFAULT
                 it[PreferenceKeys.EnableAutoSignIn] = ENABLE_AUTO_SIGN_IN_DEFAULT
+                it[PreferenceKeys.EnableAutoReSign] = ENABLE_AUTO_RESIGN_DEFAULT
                 it[PreferenceKeys.EnableDailyNoteNotify] = ENABLE_DAILY_NOTE_NOTIFY_DEFAULT
                 it[PreferenceKeys.DailyNoteNotifyInterval] = DAILY_NOTE_NOTIFY_INTERVAL_DEFAULT
             }

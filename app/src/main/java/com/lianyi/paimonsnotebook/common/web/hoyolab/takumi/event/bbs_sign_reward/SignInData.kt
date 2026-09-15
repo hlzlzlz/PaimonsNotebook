@@ -35,6 +35,24 @@ data class SignInRewardData(
     )
 }
 
+//补签信息
+data class SignInResignInfoData(
+    val resign_cnt_daily: Int = 0,
+    val resign_cnt_monthly: Int = 0,
+    val resign_limit_daily: Int = 0,
+    val resign_limit_monthly: Int = 0,
+    val sign_cnt_missed: Int = 0,
+    val coin_cnt: Int = 0,
+    val coin_cost: Int = 0
+) {
+    //补签卡足够且未达限额时可以补签
+    val canResign: Boolean
+        get() = sign_cnt_missed > 0 &&
+                resign_cnt_daily < resign_limit_daily &&
+                resign_cnt_monthly < resign_limit_monthly &&
+                coin_cnt >= coin_cost && coin_cost > 0
+}
+
 //签到请求体
 data class SignInRequestBody(
     val act_id: String,

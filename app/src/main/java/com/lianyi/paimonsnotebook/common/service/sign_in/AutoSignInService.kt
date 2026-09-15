@@ -47,6 +47,8 @@ object AutoSignInService {
         val completedMap = readCompletedMap().toMutableMap()
         var changed = false
 
+        val enableAutoReSign = readAutoResignEnabled()
+
         //系统通知内容汇总,worker后台执行时应用内浮层无人可见
         val systemMessages = mutableListOf<String>()
 
@@ -88,6 +90,34 @@ object AutoSignInService {
                     }
                 }
 
+                //补签:当天签到完成且开启开关时,检查漏签并自动补一张(消耗补签卡)
+                if (enableAutoReSign && (result.success || result.retcode == -5003)) {
+                    val resignInfo = signInClient.getResignInfo(user.userEntity, playerUid)
+
+                    val resignData = resignInfo.data
+
+                    if (resignInfo.success && resignData != null && resignData.canResign) {
+                        val resignResult = signInClient.reSign(user.userEntity, playerUid)
+
+                        when {
+                            resignResult.success -> {
+                                systemMessages += "UID[$uid] 补签成功(剩余补签卡${resignData.coin_cnt - resignData.coin_cost})"
+                            }
+
+                            resignResult.data.gt.isNotBlank() || resignResult.data.risk_code != 0 -> {
+                                systemMessages += "UID[$uid] 补签触发风控,请手动前往签到页补签"
+                            }
+
+                            else -> {
+                                systemMessages += "UID[$uid] 补签失败:${resignResult.message}"
+                            }
+                        }
+
+                        //补签请求间隔
+                        Thread.sleep(1500)
+                    }
+                }
+
                 //请求间隔,避免请求过快
                 Thread.sleep(1500)
             }
@@ -112,6 +142,11 @@ object AutoSignInService {
     }
 
     private fun serverToday() = serverTimeFormat.format(Date())
+
+    private suspend fun readAutoResignEnabled(): Boolean =
+        PaimonsNotebookApplication.context.datastorePf.data.map {
+            it[PreferenceKeys.EnableAutoReSign] ?: false
+        }.first()
 
     private suspend fun readCompletedMap(): Map<String, String> {
         val json = PaimonsNotebookApplication.context.datastorePf.data.map {

@@ -515,6 +515,13 @@ object ApiEndpoints {
 
     const val SignInSign = "https://api-takumi.mihoyo.com/event/luna/sign"
 
+    //补签信息
+    fun SignInResignInfo(uid: PlayerUid) =
+        "https://api-takumi.mihoyo.com/event/luna/resign_info?lang=zh-cn&act_id=${SignInActId}&uid=${uid.value}&region=${uid.region}"
+
+    //补签
+    const val SignInResign = "https://api-takumi.mihoyo.com/event/luna/resign"
+
     const val createLoginCaptcha = "${PassportApiMaCnVerifier}/verifier/createLoginCaptcha"
 
     //游戏角色列表

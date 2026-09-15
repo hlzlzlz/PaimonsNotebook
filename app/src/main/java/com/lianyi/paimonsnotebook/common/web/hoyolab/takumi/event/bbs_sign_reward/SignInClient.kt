@@ -57,4 +57,38 @@ class SignInClient {
         }.post(this)
 
     }.getAsJson<SignInResultData>()
+
+    //补签信息(漏签天数/补签卡数量/当月已补与限额)
+    suspend fun getResignInfo(
+        user: User,
+        playerUid: PlayerUid
+    ) = buildRequest {
+        url(ApiEndpoints.SignInResignInfo(playerUid))
+
+        setUser(user, CookieHelper.Type.CookieToken)
+        addHeader("x-rpc-signgame", ApiEndpoints.SignInGameBiz)
+
+        setDynamicSecret(DynamicSecret.SaltType.LK2, DynamicSecret.Version.Gen1, includeChars = true)
+
+    }.getAsJson<SignInResignInfoData>()
+
+    //补签一次(消耗补签卡,与sign同一请求形态)
+    suspend fun reSign(
+        user: User,
+        playerUid: PlayerUid
+    ) = buildRequest {
+        url(ApiEndpoints.SignInResign)
+
+        setUser(user, CookieHelper.Type.CookieToken)
+        addHeader("x-rpc-signgame", ApiEndpoints.SignInGameBiz)
+
+        setDynamicSecret(DynamicSecret.SaltType.LK2, DynamicSecret.Version.Gen1, includeChars = true)
+
+        buildMap {
+            put("act_id", ApiEndpoints.SignInActId)
+            put("region", playerUid.region)
+            put("uid", playerUid.value)
+        }.post(this)
+
+    }.getAsJson<SignInResultData>()
 }

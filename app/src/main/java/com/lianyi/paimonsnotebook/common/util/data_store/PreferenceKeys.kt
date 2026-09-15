@@ -165,6 +165,11 @@ object PreferenceKeys {
     val EnableDailyNoteNotify by lazy {
         booleanPreferencesKey("enableDailyNoteNotify")
     }
+
+    //自动签到补签
+    val EnableAutoReSign by lazy {
+        booleanPreferencesKey("enableAutoReSign")
+    }
     //提醒检查间隔(分钟)
     val DailyNoteNotifyInterval by lazy {
         intPreferencesKey("dailyNoteNotifyInterval")

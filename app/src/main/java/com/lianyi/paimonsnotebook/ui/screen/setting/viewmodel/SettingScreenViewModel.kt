@@ -268,6 +268,21 @@ class SettingScreenViewModel : ViewModel() {
             }
         ),
         OptionListData(
+            name = "签到自动补签",
+            description = "需先开启米游社自动签到,默认关闭。开启后在自动签到完成时检查当月漏签,若有漏签且补签卡足够,将自动消耗补签卡补上(受米游社每日/每月补签限额约束)",
+            onClick = {
+                viewModelScope.launchIO {
+                    val newValue = !configurationData.enableAutoReSign
+                    PreferenceKeys.EnableAutoReSign.editValue(newValue)
+                }
+            },
+            slot = {
+                SettingsOptionSwitch(
+                    checked = configurationData.enableAutoReSign
+                )
+            }
+        ),
+        OptionListData(
             name = "实时便笺提醒",
             description = "默认关闭,开启后App将在后台定期检查树脂、家园币、每日委托、参量物质、探索派遣,满足条件时发送系统通知(每种条件只提醒一次,不会重复打扰)",
             onClick = {
