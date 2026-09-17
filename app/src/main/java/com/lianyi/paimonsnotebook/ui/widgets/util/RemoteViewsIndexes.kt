@@ -166,7 +166,11 @@ object RemoteViewsIndexes {
                 dataType = setOf(RemoteViewsDataType.DailyNote),
                 remoteViewsName = "实时便笺3*2",
                 remoteViewsType = RemoteViewsType.DailyNote,
-                configurationOptions = defaultConfigurationOptionsUser
+                //原先误用User:本视图dataType为DailyNote,更新时由
+                //AppWidgetRemoViewsHelper依据configuration.bindingGameRole.playerUid请求数据,
+                //取不到就直接返回"游戏角色错误"占位;而bindingGameRole只在showGameRole分支被写入,
+                //选User时它永远为null,该组件因此必定显示错误占位
+                configurationOptions = defaultConfigurationOptionsGameRole
             ),
             //2*2与4*3组件此前无任何视图登记(上游遗留),这里复用相邻尺寸的布局与内容
             DailyNote2X2RemoteViews::class.java.name to RemoteViewsInfo(
