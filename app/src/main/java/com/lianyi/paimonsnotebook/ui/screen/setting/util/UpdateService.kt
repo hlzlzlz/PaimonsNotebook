@@ -26,6 +26,12 @@ class UpdateService {
             "mirror.ghproxy(推荐)",
             "cdn.jsdelivr"
         )
+
+        //下载到本地的安装包文件名(固定ASCII名,便于覆盖与避免中文名问题)
+        private const val RELEASE_PACKAGE_FILE_NAME = "PaimonsNotebook-update"
+
+        //安装包最小合理体积(小于此值必然是错误响应)
+        private const val MIN_PACKAGE_SIZE = 1024 * 1024L
     }
 
     private var _githubLatestDataCache: GithubLatestData? = null
@@ -33,8 +39,9 @@ class UpdateService {
     lateinit var newVersionPackage: File
         private set
 
-    //如果上次请求的时间小于十分钟就跳过此次请求
-    private val skipQueryLatestInfo: Boolean
+    //距上次查询已超过10分钟时才需要重新请求
+    //(原属性名为skipQueryLatestInfo,含义与实现相反,极易被误改成取反而引入bug)
+    private val shouldQueryLatestInfo: Boolean
         get() = System.currentTimeMillis() - latestQueryTimestamp >= 600000L
 
     private var latestQueryTimestamp = 0L
@@ -45,7 +52,7 @@ class UpdateService {
         onFail: () -> Unit,
         onNotFoundNewVersion: () -> Unit
     ) {
-        if (skipQueryLatestInfo) {
+        if (shouldQueryLatestInfo) {
             val res = buildRequest {
                 url(PaimonsNotebookApplication.latestReleaseUrl)
             }.getAsJsonNative<GithubLatestData>(getParameterizedType(GithubLatestData::class.java))
@@ -116,7 +123,10 @@ class UpdateService {
 
         val requestUrl = getRequestUrlByEndpointName(remoteEndpointName)
 
-        val saveFile = FileHelper.getPackageSaveFile(_githubLatestDataCache!!.name)
+        //用固定的ASCII文件名,不用release.name:
+        //release.name是中文(如"派蒙笔记本1.8.7"),中文文件名在FileProvider与部分安装器上易出问题,
+        //且每次发版name都变,会在package目录残留旧APK
+        val saveFile = FileHelper.getPackageSaveFile(RELEASE_PACKAGE_FILE_NAME)
 
         try {
             val progressListener = object : ProgressListener {
@@ -160,6 +170,14 @@ class UpdateService {
             if (res.first && res.second != null) {
                 FileHelper.saveFile(saveFile, res.second!!) {}
 
+                //校验下载结果确实是安装包:HTTP层已过滤非2xx,
+                //此处再排除"返回了错误页HTML"这类200响应,避免把垃圾文件当APK
+                if (!isValidPackageFile(saveFile)) {
+                    saveFile.delete()
+                    onFail.invoke()
+                    return
+                }
+
                 newVersionPackage = saveFile
 
                 onSuccess.invoke()
@@ -168,6 +186,22 @@ class UpdateService {
             }
         } catch (_: Exception) {
             onFail.invoke()
+        }
+    }
+
+    //判断下载结果是否为合法的APK(ZIP以"PK"开头,长度不能过小)
+    private fun isValidPackageFile(file: File): Boolean {
+        if (!file.exists() || file.length() < MIN_PACKAGE_SIZE) {
+            return false
+        }
+
+        return try {
+            file.inputStream().use { input ->
+                val header = ByteArray(2)
+                input.read(header) == 2 && header[0] == 'P'.code.toByte() && header[1] == 'K'.code.toByte()
+            }
+        } catch (_: Exception) {
+            false
         }
     }
 

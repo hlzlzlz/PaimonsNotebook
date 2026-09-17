@@ -54,6 +54,9 @@ object FileHelper {
 
     private const val SAVE_FILE_ROOT_PATH = "PaimonsNotebook"
 
+//流式读写的缓冲区大小
+private const val FILE_BUFFER_SIZE = 1024 * 8
+
     private const val SAVE_IMAGE_RELATIVE_PATH = "${SAVE_FILE_ROOT_PATH}/images"
 
     private const val SAVE_TEMP_FILE_RELATIVE_PATH = "${SAVE_FILE_ROOT_PATH}/temp"
@@ -317,23 +320,28 @@ object FileHelper {
     * */
     suspend fun saveFile(file: File, inputStream: InputStream, callback: (Long) -> Unit) {
         withContext(Dispatchers.IO) {
-            val outputStream = FileOutputStream(file)
+            //必须用use确保关闭:原先不关流会导致缓冲区未完全刷盘(APK被截断)
+            //以及文件句柄泄漏,且异常路径下同样漏关
+            BufferedInputStream(inputStream, FILE_BUFFER_SIZE).use { buffer ->
+                FileOutputStream(file).use { outputStream ->
+                    val byteArray = ByteArray(FILE_BUFFER_SIZE)
 
-            val bufferSize = 1024 * 8
-            val byteArray = ByteArray(bufferSize)
-            val buffer = BufferedInputStream(inputStream, bufferSize)
+                    var totalReadLength = 0L
 
-            var readLength = 0
-            var totalReadLength = 0L
+                    while (coroutineContext.isActive) {
+                        val readLength = buffer.read(byteArray, 0, FILE_BUFFER_SIZE)
 
-            while (coroutineContext.isActive &&
-                buffer.read(byteArray, 0, bufferSize).also {
-                    readLength = it
-                } != -1
-            ) {
-                outputStream.write(byteArray, 0, readLength)
-                totalReadLength += readLength
-                callback.invoke(totalReadLength)
+                        if (readLength == -1) {
+                            break
+                        }
+
+                        outputStream.write(byteArray, 0, readLength)
+                        totalReadLength += readLength
+                        callback.invoke(totalReadLength)
+                    }
+
+                    outputStream.flush()
+                }
             }
         }
     }

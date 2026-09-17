@@ -100,10 +100,20 @@ fun <K, V> Map<K, V>.post(builder: Request.Builder) =
 fun String.toRequestBody() = this.toRequestBody("application/json".toMediaType())
 
 //获取字节流
+//注意:必须校验HTTP状态码。下载APK时若遇到404/403/5xx,响应体是错误页面的HTML而非安装包,
+//原先只判断body是否为null,会把错误页面当成APK写盘并报告"下载成功",
+//用户点安装时只看到"解析包错误",无从判断真实原因。
 suspend fun Request.getAsByte(client: OkHttpClient = emptyOkHttpClient) =
     withContext(Dispatchers.IO) {
         try {
-            client.newCall(this@getAsByte).await().body?.byteStream()
+            val response = client.newCall(this@getAsByte).await()
+
+            if (!response.isSuccessful) {
+                response.close()
+                null
+            } else {
+                response.body?.byteStream()
+            }
         } catch (e: Exception) {
             null
         }
