@@ -6,6 +6,10 @@
 #保持所有在data路径下的类
 -keep class com.lianyi.**.data.** {*;}
 
+# 圣遗物评分权重:经Gson存入DataStore,类名与字段名都必须保持稳定,
+# 否则升级后旧权重读不回来(表现为用户设置的权重自己还原成默认值)
+-keep class com.lianyi.paimonsnotebook.common.util.reliquary.** {*;}
+
 # 米游社数据类
 -keep class com.lianyi.paimonsnotebook.common.web.hoyolab.** {*;}
 # 元数据数据类

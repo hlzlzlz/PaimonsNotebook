@@ -48,7 +48,10 @@ class GachaItemsExportService(
             val uid = uidList.first()
 
             val gachaLogItemList = dao.getGachaLogItemByUidPage(uid, 0, 1)
-            val lang = gachaLogItemList.first().lang
+
+            //如果为空,就设置为zh-cn(与下方v4导出的处理保持一致,空列表直接first()会抛)
+            val lang =
+                (if (gachaLogItemList.isNotEmpty()) gachaLogItemList.first().lang else "zh-cn").ifBlank { "zh-cn" }
 
             val region =
                 DataStoreHelper.getLocalDataMap<String, Long>(PreferenceKeys.GachaRecordGameUidRegionMap)[uid]

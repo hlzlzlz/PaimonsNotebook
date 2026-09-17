@@ -12,7 +12,9 @@ object UIGFHelper {
     private const val AVATAR_WISH_1 = "301"
     private const val AVATAR_WISH_2 = "400"
     private const val WEAPON_WISH = "302"
-    private const val CHRONICLED_WISH = "500"
+
+    //集录祈愿的类型码,公开以供保底计算等模块引用,避免各自硬编码造成漂移
+    const val CHRONICLED_WISH = "500"
 
 
     //当更新祈愿卡池类型时,需要在此处同步添加

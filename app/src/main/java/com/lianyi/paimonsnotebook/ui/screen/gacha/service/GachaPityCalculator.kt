@@ -1,6 +1,7 @@
 package com.lianyi.paimonsnotebook.ui.screen.gacha.service
 
 import com.lianyi.paimonsnotebook.common.database.gacha.entity.GachaItems
+import com.lianyi.paimonsnotebook.common.util.metadata.genshin.uigf.UIGFHelper
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.gacha_event.GachaEventData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.gacha_event.GachaEventEntry
 import java.util.concurrent.TimeUnit
@@ -29,7 +30,9 @@ object GachaPityCalculator {
         Character("角色活动祈愿", listOf("301", "400"), 90, 74, true),
         Weapon("武器活动祈愿", listOf("302"), 80, 65, true),
         Standard("常驻祈愿", listOf("200"), 90, 74, false),
-        Chronicled("集录祈愿", listOf("305"), 90, 74, true),
+        //集录祈愿的UIGF类型码是500(见UIGFHelper.CHRONICLED_WISH),不是305;
+        //写成305会导致该池过滤结果恒为空,保底页永远不显示集录卡片
+        Chronicled("集录祈愿", listOf(UIGFHelper.CHRONICLED_WISH), 90, 74, true),
         Beginner("初行者祈愿", listOf("100"), 90, 74, false)
     }
 
