@@ -27,9 +27,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.ViewModelProvider
+import com.lianyi.core.ui.components.text.InfoText
 import com.lianyi.paimonsnotebook.R
 import com.lianyi.paimonsnotebook.common.components.dialog.ConfirmDialog
 import com.lianyi.paimonsnotebook.common.components.loading.LoadingAnimationPlaceholder
+import com.lianyi.paimonsnotebook.common.components.placeholder.EmptyPagePlaceholder
 import com.lianyi.paimonsnotebook.common.components.spacer.StatusBarPaddingSpacer
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
@@ -120,6 +122,12 @@ class HomeScreen : BaseActivity() {
                         ) {
                             when (it) {
                                 HomeScreenDisplayState.Simple -> {
+                                    //Simple(非社区)主页尚未实现,原先此分支为空Composable,
+                                    //用户关掉"启用社区主页"后会看到纯白屏,像是应用坏了。
+                                    //此处给出明确说明,避免误解。
+                                    EmptyPagePlaceholder(title = "简洁主页正在开发中") {
+                                        InfoText(text = "可在 设置 中重新开启「启用社区主页」")
+                                    }
                                 }
 
                                 HomeScreenDisplayState.Community -> {

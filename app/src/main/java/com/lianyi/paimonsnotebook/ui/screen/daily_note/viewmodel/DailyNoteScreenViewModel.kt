@@ -17,6 +17,7 @@ import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.binding.UserGameRole
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class DailyNoteScreenViewModel : ViewModel() {
 
@@ -60,12 +61,24 @@ class DailyNoteScreenViewModel : ViewModel() {
     var showLoading by mutableStateOf(false)
 
     fun refreshDailyNote() {
-        viewModelScope.launch(Dispatchers.IO) {
+        //Compose状态(showLoading/isRefreshing)在主线程写,仅网络与DB操作切IO
+        viewModelScope.launch {
             "正在获取最新的实时便笺".notify()
             showLoading = true
+            //isRefreshing原先从未被置true,导致下拉刷新指示器永不显示
+            isRefreshing = true
 
-            DailyNoteHelper.reloadDailyNote()
-            showLoading = false
+            try {
+                withContext(Dispatchers.IO) {
+                    DailyNoteHelper.reloadDailyNote()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                "刷新实时便笺失败:${e.message ?: "未知错误"}".errorNotify()
+            } finally {
+                showLoading = false
+                isRefreshing = false
+            }
         }
     }
 

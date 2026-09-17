@@ -82,6 +82,30 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
         }
     }
 
+    //上次构建days时的服务器星期(1=周一..7=周日),用于判断是否需要跨天重建
+    private var builtDayOfWeek = 0
+
+    /*
+    * 重新计算"今天"高亮与生日
+    * 页面原先只在init里算一次,应用跨天后仍显示旧日期:
+    * "今天"高亮错位、当天生日不显示。本方法数据全部来自本地元数据(无网络),
+    * 由界面在onResume时调用,开销可忽略。
+    * */
+    fun refreshToday() {
+        if (days.isNotEmpty() && builtDayOfWeek == serverDayOfWeek()) {
+            return
+        }
+
+        viewModelScope.launch {
+            val dayInfos = withContext(Dispatchers.IO) { buildDays() }
+
+            if (dayInfos.isNotEmpty()) {
+                days = dayInfos
+                loadingState = LoadingState.Success
+            }
+        }
+    }
+
     //服务器时区判断今天星期几,java.time的DAY_OF_WEEK: 1=周一..7=周日
     private fun serverDayOfWeek(): Int =
         LocalDate.now(ZoneId.of("GMT+8")).dayOfWeek.value
@@ -90,6 +114,9 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
         val avatars = avatarService.avatarList
         val weapons = weaponService.weaponList
         val today = serverDayOfWeek()
+
+        //记录本次构建依据的星期,供refreshToday判断是否需要跨天重建
+        builtDayOfWeek = today
 
         return WeeklyMaterialTable.Day.entries.mapIndexed { index, day ->
             val groupsToInfo = fun(group: WeeklyMaterialTable.RotationalGroup): MaterialGroupInfo {

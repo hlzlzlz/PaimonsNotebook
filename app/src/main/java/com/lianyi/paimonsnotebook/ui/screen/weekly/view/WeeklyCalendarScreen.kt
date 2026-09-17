@@ -97,6 +97,12 @@ class WeeklyCalendarScreen : BaseActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        //应用可能跨天未重启,回到本页时重算"今天"高亮与生日(纯本地数据,开销可忽略)
+        viewModel.refreshToday()
+    }
+
     @Composable
     private fun WeeklyCalendarContent() {
         ContentLoadingLayout(loadingState = viewModel.loadingState) {

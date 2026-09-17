@@ -68,8 +68,11 @@ class RoleCombatScreenViewModel : ViewModel() {
     init {
         //Compose状态的写入必须在主线程,仅网络请求切换IO
         viewModelScope.launch {
+            //元数据缺失时AvatarService构造会抛异常,不能让整个collect链路中断
             withContext(Dispatchers.IO) {
-                avatarMap += AvatarService {}.avatarList.associateBy { it.id }
+                runCatching {
+                    avatarMap += AvatarService {}.avatarList.associateBy { it.id }
+                }.onFailure { it.printStackTrace() }
             }
 
             AccountHelper.selectedUserFlow.collect {
@@ -135,6 +138,11 @@ class RoleCombatScreenViewModel : ViewModel() {
         setLoadingState(page, LoadingState.Loading)
 
         viewModelScope.launch {
+            //整体try/catch:本页会调用CardVerificationService.verify(内含withTimeout(180s)),
+            //用户超时未完成滑块会抛TimeoutCancellationException;
+            //currentUser/currentGameRole为空断言、网络与解析异常也都在此收敛,
+            //避免界面永久停留在Loading且没有任何提示
+            try {
             if (page == 2) {
                 val response = withContext(Dispatchers.IO) {
                     statisticsClient.getRoleCombatStatistics(statisticsLastPeriod)
@@ -156,9 +164,18 @@ class RoleCombatScreenViewModel : ViewModel() {
                 return@launch
             }
 
+            //用户或角色可能在页面停留期间被删除,此处不再用!!断言
+            val user = currentUser
+            val gameRole = currentGameRole
+
+            if (user == null || gameRole == null) {
+                setLoadingState(page, LoadingState.Error)
+                return@launch
+            }
+
             val userAndUid = UserAndUid(
-                userEntity = currentUser!!.userEntity,
-                playerUid = PlayerUid.fromGameRole(currentGameRole!!)
+                userEntity = user.userEntity,
+                playerUid = PlayerUid.fromGameRole(gameRole)
             )
 
             when (page) {
@@ -175,7 +192,7 @@ class RoleCombatScreenViewModel : ViewModel() {
                         //1034风控:App内滑块验证后自动重试
                         if (result.validate) {
                             val challenge = CardVerificationService.verify(
-                                currentUser!!.userEntity, CardVerificationService.PATH_ROLE_COMBAT
+                                user.userEntity, CardVerificationService.PATH_ROLE_COMBAT
                             )
 
                             if (challenge != null) {
@@ -214,7 +231,7 @@ class RoleCombatScreenViewModel : ViewModel() {
                         //1034风控:App内滑块验证后自动重试
                         if (result.validate) {
                             val challenge = CardVerificationService.verify(
-                                currentUser!!.userEntity, CardVerificationService.PATH_HARD_CHALLENGE
+                                user.userEntity, CardVerificationService.PATH_HARD_CHALLENGE
                             )
 
                             if (challenge != null) {
@@ -239,6 +256,13 @@ class RoleCombatScreenViewModel : ViewModel() {
                         }
                     }
                 }
+            }
+            } catch (e: Exception) {
+                e.printStackTrace()
+
+                //把当前页从Loading态里解放出来,并给出提示
+                setLoadingState(page, LoadingState.Error)
+                "获取战斗记录失败:${e.message ?: "未知错误"}".errorNotify()
             }
         }
     }

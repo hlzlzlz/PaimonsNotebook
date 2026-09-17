@@ -226,7 +226,12 @@ class HomeScreenViewModel : ViewModel() {
             if (success) {
                 noticeList.clear()
                 noticeList.addAll(data.list)
+                //原先成功/失败分支都没再更新noticeStatus,该状态会永久停在Loading;
+                //UI当前未消费它,但保留正确终态,以免后续接入时踩坑
+                noticeStatus =
+                    if (data.list.isEmpty()) LoadingState.Empty else LoadingState.Success
             } else {
+                noticeStatus = LoadingState.Error
                 "公告列表请求失败:${retcode}".errorNotify()
             }
         }
