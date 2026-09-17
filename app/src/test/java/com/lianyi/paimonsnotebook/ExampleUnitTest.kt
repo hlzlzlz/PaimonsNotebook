@@ -48,10 +48,23 @@ class ExampleUnitTest {
     * */
     @Test
     fun test() {
-        val reliquaryFile =
-            File("D:\\Project\\PaimonsNotebook\\project\\PaimonsNotebook\\app\\src\\test\\java\\com\\lianyi\\paimonsnotebook\\Reliquary.json")
-        val reliquarySetFile =
-            File("D:\\Project\\PaimonsNotebook\\project\\PaimonsNotebook\\app\\src\\test\\java\\com\\lianyi\\paimonsnotebook\\ReliquarySet.json")
+        //原先硬编码了作者机器的绝对路径(D:\Project\...),在任何其他环境都会
+        //FileNotFoundException,导致整个测试任务恒红、失去回归价值。
+        //改为相对于模块目录(Gradle 测试的默认工作目录)定位,并保留类路径兜底
+        val testDir = sequenceOf(
+            File("src/test/java/com/lianyi/paimonsnotebook"),
+            File("app/src/test/java/com/lianyi/paimonsnotebook")
+        ).firstOrNull { it.isDirectory }
+            ?: File(javaClass.protectionDomain.codeSource.location.toURI()).parentFile
+
+        val reliquaryFile = File(testDir, "Reliquary.json")
+        val reliquarySetFile = File(testDir, "ReliquarySet.json")
+
+        //文件缺失时明确跳过,而不是抛出难懂的 FileNotFoundException
+        org.junit.Assume.assumeTrue(
+            "缺少测试数据: ${reliquaryFile.absolutePath}",
+            reliquaryFile.exists() && reliquarySetFile.exists()
+        )
 
         val list = JSON.parse<List<ReliquaryData>>(
             reliquaryFile.readText(),
