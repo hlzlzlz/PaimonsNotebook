@@ -21,6 +21,7 @@ import com.lianyi.paimonsnotebook.common.service.daily_note_notify.DailyNoteNoti
 import com.lianyi.paimonsnotebook.common.service.sign_in.AutoSignInScheduler
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
 import com.lianyi.paimonsnotebook.common.extension.scope.launchIO
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.common.util.builder.imageLoader
 import com.lianyi.paimonsnotebook.common.util.coil.ImageFallbackInterceptor
 import com.lianyi.paimonsnotebook.common.util.coil.MergeInterceptor
@@ -194,7 +195,8 @@ class PaimonsNotebookApplication : Application(), ImageLoaderFactory {
 
     //清除计划删除图片文件
     private fun executeDiskCachePlanDelete() {
-        CoroutineScope(Dispatchers.IO).launch {
+        //用launchSafeIO:本方法在Application.onCreate中调用,裸launch抛异常会杀进程
+        launchSafeIO {
             //TODO 目前已知删除disckCache文件会导致删除图片再次缓存图片,再从本地读取缓存为null
             launchIO {
                 val autoClean = dataStoreValuesFirstLambda {

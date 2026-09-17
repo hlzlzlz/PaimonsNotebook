@@ -9,15 +9,13 @@ import android.os.Bundle
 import android.widget.RemoteViews
 import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.common.view.HoyolabWebActivity
 import com.lianyi.paimonsnotebook.ui.screen.app_widget.view.AppWidgetConfigurationScreen
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
 import com.lianyi.paimonsnotebook.ui.widgets.remoteviews.state.NoBindingRemoteViews
 import com.lianyi.paimonsnotebook.ui.widgets.util.AppWidgetHelper
 import com.lianyi.paimonsnotebook.ui.widgets.util.AppWidgetRemoViewsHelper
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 /*
 * 小组件基类
@@ -41,7 +39,7 @@ open class BaseAppWidget : AppWidgetProvider() {
     }
 
     override fun onDeleted(context: Context?, appWidgetIds: IntArray?) {
-        CoroutineScope(Dispatchers.IO).launch {
+        launchSafeIO {
             appWidgetIds?.forEach {
                 dao.deleteByAppWidgetId(it)
             }
@@ -96,7 +94,9 @@ open class BaseAppWidget : AppWidgetProvider() {
         intent: Intent?,
         notify: Boolean = false,
     ) {
-        CoroutineScope(Dispatchers.IO).launch {
+        //用launchSafeIO:本方法由系统定时回调(onUpdate,updatePeriodMillis=30分钟)与
+        //广播触发,无需用户操作即执行,裸launch抛异常会直接杀进程且会反复复现
+        launchSafeIO {
             val appWidgetBinding = dao.getAppWidgetBindingByAppWidgetId(appWidgetId)
 
             //如果获取的userMid不为空则获取组件绑定的用户

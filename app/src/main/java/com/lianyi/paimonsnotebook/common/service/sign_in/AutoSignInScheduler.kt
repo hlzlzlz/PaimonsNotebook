@@ -4,14 +4,12 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
 import com.lianyi.paimonsnotebook.common.util.data_store.datastorePf
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 /*
@@ -23,7 +21,8 @@ object AutoSignInScheduler {
 
     fun ensureScheduled() {
         //延迟调度,避免拖慢冷启动
-        CoroutineScope(Dispatchers.IO).launch {
+        //用launchSafeIO:本函数在Application.onCreate中调用,裸launch抛异常会杀进程
+        launchSafeIO {
             delay(5000)
             val enabled = PaimonsNotebookApplication.context.datastorePf.data.map {
                 it[PreferenceKeys.EnableAutoSignIn] ?: false

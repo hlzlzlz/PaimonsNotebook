@@ -3,6 +3,7 @@ package com.lianyi.paimonsnotebook.common.core.enviroment
 import android.os.Build
 import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
 import com.lianyi.paimonsnotebook.common.extension.data_store.editValue
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
 import com.lianyi.paimonsnotebook.common.util.data_store.dataStoreValuesFirst
 import com.lianyi.paimonsnotebook.common.util.json.JSON
@@ -26,7 +27,8 @@ object CoreEnvironment {
     var skipSplashScreen = false
 
     fun init() {
-        CoroutineScope(Dispatchers.IO).launch {
+        //用launchSafeIO:本函数在Application.onCreate中调用,裸launch里抛异常会直接杀进程
+        launchSafeIO {
 //            launch {
 //                setAppSignInfo()
 //            }

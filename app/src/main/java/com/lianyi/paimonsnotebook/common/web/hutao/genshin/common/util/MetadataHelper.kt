@@ -12,12 +12,11 @@ import com.lianyi.paimonsnotebook.common.util.request.buildRequest
 import com.lianyi.paimonsnotebook.common.util.request.getAsText
 import com.lianyi.paimonsnotebook.common.web.HutaoEndpoints
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.LocaleNames
-import kotlinx.coroutines.CoroutineScope
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
@@ -120,7 +119,8 @@ object MetadataHelper {
         }
         isUpdating = true
 
-        CoroutineScope(Dispatchers.IO).launch {
+        //用launchSafeIO:本方法可能由启动路径触发,裸launch抛异常会杀进程
+        launchSafeIO {
             //哈希清单拉取/解析失败不能作为未捕获异常杀掉进程(协程里抛出即进程退出),退回旧数据
             val needUpdate = try {
                 metadataNeedUpdate()
@@ -130,7 +130,7 @@ object MetadataHelper {
                     "检查元数据更新时发生错误,现在使用的仍是旧数据".warnNotify()
                 }
                 isUpdating = false
-                return@launch
+                return@launchSafeIO
             }
 
             if (!needUpdate) {
@@ -140,7 +140,7 @@ object MetadataHelper {
 
                 isUpdating = false
                 onSuccess.invoke()
-                return@launch
+                return@launchSafeIO
             }
 
             val notifyId = "发现新的元数据,正在更新...".notify(keepShow = true)
@@ -204,10 +204,21 @@ object MetadataHelper {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            onFailed.invoke()
+            //onFailed自身抛异常不能阻断onFinally,否则isUpdating会永久卡在true
+            try {
+                onFailed.invoke()
+            } catch (e2: Exception) {
+                e2.printStackTrace()
+            }
+        } finally {
+            //onFinally必须无条件执行:它负责复位isUpdating,
+            //一旦漏执行,元数据将再也无法更新(且没有任何提示)
+            try {
+                onFinally.invoke()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
-
-        onFinally.invoke()
     }
 
     //更新元数据map

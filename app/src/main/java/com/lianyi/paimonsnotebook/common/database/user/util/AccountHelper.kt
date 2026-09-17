@@ -17,8 +17,7 @@ import com.lianyi.paimonsnotebook.common.web.hoyolab.passport.PassportClient
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.auth.AuthClient
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.binding.BindingClient
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.binding.UserGameRoleData
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -72,7 +71,8 @@ object AccountHelper {
 
     init {
         //接收查询用户实体流
-        CoroutineScope(Dispatchers.IO).launch {
+        //用launchSafeIO:本object在HomeScreenViewModel初始化时首次触碰,裸launch抛异常会杀进程
+        launchSafeIO {
             launch {
                 //当前选中用户流
                 dao.getSelectedUser().collect { userEntity ->
@@ -181,8 +181,8 @@ object AccountHelper {
     }
 
     private fun addUser(userEntity: UserEntity) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val user = getUserByUserEntity(userEntity, true) ?: return@launch
+        launchSafeIO {
+            val user = getUserByUserEntity(userEntity, true) ?: return@launchSafeIO
 
             val currentUserList = UserListFlow.value.toMutableList()
 
@@ -239,7 +239,7 @@ object AccountHelper {
         updateUserEntitySelectedState(user.userEntity, isSelected)
 
     private fun updateUserEntitySelectedState(user: UserEntity, isSelected: Boolean) {
-        CoroutineScope(Dispatchers.IO).launch {
+        launchSafeIO {
             val value = if (isSelected) 1 else 0
             dao.updateUserSelectState(value, user.mid)
         }

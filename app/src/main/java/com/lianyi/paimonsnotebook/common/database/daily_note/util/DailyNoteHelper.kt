@@ -10,6 +10,7 @@ import com.lianyi.paimonsnotebook.common.data.hoyolab.user.UserAndUid
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
 import com.lianyi.paimonsnotebook.common.database.daily_note.entity.DailyNoteWidget
 import com.lianyi.paimonsnotebook.common.database.user.util.AccountHelper
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
 import com.lianyi.paimonsnotebook.common.extension.string.notify
 import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
@@ -17,11 +18,8 @@ import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.binding.UserGameRole
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.GameRecordClient
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.daily_note.DailyNoteData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.daily_note.DailyNoteWidgetData
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import com.lianyi.paimonsnotebook.common.database.daily_note.entity.DailyNote as DailyNoteEntity
 import com.lianyi.paimonsnotebook.common.database.user.entity.User as UserEntity
 
@@ -51,12 +49,11 @@ object DailyNoteHelper {
 
     init {
         //接收用户数据流
-        CoroutineScope(Dispatchers.IO).launch {
-            launch {
-
-                AccountHelper.userListFlow.collect {
-                    setDailyNoteList()
-                }
+        //用launchSafeIO:setDailyNoteList会抛SQLiteConstraintException(见addDailyNote的try),
+        //而本object在HomeScreenViewModel初始化时首次触碰,裸launch抛异常会直接杀进程
+        launchSafeIO {
+            AccountHelper.userListFlow.collect {
+                setDailyNoteList()
             }
         }
     }
@@ -123,7 +120,7 @@ object DailyNoteHelper {
 
     //删除实时便笺记录
     fun deleteDailyNote(dailyNote: DailyNote) {
-        CoroutineScope(Dispatchers.IO).launch {
+        launchSafeIO {
             dailyNoteDao.delete(dailyNote.dailyNoteEntity)
             setDailyNoteList()
         }

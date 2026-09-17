@@ -79,7 +79,8 @@ object AutoSignInService {
                     }
 
                     //命中风控
-                    result.data.gt.isNotBlank() || result.data.risk_code != 0 -> {
+                    //data声明非空但服务端可能返回data:null,此处必须判空
+                    result.data?.gt.isNullOrBlank() == false || (result.data?.risk_code ?: 0) != 0 -> {
                         "UID[${uid}]自动签到触发风控,请手动前往签到页面完成签到".notify()
                         systemMessages += "UID[$uid] 触发风控,请手动前往签到页面完成签到"
                     }
@@ -104,7 +105,8 @@ object AutoSignInService {
                                 systemMessages += "UID[$uid] 补签成功(剩余补签卡${resignData.coin_cnt - resignData.coin_cost})"
                             }
 
-                            resignResult.data.gt.isNotBlank() || resignResult.data.risk_code != 0 -> {
+                            //data声明非空但服务端可能返回data:null,此处必须判空
+                            resignResult.data?.gt.isNullOrBlank() == false || (resignResult.data?.risk_code ?: 0) != 0 -> {
                                 systemMessages += "UID[$uid] 补签触发风控,请手动前往签到页补签"
                             }
 

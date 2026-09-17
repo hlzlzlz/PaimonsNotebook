@@ -20,6 +20,7 @@ import com.lianyi.paimonsnotebook.common.web.hoyolab.cookie.CookieHelper
 import com.lianyi.paimonsnotebook.common.web.hoyolab.passport.PassportClient
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.auth.AuthClient
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -245,7 +246,9 @@ class MiHoYoJSInterface(
 
         println("param = ${str}")
 
-        CoroutineScope(Dispatchers.IO).launch {
+        //用launchSafeIO:本方法由WebView页面回调,内部有网络请求与JSON解析,
+        //裸launch抛异常会直接杀掉进程
+        launchSafeIO {
             val result = tryGetJsResultFromJsParam(param)
 
             if (result != null && !param.callback.isNullOrBlank()) {

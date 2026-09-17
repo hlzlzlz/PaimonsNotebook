@@ -1,30 +1,34 @@
 package com.lianyi.paimonsnotebook.ui.screen.setting.util
 
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
 import com.lianyi.paimonsnotebook.common.util.data_store.dataStoreValues
 import com.lianyi.paimonsnotebook.common.util.json.JSON
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
 import com.lianyi.paimonsnotebook.ui.screen.setting.data.ConfigurationData
 import com.lianyi.paimonsnotebook.ui.screen.setting.util.enums.HomeScreenDisplayState
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 object SettingsHelper {
     private val _ConfigurationData = MutableStateFlow(ConfigurationData())
     val configurationFlow = _ConfigurationData.asStateFlow()
 
     init {
-        CoroutineScope(Dispatchers.IO).launch {
+        //用launchSafeIO:本object在HomeScreenViewModel初始化时首次触碰,
+        //裸launch里抛异常会直接杀掉进程(表现为开屏一闪就没了)
+        launchSafeIO {
             dataStoreValues { preferences ->
                 val configurationData = ConfigurationData().apply {
+                    //valueOf遇非法持久化值会抛IllegalArgumentException,此处回退到默认值,
+                    //避免历史脏数据或枚举变更导致启动崩溃
                     homeScreenDisplayState =
-                        HomeScreenDisplayState.valueOf(
-                            preferences[PreferenceKeys.HomeScreenDisplayState]
-                                ?: ConfigurationData.homeScreenDisplayStateDefault.name
-                        )
+                        runCatching {
+                            HomeScreenDisplayState.valueOf(
+                                preferences[PreferenceKeys.HomeScreenDisplayState]
+                                    ?: ConfigurationData.homeScreenDisplayStateDefault.name
+                            )
+                        }.getOrDefault(ConfigurationData.homeScreenDisplayStateDefault)
                     enableOverlay = preferences[PreferenceKeys.EnableOverlay]
                         ?: ConfigurationData.ENABLE_OVERLAY_DEFAULT
                     alwaysUseDefaultUser =

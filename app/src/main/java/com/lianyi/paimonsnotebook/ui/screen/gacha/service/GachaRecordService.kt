@@ -2,13 +2,11 @@ package com.lianyi.paimonsnotebook.ui.screen.gacha.service
 
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
 import com.lianyi.paimonsnotebook.common.database.gacha.data.GachaRecordOverview
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
 import com.lianyi.paimonsnotebook.common.util.data_store.dataStoreValues
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 class GachaRecordService {
     private val dao = PaimonsNotebookDatabase.database.gachaItemsDao
@@ -30,14 +28,14 @@ class GachaRecordService {
     private val CurrentGachaRecordGameUidFlow = MutableStateFlow("")
 
     init {
-        CoroutineScope(Dispatchers.IO).launch {
-            launch {
-                dataStoreValues {
-                    val gameUid = it[PreferenceKeys.GachaRecordCurrentGameUid] ?: ""
+        //用launchSafeIO:本类每次实例化都会新起一个scope,且updateData内的总览查询是重SQL,
+        //裸launch抛异常会直接杀掉进程(CAOC静默模式,崩溃页不弹)
+        launchSafeIO {
+            dataStoreValues {
+                val gameUid = it[PreferenceKeys.GachaRecordCurrentGameUid] ?: ""
 
-                    CurrentGachaRecordGameUidFlow.value = gameUid
-                    updateData()
-                }
+                CurrentGachaRecordGameUidFlow.value = gameUid
+                updateData()
             }
         }
     }

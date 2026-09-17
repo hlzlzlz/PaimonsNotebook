@@ -19,12 +19,17 @@ object AvatarStrategyHelper {
             return
         }
 
-        fetched = true
-
-        strategies = try {
+        //先取数据再置位:置位必须放在成功之后,
+        //否则首次请求因网络抖动失败后fetched已为true,本安装内永久不再重试
+        val data = try {
             client.getAvatarStrategies()?.data
         } catch (e: Exception) {
             null
+        }
+
+        if (data != null) {
+            strategies = data
+            fetched = true
         }
     }
 
