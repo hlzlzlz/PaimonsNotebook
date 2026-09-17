@@ -17,10 +17,9 @@ import androidx.compose.ui.unit.sp
 import com.lianyi.paimonsnotebook.common.components.widget.InputTextFiled
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
 import com.lianyi.paimonsnotebook.common.database.app_widget_binding.entity.AppWidgetBinding
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.ui.widgets.util.AppWidgetHelper
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -99,7 +98,7 @@ fun DebugAppWidgetContent() {
 
             if (id == -1) return@Button
 
-            CoroutineScope(Dispatchers.IO).launch {
+            launchSafeIO {
                 AppWidgetHelper.updateAppWidgetContentById(id)
             }
         }) {

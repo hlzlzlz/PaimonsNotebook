@@ -7,8 +7,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.sp
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
 import com.lianyi.paimonsnotebook.common.database.cultivate.entity.CultivateProject
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.common.extension.string.show
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 fun DebugCultivateProjectContent() {
     Column {
         Button(onClick = {
-            CoroutineScope(Dispatchers.IO).launch {
+            launchSafeIO {
                 val c = PaimonsNotebookDatabase.database.cultivateProjectDao.deleteAll()
                 println("c = $c")
 
@@ -28,7 +28,7 @@ fun DebugCultivateProjectContent() {
             Text(text = "清空全部养成计划表", fontSize = 16.sp)
         }
         Button(onClick = {
-            CoroutineScope(Dispatchers.IO).launch {
+            launchSafeIO {
                 val c = PaimonsNotebookDatabase.database.cultivateEntityDao.deleteAll()
                 println("c = $c")
 
@@ -40,7 +40,7 @@ fun DebugCultivateProjectContent() {
             Text(text = "清空全部养成实体表", fontSize = 16.sp)
         }
         Button(onClick = {
-            CoroutineScope(Dispatchers.IO).launch {
+            launchSafeIO {
                 val c = PaimonsNotebookDatabase.database.cultivateItemsDao.deleteAll()
                 println("c = $c")
 
@@ -52,7 +52,7 @@ fun DebugCultivateProjectContent() {
             Text(text = "清空全部养成项表", fontSize = 16.sp)
         }
         Button(onClick = {
-            CoroutineScope(Dispatchers.IO).launch {
+            launchSafeIO {
                 val c = PaimonsNotebookDatabase.database.cultivateItemMaterialsDao.deleteAll()
                 println("c = $c")
 
@@ -65,7 +65,7 @@ fun DebugCultivateProjectContent() {
         }
 
         Button(onClick = {
-            CoroutineScope(Dispatchers.IO).launch {
+            launchSafeIO {
                 val c = PaimonsNotebookDatabase.database.cultivateProjectDao.insert(
                     CultivateProject(
                         -100,

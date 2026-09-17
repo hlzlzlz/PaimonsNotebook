@@ -7,11 +7,11 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.edit
 import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
 import com.lianyi.paimonsnotebook.common.extension.data_store.editValue
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
 import com.lianyi.paimonsnotebook.common.util.data_store.datastorePf
 import com.lianyi.paimonsnotebook.common.util.file.FileHelper
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.util.MetadataHelper
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -21,7 +21,7 @@ fun DebugMetadataContent() {
     Text(text = "EnableMetadata")
 
     Button(onClick = {
-        CoroutineScope(Dispatchers.IO).launch {
+        launchSafeIO {
             PreferenceKeys.EnableMetadata.editValue(false)
         }
     }) {
@@ -29,7 +29,7 @@ fun DebugMetadataContent() {
     }
 
     Button(onClick = {
-        CoroutineScope(Dispatchers.IO).launch {
+        launchSafeIO {
             PreferenceKeys.EnableMetadata.editValue(true)
         }
     }) {
@@ -37,7 +37,7 @@ fun DebugMetadataContent() {
     }
 
     Button(onClick = {
-        CoroutineScope(Dispatchers.IO).launch {
+        launchSafeIO {
             FileHelper.saveFileMetadataPath.listFiles()?.forEach {
                 it.delete()
             }
@@ -49,7 +49,7 @@ fun DebugMetadataContent() {
     Text(text = "InitialMetadataDownload")
 
     Button(onClick = {
-        CoroutineScope(Dispatchers.IO).launch {
+        launchSafeIO {
             PreferenceKeys.InitialMetadataDownload.editValue(true)
         }
     }) {
@@ -57,7 +57,7 @@ fun DebugMetadataContent() {
     }
 
     Button(onClick = {
-        CoroutineScope(Dispatchers.IO).launch {
+        launchSafeIO {
             PreferenceKeys.InitialMetadataDownload.editValue(false)
         }
     }) {
@@ -68,7 +68,7 @@ fun DebugMetadataContent() {
 
 
     Button(onClick = {
-        CoroutineScope(Dispatchers.IO).launch {
+        launchSafeIO {
             PreferenceKeys.OnLaunchShowEnableMetadataHint.editValue(true)
         }
     }) {
@@ -76,7 +76,7 @@ fun DebugMetadataContent() {
     }
 
     Button(onClick = {
-        CoroutineScope(Dispatchers.IO).launch {
+        launchSafeIO {
             PreferenceKeys.OnLaunchShowEnableMetadataHint.editValue(false)
         }
     }) {
@@ -84,7 +84,7 @@ fun DebugMetadataContent() {
     }
 
     Button(onClick = {
-        CoroutineScope(Dispatchers.IO).launch {
+        launchSafeIO {
             PaimonsNotebookApplication.context.datastorePf.edit {
                 it.remove(PreferenceKeys.OnLaunchShowEnableMetadataHint)
                 it.remove(PreferenceKeys.EnableMetadata)
@@ -96,7 +96,7 @@ fun DebugMetadataContent() {
     }
 
     Button(onClick = {
-        CoroutineScope(Dispatchers.IO).launch {
+        launchSafeIO {
             MetadataHelper.updateMetadata(true,{}, {}, {}, {})
         }
     }) {

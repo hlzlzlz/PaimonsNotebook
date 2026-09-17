@@ -6,9 +6,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.sp
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
 import com.lianyi.paimonsnotebook.common.extension.data_store.editValue
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.common.extension.string.show
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 fun DebugGachaContent() {
 
     Button(onClick = {
-        CoroutineScope(Dispatchers.IO).launch {
+        launchSafeIO {
             PaimonsNotebookDatabase.database.gachaItemsDao.deleteAllGachaLogItem()
             PreferenceKeys.GachaRecordCurrentGameUid.editValue("")
             launch(Dispatchers.Main) {

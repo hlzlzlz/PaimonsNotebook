@@ -6,9 +6,9 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.sp
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.common.extension.string.show
 import com.lianyi.paimonsnotebook.ui.screen.achievement.util.helper.AchievementHelper
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 fun DebugAchievementContent() {
     Column {
         Button(onClick = {
-            CoroutineScope(Dispatchers.IO).launch {
+            launchSafeIO {
                 PaimonsNotebookDatabase.database.achievementUserDao.deleteAllUser()
                 launch(Dispatchers.Main) {
                     "成就数据已清空".show()
@@ -27,10 +27,10 @@ fun DebugAchievementContent() {
             Text(text = "清空全部成就数据", fontSize = 16.sp)
         }
         Button(onClick = {
-            CoroutineScope(Dispatchers.IO).launch {
+            launchSafeIO {
                 val selectedUserId =
                     PaimonsNotebookDatabase.database.achievementUserDao.getSelectedUser()?.id
-                        ?: return@launch
+                        ?: return@launchSafeIO
 
                 val ids = mutableListOf<Int>()
 
@@ -46,10 +46,10 @@ fun DebugAchievementContent() {
             Text(text = "获取完成个数(随机不存在的Id测试)", fontSize = 16.sp)
         }
         Button(onClick = {
-            CoroutineScope(Dispatchers.IO).launch {
+            launchSafeIO {
                 val selectedUserId =
                     PaimonsNotebookDatabase.database.achievementUserDao.getSelectedUser()?.id
-                        ?: return@launch
+                        ?: return@launchSafeIO
 
                 val currentAchievements = PaimonsNotebookDatabase.database.achievementsDao.getAchievementListByUserId(selectedUserId).first()
 

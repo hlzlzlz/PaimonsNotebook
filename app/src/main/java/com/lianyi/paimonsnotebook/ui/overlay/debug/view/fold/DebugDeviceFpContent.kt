@@ -10,11 +10,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.lianyi.paimonsnotebook.common.components.widget.InputTextFiled
 import com.lianyi.paimonsnotebook.common.extension.data_store.editValue
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
 import com.lianyi.paimonsnotebook.common.util.data_store.dataStoreValuesFirstLambda
 import com.lianyi.paimonsnotebook.common.util.json.JSON
 import com.lianyi.paimonsnotebook.common.web.hoyolab.public_data_api.PublicDataApiClient
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -32,7 +32,7 @@ fun DebugDeviceFpContent() {
         Text(text = content)
 
         Button(onClick = {
-            CoroutineScope(Dispatchers.IO).launch {
+            launchSafeIO {
                 val res = PublicDataApiClient().getFp(
                     dataStoreValuesFirstLambda {
                         this[PreferenceKeys.DeviceFp] ?: ""
@@ -47,7 +47,7 @@ fun DebugDeviceFpContent() {
 
     Column {
         Button(onClick = {
-            CoroutineScope(Dispatchers.IO).launch {
+            launchSafeIO {
                 PreferenceKeys.DeviceId.editValue("")
             }
         }) {
@@ -62,7 +62,7 @@ fun DebugDeviceFpContent() {
         })
 
         Button(onClick = {
-            CoroutineScope(Dispatchers.IO).launch {
+            launchSafeIO {
                 PreferenceKeys.DeviceId.editValue(input)
             }
         }) {

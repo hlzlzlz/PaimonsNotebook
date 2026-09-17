@@ -7,10 +7,10 @@ import androidx.compose.ui.unit.sp
 import com.lianyi.paimonsnotebook.common.data.hoyolab.PlayerUid
 import com.lianyi.paimonsnotebook.common.database.user.util.AccountHelper
 import com.lianyi.paimonsnotebook.common.extension.data_store.editValue
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.common.extension.string.show
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.GameRecordClient
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -26,7 +26,7 @@ fun DebugTempContent() {
         Text(text = "崩溃测试", fontSize = 18.sp)
     }
     Button(onClick = {
-        CoroutineScope(Dispatchers.IO).launch {
+        launchSafeIO {
             PreferenceKeys.CustomHomeDrawerList.editValue("[]")
         }
     }) {
