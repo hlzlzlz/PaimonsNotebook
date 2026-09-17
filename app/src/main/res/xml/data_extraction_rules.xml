@@ -1,19 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+   数据提取规则(API 31+ 使用本文件)
+   见 https://developer.android.com/about/versions/12/backup-restore#xml-changes
+
+   重要:users表以明文存储 cookie_token / ltoken / stoken(CookieConverter 未加密),
+   且 DataStore 内含 device_fp,因此必须排除数据库与 DataStore,
+   否则活体凭证会随云备份/换机迁移被系统托管。
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <!-- 排除数据库(paimonsnotebook_database.db 的 users 表含明文 token) -->
+        <exclude domain="database" path="." />
+
+        <!-- 排除 DataStore(含 device_fp / device_id 等设备身份) -->
+        <exclude domain="file" path="datastore" />
+        <exclude domain="file" path="datastorePf.preferences_pb" />
+
+        <!-- 排除图片缓存与元数据(体积大且可重新下载) -->
+        <exclude domain="file" path="image_cache" />
+        <exclude domain="external" path="metadata" />
     </cloud-backup>
-    <!--
+
+    <!-- 换机迁移同样排除凭证,避免新设备直接继承登录态 -->
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="database" path="." />
+        <exclude domain="file" path="datastore" />
+        <exclude domain="file" path="datastorePf.preferences_pb" />
+        <exclude domain="file" path="image_cache" />
+        <exclude domain="external" path="metadata" />
     </device-transfer>
-    -->
 </data-extraction-rules>

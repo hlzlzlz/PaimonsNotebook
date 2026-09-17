@@ -1,13 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older that API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+   备份规则(API 31 以下使用本文件;API 31+ 见 data_extraction_rules.xml)
+   见 https://developer.android.com/guide/topics/data/autobackup
+
+   重要:users表以明文存储 cookie_token / ltoken / stoken(CookieConverter 未加密),
+   且 DataStore 内含 device_fp,因此必须排除数据库与 DataStore,
+   否则活体凭证会随云备份/换机迁移被系统托管。
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <!-- 排除数据库(paimonsnotebook_database.db 的 users 表含明文 token) -->
+    <exclude domain="database" path="." />
+
+    <!-- 排除 DataStore(含 device_fp / device_id 等设备身份) -->
+    <exclude domain="file" path="datastore" />
+    <exclude domain="file" path="datastorePf.preferences_pb" />
+
+    <!-- 排除图片缓存与元数据(体积大且可重新下载) -->
+    <exclude domain="file" path="image_cache" />
+    <exclude domain="external" path="metadata" />
 </full-backup-content>

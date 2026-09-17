@@ -73,7 +73,10 @@ class ImageDetailScreenViewModel : ViewModel() {
 
         if (cacheFile != null) {
             viewModelScope.launchIO {
-                diskCacheData = dao.getDataByUrl(stringExtra)
+                //数据库无该url记录时返回null,保留默认的DiskCache("")避免NPE
+                dao.getDataByUrl(stringExtra)?.let {
+                    diskCacheData = it
+                }
             }
         } else {
             "无法读取图片内容,可能是图片没有完全加载导致的,重新加载图片以解决此问题"

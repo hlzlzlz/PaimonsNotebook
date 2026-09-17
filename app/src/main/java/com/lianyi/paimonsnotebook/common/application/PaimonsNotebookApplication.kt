@@ -66,13 +66,15 @@ class PaimonsNotebookApplication : Application(), ImageLoaderFactory {
             "qhNCaJ5EPHebQIX4-G2mpQu86f-WlAc7"
         }
 
+        //本分支的维护仓库(上游QooLianyi自2024-11停更,最新仍为1.7.1-12,
+        //若继续查上游会导致版本比较恒为"已是最新",应用内更新永久失效)
         val githubUrl by lazy {
-            "https://github.com/QooLianyi/PaimonsNotebook"
+            "https://github.com/hlzlzlz/PaimonsNotebook"
         }
 
         //从git上获取最新release
         val latestReleaseUrl by lazy {
-            "https://api.github.com/repos/QooLianyi/PaimonsNotebook/releases/latest"
+            "https://api.github.com/repos/hlzlzlz/PaimonsNotebook/releases/latest"
         }
     }
 

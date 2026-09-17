@@ -7,16 +7,18 @@ import com.lianyi.paimonsnotebook.common.database.app_widget_binding.entity.AppW
 import com.lianyi.paimonsnotebook.common.util.time.TimeHelper
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.daily_note.DailyNoteWidgetData
 import com.lianyi.paimonsnotebook.ui.widgets.core.BaseRemoteViews
-import com.lianyi.paimonsnotebook.ui.widgets.widget.AppWidgetCommon2X2
+import com.lianyi.paimonsnotebook.ui.widgets.widget.AppWidgetCommon2X1
 
 /*
-* 小组件树脂进度条2*2远端视图
+* 小组件树脂恢复时间2*1远端视图
 * */
 internal class ResinRecoverTime2X1RemoteViews(
     private val appWidgetBinding: AppWidgetBinding
 ) : BaseRemoteViews(
     appWidgetBinding.appWidgetId,
-    AppWidgetCommon2X2::class.java,
+    //本视图名为2X1、布局为widget_layout_resin_2_1_recover_time,
+    //registry(RemoteViewsIndexes)登记的也是AppWidgetCommon2X1,原先误写为2X2
+    AppWidgetCommon2X1::class.java,
     R.layout.widget_layout_resin_2_1_recover_time
 ) {
 

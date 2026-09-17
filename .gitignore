@@ -18,6 +18,11 @@ local.properties
 *.jks
 *.keystore
 
+# 活体凭证(App数据库含明文token)
+creds.json
+pn-release.db
+good_fp.txt
+
 # JVM崩溃/回放日志
 hs_err_pid*.log
 replay_pid*.log

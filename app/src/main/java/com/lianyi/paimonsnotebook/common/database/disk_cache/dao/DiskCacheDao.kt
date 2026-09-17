@@ -16,8 +16,9 @@ interface DiskCacheDao {
     @Query("select * from disk_cache where plan_delete = 0 order by create_time desc")
     fun getData(): Flow<List<DiskCache>>
 
+    //注意:无匹配行时Room实际返回null,因此声明为可空,避免调用方误当成非空导致NPE
     @Query("select * from disk_cache where url = :url")
-    fun getDataByUrl(url: String): DiskCache
+    fun getDataByUrl(url: String): DiskCache?
 
     @Query("select * from disk_cache limit :currentPage,:pageCount")
     fun getDataByPage(currentPage: Int, pageCount: Int): Flow<List<DiskCache>>

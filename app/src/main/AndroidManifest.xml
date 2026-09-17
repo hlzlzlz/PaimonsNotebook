@@ -187,18 +187,16 @@
         <activity
             android:name=".ui.screen.items.view.WeaponScreen"
             android:theme="@style/Theme.PaimonsNotebook" />
+        <!--
+            开发期字体样板页,无任何业务调用(仅被已废弃的FunctionPages枚举引用)。
+            原先 exported=true 且 <data scheme> 被注释,等于暴露一个无约束的ACTION_VIEW入口,
+            任意应用都能拉起,故改为不导出。
+        -->
         <activity
             android:name=".ui.screen.develop.TypographyScreen"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="singleTop"
-            android:theme="@style/Theme.PaimonsNotebook">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-<!--                <data android:scheme="mdk_e45a5ea9b62b87aa" />-->
-<!--                <data android:scheme="mdk_47f91e6080ef9670"/>-->
-            </intent-filter>
-        </activity>
+            android:theme="@style/Theme.PaimonsNotebook" />
 
         <activity
             android:name=".ui.screen.home.view.HomeScreen"

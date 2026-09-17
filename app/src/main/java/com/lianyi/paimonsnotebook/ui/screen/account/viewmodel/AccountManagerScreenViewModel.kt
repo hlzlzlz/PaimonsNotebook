@@ -359,7 +359,17 @@ class AccountManagerScreenViewModel : ViewModel() {
 
         viewModelScope.launch {
             val authClient = authClient.getActionTicketBySToken(user.userEntity)
-            val result = bindingClient.changeGameRoleByDefault(authClient.data.ticket, role)
+
+            //data声明非空但服务端可能返回data:null,必须先检查success再取ticket
+            val ticket = if (authClient.success) authClient.data?.ticket else null
+
+            if (ticket.isNullOrBlank()) {
+                "获取验证票据失败:${authClient.retcode},${authClient.message}".warnNotify()
+                dismissLoadingDialog()
+                return@launch
+            }
+
+            val result = bindingClient.changeGameRoleByDefault(ticket, role)
 
             if (result.success) {
                 AccountHelper.reloadUserGameRoles(user)

@@ -63,16 +63,24 @@ class ReliquaryService(onMissingFile: () -> Unit) {
             it.SetId
         }.mapValues { entry ->
             //只保留最高等级的圣遗物
-            val maxRankLevel = entry.value.maxOf { it.RankLevel }
+            //maxOf在集合非空时安全,但Ids可能因元数据缺字段被Gson解析为null/空
+            val maxRankLevel = entry.value.maxOfOrNull { it.RankLevel } ?: 0
 
             //记录最大星级
             maxStarMap[entry.key] = maxRankLevel
             entry.value.filter { it.RankLevel == maxRankLevel }.sortedBy { it.EquipType }.apply {
                 this.forEach { reliquary ->
-                    val lastId = reliquary.Ids.last()
+                    //Ids为null或空时跳过:原实现直接Ids.last()会在脏数据上抛NoSuchElementException
+                    val ids = reliquary.Ids
+
+                    if (ids.isNullOrEmpty()) {
+                        return@forEach
+                    }
+
+                    val lastId = ids.last()
                     reliquaryMap[lastId] = reliquary
 
-                    reliquary.Ids.forEach {
+                    ids.forEach {
                         reliquaryFullMap[it] = reliquary
                     }
                 }

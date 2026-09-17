@@ -7,7 +7,7 @@ import com.lianyi.paimonsnotebook.common.database.app_widget_binding.entity.AppW
 import com.lianyi.paimonsnotebook.common.util.time.TimeHelper
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.daily_note.DailyNoteWidgetData
 import com.lianyi.paimonsnotebook.ui.widgets.core.BaseRemoteViews
-import com.lianyi.paimonsnotebook.ui.widgets.widget.AppWidgetCommon3X1
+import com.lianyi.paimonsnotebook.ui.widgets.widget.AppWidgetCommon3X2
 
 /*
 * 小组件树脂进度条3*2远端视图
@@ -16,7 +16,9 @@ internal class ResinProgressBarRecoverTime3X2RemoteViews(
     private val appWidgetBinding: AppWidgetBinding
 ) : BaseRemoteViews(
     appWidgetBinding.appWidgetId,
-    AppWidgetCommon3X1::class.java,
+    //本视图名为3X2、布局为widget_layout_resin_3_2,
+    //registry(RemoteViewsIndexes)登记的也是AppWidgetCommon3X2,原先误写为3X1
+    AppWidgetCommon3X2::class.java,
     R.layout.widget_layout_resin_3_2
 ) {
     init {

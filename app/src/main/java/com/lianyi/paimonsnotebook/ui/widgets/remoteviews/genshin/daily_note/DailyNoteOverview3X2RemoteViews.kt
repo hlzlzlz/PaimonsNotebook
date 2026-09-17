@@ -8,13 +8,15 @@ import com.lianyi.paimonsnotebook.common.util.time.TimeHelper
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.daily_note.DailyNoteData
 import com.lianyi.paimonsnotebook.ui.widgets.core.BaseRemoteViews
 import com.lianyi.paimonsnotebook.ui.widgets.util.RemoteViewsContentHelper
-import com.lianyi.paimonsnotebook.ui.widgets.widget.AppWidgetCommon2X1
+import com.lianyi.paimonsnotebook.ui.widgets.widget.AppWidgetCommon3X2
 
 class DailyNoteOverview3X2RemoteViews(
     private val appWidgetBinding: AppWidgetBinding
 ) : BaseRemoteViews(
     appWidgetBinding.appWidgetId,
-    AppWidgetCommon2X1::class.java,
+    //本视图名为3X2、布局为widget_layout_daily_note_overview_3_2,
+    //registry(RemoteViewsIndexes)登记的也是AppWidgetCommon3X2,原先误写为2X1
+    AppWidgetCommon3X2::class.java,
     R.layout.widget_layout_daily_note_overview_3_2,
     161f
 ) {

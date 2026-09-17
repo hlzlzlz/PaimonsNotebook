@@ -220,6 +220,10 @@ open class BaseRemoteViews(
 
             val imageFileBitmap = BitmapFactory.decodeFile(imageFile?.path)
 
+            //解码失败(文件缺失/损坏)时返回null,原先直接解引用会NPE;
+            //而本方法在suspend链上被系统定时回调触发,异常会静默杀掉进程
+            if (imageFileBitmap != null) {
+
             val widthScale = bitmap.width.toFloat() / imageFileBitmap.width
             val heightScale = bitmap.height.toFloat() / imageFileBitmap.height
 
@@ -271,6 +275,20 @@ open class BaseRemoteViews(
 
             imageFileBitmap.recycle()
             imageBitmap.recycle()
+
+            } else {
+                //解码失败时退回纯色背景,避免组件显示空白
+                GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadii = radii
+                    setSize(width, height)
+                    setBounds(0, 0, intrinsicWidth, intrinsicHeight)
+
+                    setColor(backgroundColor)
+
+                    draw(canvas)
+                }
+            }
         } else {
             GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE

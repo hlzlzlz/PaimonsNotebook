@@ -13,7 +13,6 @@ import com.lianyi.paimonsnotebook.common.util.request.getAsJsonNative
 import com.lianyi.paimonsnotebook.ui.screen.setting.data.GithubLatestData
 import okhttp3.OkHttpClient
 import java.io.File
-import java.net.URLEncoder
 
 /*
 * 更新服务
@@ -127,17 +126,31 @@ class UpdateService {
                     contentLength: Long,
                     done: Boolean
                 ) {
-                    onProgress.invoke((bytesRead.toDouble() / contentLength).toFloat())
+                    //contentLength可能为0(未知长度),此时按0处理避免NaN
+                    onProgress.invoke(
+                        if (contentLength > 0) {
+                            (bytesRead.toDouble() / contentLength).toFloat().coerceIn(0f, 1f)
+                        } else {
+                            0f
+                        }
+                    )
                 }
             }
 
             val client = OkHttpClient.Builder().addInterceptor {
                 val response = it.proceed(it.request())
-                response.newBuilder().body(
-                    ProgressResponseBody(
-                        response.request.url.toUrl().toString(), response.body!!, progressListener
-                    )
-                ).build()
+                //204或无响应体时body为null,原先用!!会NPE
+                val body = response.body
+
+                if (body == null) {
+                    response
+                } else {
+                    response.newBuilder().body(
+                        ProgressResponseBody(
+                            response.request.url.toUrl().toString(), body, progressListener
+                        )
+                    ).build()
+                }
             }.build()
 
             val res = buildRequest {
@@ -161,8 +174,12 @@ class UpdateService {
     private fun getRequestUrlByEndpointName(
         name: String
     ): String {
-        val asset =
-            _githubLatestDataCache?.assets?.takeFirstIf { it.name == "app-release.apk" }
+        //本仓库release上传的资产名是PaimonsNotebook-<版本>-release.apk,
+        //而不再是上游的app-release.apk;两者都接受以兼容历史release
+        val asset = _githubLatestDataCache?.assets?.takeFirstIf {
+            it.name == "app-release.apk" ||
+                    (it.name.startsWith("PaimonsNotebook-") && it.name.endsWith(".apk"))
+        }
 
         return when (name) {
             "github" -> {
@@ -170,16 +187,15 @@ class UpdateService {
             }
 
             "mirror.ghproxy(推荐)" -> {
-                "https://mirror.ghproxy.com/?q=${
-                    URLEncoder.encode(
-                        asset?.browser_download_url ?: "",
-                        "utf-8"
-                    )
+                //mirror.ghproxy.com 已停服,改用现行可用的 gh-proxy 镜像
+                "https://gh-proxy.com/${
+                    asset?.browser_download_url ?: ""
                 }"
             }
 
             "cdn.jsdelivr" -> {
-                "https://cdn.jsdelivr.net/gh/QooLianyi/PaimonsNotebook/app/release/app-release.apk"
+                //走本分支仓库的app/release目录(该文件已入库,jsDelivr可直取)
+                "https://cdn.jsdelivr.net/gh/hlzlzlz/PaimonsNotebook/app/release/app-release.apk"
             }
 
             else -> {
