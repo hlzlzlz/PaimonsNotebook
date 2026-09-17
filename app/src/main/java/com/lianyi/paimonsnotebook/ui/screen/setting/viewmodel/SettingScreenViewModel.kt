@@ -480,7 +480,10 @@ class SettingScreenViewModel : ViewModel() {
                             }
                         },
                         onInstall = {
-                            SystemService.installAndroidApplication(updateService.newVersionPackage)
+                            //成功唤起安装界面后关闭弹窗,失败时保留弹窗以便用户重试
+                            if (SystemService.installAndroidApplication(updateService.newVersionPackage)) {
+                                onUpdateDialogDismissRequest()
+                            }
                         }, onDismissRequest = {
                             onUpdateDialogDismissRequest()
                         })

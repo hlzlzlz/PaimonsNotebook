@@ -13,6 +13,7 @@ import android.view.WindowManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.FileProvider
 import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
+import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
 import com.lianyi.paimonsnotebook.common.util.file.FileHelper
 import java.io.File
 
@@ -64,15 +65,30 @@ object SystemService {
         clipboardManager.primaryClip?.getItemAt(0)?.text?.toString()
 
     //安装程序
-    fun installAndroidApplication(file: File) {
-        context.startActivity(
-            Intent(Intent.ACTION_VIEW).apply {
-                val uri =
-                    FileProvider.getUriForFile(context, FileHelper.provider, file)
-                setDataAndType(uri, "application/vnd.android.package-archive")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
-            }
-        )
+    //返回是否成功唤起安装界面
+    fun installAndroidApplication(file: File): Boolean {
+        //文件不存在时FileProvider.getUriForFile会抛IllegalArgumentException
+        if (!file.exists()) {
+            "安装包不存在或已被清理,请重新下载".errorNotify()
+            return false
+        }
+
+        return try {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW).apply {
+                    val uri =
+                        FileProvider.getUriForFile(context, FileHelper.provider, file)
+                    setDataAndType(uri, "application/vnd.android.package-archive")
+                    flags =
+                        Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                }
+            )
+            true
+        } catch (e: Exception) {
+            //无安装器(部分定制ROM会移除packageinstaller的ACTION_VIEW入口)等情况
+            "无法唤起安装界面:${e.message ?: "未知错误"}".errorNotify()
+            false
+        }
     }
 
 
