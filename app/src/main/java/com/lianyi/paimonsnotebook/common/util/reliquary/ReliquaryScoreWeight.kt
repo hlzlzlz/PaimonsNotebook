@@ -1,5 +1,7 @@
 package com.lianyi.paimonsnotebook.common.util.reliquary
 
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import com.google.gson.annotations.SerializedName
 import com.lianyi.paimonsnotebook.common.util.json.JSON
 
@@ -32,7 +34,62 @@ data class ReliquaryScoreWeight(
     fun stringify() = JSON.stringify(this)
 
     companion object {
-        fun fromJson(json: String): ReliquaryScoreWeight? =
-            runCatching { JSON.parse<ReliquaryScoreWeight>(json) }.getOrNull()
+
+        //字段声明顺序,也是Gson的序列化顺序
+        private val FIELD_NAMES = listOf(
+            "critRate",
+            "critDmg",
+            "atkPercent",
+            "hpPercent",
+            "defPercent",
+            "chargeEfficiency",
+            "elementMastery"
+        )
+
+        fun fromJson(json: String): ReliquaryScoreWeight? = runCatching {
+            if (isLegacyFormat(json)) {
+                fromLegacyJson(json)
+            } else {
+                JSON.parse<ReliquaryScoreWeight>(json)
+            }
+        }.getOrNull()
+
+        /*
+        * 判断是否为加@SerializedName之前写入的旧格式。
+        *
+        * 1.8.7及更早的版本中,本类字段被R8混淆成单字母(如a~g),Gson按字段名序列化,
+        * 因此DataStore里存的是 {"a":1.5,"b":1.0,...}。仅靠@SerializedName无法读回这些数据
+        * (键名对不上会静默套用默认值1.0),必须在读取时做一次迁移。
+        * */
+        fun isLegacyFormat(json: String): Boolean = runCatching {
+            val obj = JsonParser.parseString(json).asJsonObject
+
+            obj.size() > 0 && FIELD_NAMES.none { obj.has(it) }
+        }.getOrDefault(false)
+
+        /*
+        * 解析旧格式:键名已不可知(R8每次构建分配的字母可能不同),
+        * 但JsonObject保持插入顺序,与写入时的字段声明顺序一致,
+        * 故按位置取值。缺失的位置退回默认值1.0。
+        * */
+        private fun fromLegacyJson(json: String): ReliquaryScoreWeight {
+            val obj: JsonObject = JsonParser.parseString(json).asJsonObject
+
+            val values = obj.entrySet().map { entry ->
+                runCatching { entry.value.asDouble }.getOrNull()
+            }
+
+            fun at(index: Int) = values.getOrNull(index) ?: 1.0
+
+            return ReliquaryScoreWeight(
+                critRate = at(0),
+                critDmg = at(1),
+                atkPercent = at(2),
+                hpPercent = at(3),
+                defPercent = at(4),
+                chargeEfficiency = at(5),
+                elementMastery = at(6)
+            )
+        }
     }
 }

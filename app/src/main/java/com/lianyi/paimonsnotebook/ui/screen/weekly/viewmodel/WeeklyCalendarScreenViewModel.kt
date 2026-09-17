@@ -82,17 +82,19 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
         }
     }
 
-    //上次构建days时的服务器星期(1=周一..7=周日),用于判断是否需要跨天重建
-    private var builtDayOfWeek = 0
+    //上次构建days时依据的服务器日期(如2026-09-18),用于判断是否需要跨天重建
+    private var builtDate: String = ""
 
     /*
     * 重新计算"今天"高亮与生日
     * 页面原先只在init里算一次,应用跨天后仍显示旧日期:
     * "今天"高亮错位、当天生日不显示。本方法数据全部来自本地元数据(无网络),
     * 由界面在onResume时调用,开销可忽略。
+    *
+    * 以日期(而非星期)为判断依据:生日按"月/日"匹配,同星期但不同日期时生日列表也会不同。
     * */
     fun refreshToday() {
-        if (days.isNotEmpty() && builtDayOfWeek == serverDayOfWeek()) {
+        if (days.isNotEmpty() && builtDate == serverDate().toString()) {
             return
         }
 
@@ -106,17 +108,20 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
         }
     }
 
+    //服务器时区的当前日期
+    private fun serverDate(): LocalDate = LocalDate.now(ZoneId.of("GMT+8"))
+
     //服务器时区判断今天星期几,java.time的DAY_OF_WEEK: 1=周一..7=周日
-    private fun serverDayOfWeek(): Int =
-        LocalDate.now(ZoneId.of("GMT+8")).dayOfWeek.value
+    private fun serverDayOfWeek(): Int = serverDate().dayOfWeek.value
 
     private fun buildDays(): List<DayInfo> {
         val avatars = avatarService.avatarList
         val weapons = weaponService.weaponList
-        val today = serverDayOfWeek()
+        val now = serverDate()
+        val today = now.dayOfWeek.value
 
-        //记录本次构建依据的星期,供refreshToday判断是否需要跨天重建
-        builtDayOfWeek = today
+        //记录本次构建依据的日期,供refreshToday判断是否需要跨天重建
+        builtDate = now.toString()
 
         return WeeklyMaterialTable.Day.entries.mapIndexed { index, day ->
             val groupsToInfo = fun(group: WeeklyMaterialTable.RotationalGroup): MaterialGroupInfo {
@@ -138,8 +143,7 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
                 )
             }
 
-            //生日:BirthMonth/BirthDay与服务器日期同月同日
-            val now = LocalDate.now(ZoneId.of("GMT+8"))
+            //生日:BirthMonth/BirthDay与服务器日期同月同日(复用外层now,避免重复取系统时间)
             val birthdays = avatars.filter {
                 it.fetterInfo.BirthMonth == now.monthValue && it.fetterInfo.BirthDay == now.dayOfMonth
             }.map { ItemRef(it.name, it.iconUrl) }
