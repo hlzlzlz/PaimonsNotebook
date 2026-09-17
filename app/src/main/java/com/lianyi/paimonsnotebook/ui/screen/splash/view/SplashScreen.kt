@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.lianyi.paimonsnotebook.common.components.loading.ContentLoadingPlaceholder
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
 import com.lianyi.paimonsnotebook.common.extension.intent.setComponentName
@@ -21,9 +22,27 @@ import com.lianyi.paimonsnotebook.ui.screen.splash.components.EnableMetadataHint
 import com.lianyi.paimonsnotebook.ui.screen.splash.viewmodel.SplashScreenViewModel
 import com.lianyi.paimonsnotebook.ui.theme.BackGroundColor
 import com.lianyi.paimonsnotebook.ui.theme.PaimonsNotebookTheme
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @SuppressLint("CustomSplashScreen")
 class SplashScreen : BaseActivity(false) {
+
+    companion object {
+
+        //主页是透明窗口主题,开屏页若在主页首帧绘制完成前退出,交接空窗期会露出底层任务(上一个应用)
+        @Volatile
+        private var homeScreenFirstFrameCallback: (() -> Unit)? = null
+
+        val isWaitingHomeScreenFirstFrame: Boolean
+            get() = homeScreenFirstFrameCallback != null
+
+        //由HomeScreen在首帧绘制完成时调用
+        fun onHomeScreenFirstFrameDrawn() {
+            homeScreenFirstFrameCallback?.invoke()
+            homeScreenFirstFrameCallback = null
+        }
+    }
 
     val viewModel by lazy {
         ViewModelProvider(this)[SplashScreenViewModel::class.java]
@@ -101,11 +120,30 @@ class SplashScreen : BaseActivity(false) {
 
     private fun goHomeScreen() {
         viewModel.disabledOnLaunchShowMetadataHint {
-
-            HomeHelper.goActivityByIntentNewTask {
-                setComponentName(HomeScreen::class.java)
+            //先注册首帧回调,再回主线程启动主页
+            waitHomeScreenFirstFrameThenFinish()
+            runOnUiThread {
+                HomeHelper.goActivityByIntentNewTask {
+                    setComponentName(HomeScreen::class.java)
+                }
             }
-            finish()
+        }
+    }
+
+    //等主页完成首帧绘制后再退出开屏;超时兜底,主页异常时避免卡在开屏页
+    private fun waitHomeScreenFirstFrameThenFinish() {
+        var finished = false
+        val finishOnce = {
+            if (!finished) {
+                finished = true
+                finish()
+            }
+        }
+        homeScreenFirstFrameCallback = finishOnce
+        lifecycleScope.launch {
+            delay(10000)
+            homeScreenFirstFrameCallback = null
+            finishOnce()
         }
     }
 

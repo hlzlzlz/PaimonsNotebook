@@ -3,6 +3,7 @@ package com.lianyi.paimonsnotebook.ui.screen.home.view
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResult
+import androidx.core.view.OneShotPreDrawListener
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,6 +37,7 @@ import com.lianyi.paimonsnotebook.ui.screen.account.components.dialog.UserDialog
 import com.lianyi.paimonsnotebook.ui.screen.home.components.home.HomeContent
 import com.lianyi.paimonsnotebook.ui.screen.home.components.home.HomeDrawerContent
 import com.lianyi.paimonsnotebook.ui.screen.home.viewmodel.HomeScreenViewModel
+import com.lianyi.paimonsnotebook.ui.screen.splash.view.SplashScreen
 import com.lianyi.paimonsnotebook.ui.screen.setting.util.enums.HomeScreenDisplayState
 import com.lianyi.paimonsnotebook.ui.theme.BackGroundColor
 import com.lianyi.paimonsnotebook.ui.theme.PaimonsNotebookTheme
@@ -170,6 +172,22 @@ class HomeScreen : BaseActivity() {
                     )
                 }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        //主页是透明窗口主题,首帧绘制前窗口下露出的是上一个应用;
+        //开屏页在等待首帧时(冷启动或从后台重开,窗口可能保留旧帧不再触发绘制),
+        //重挂一次性首帧监听并主动触发重绘,确保回调能触发
+        if (SplashScreen.isWaitingHomeScreenFirstFrame) {
+            OneShotPreDrawListener.add(window.decorView) {
+                //再延迟一帧,确保首帧已上屏
+                window.decorView.post {
+                    SplashScreen.onHomeScreenFirstFrameDrawn()
+                }
+            }
+            window.decorView.invalidate()
         }
     }
 

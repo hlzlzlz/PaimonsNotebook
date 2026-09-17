@@ -121,7 +121,19 @@ object MetadataHelper {
         isUpdating = true
 
         CoroutineScope(Dispatchers.IO).launch {
-            if (!metadataNeedUpdate()) {
+            //哈希清单拉取/解析失败不能作为未捕获异常杀掉进程(协程里抛出即进程退出),退回旧数据
+            val needUpdate = try {
+                metadataNeedUpdate()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                if (notify) {
+                    "检查元数据更新时发生错误,现在使用的仍是旧数据".warnNotify()
+                }
+                isUpdating = false
+                return@launch
+            }
+
+            if (!needUpdate) {
                 if (notify) {
                     "当前元数据已是最新".notify()
                 }
@@ -211,14 +223,14 @@ object MetadataHelper {
             url(HutaoEndpoints.metadata(LocaleNames.CHS, "$MetaFileName.json"))
         }.getAsText(applicationOkHttpClient)
 
-        hashMap.clear()
-
-        hashMap.putAll(
-            JSON.parse<Map<String, String>>(
-                metaJson,
-                getParameterizedType(Map::class.java, String::class.java, String::class.java)
-            )
+        //先解析后提交,解析失败时保留原有哈希表
+        val metaMap = JSON.parse<Map<String, String>>(
+            metaJson,
+            getParameterizedType(Map::class.java, String::class.java, String::class.java)
         )
+
+        hashMap.clear()
+        hashMap.putAll(metaMap)
 
         //Meta.json的自引用哈希条目永远无法与自己匹配(修改该文件必然使其失效),剔除以避免误判更新失败
         hashMap.remove(MetaFileName)
