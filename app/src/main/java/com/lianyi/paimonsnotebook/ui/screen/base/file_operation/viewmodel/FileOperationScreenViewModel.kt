@@ -155,6 +155,10 @@ open class FileOperationScreenViewModel : ViewModel() {
             action = Intent.ACTION_SEND
             putExtra(Intent.EXTRA_STREAM, uri)
             type = "*/*"
+            //content://形式的uri必须显式授权,否则接收方打开时抛SecurityException,
+            //表现为"分享出去但对方打不开/分享无效"。SystemService安装APK时加了本flag,
+            //此处原先遗漏
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
     }
 

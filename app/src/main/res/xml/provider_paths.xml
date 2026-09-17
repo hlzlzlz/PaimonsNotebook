@@ -1,8 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  FileProvider 可见路径。
+
+  实际被使用的只有 external-files-path:
+    gacha / achievements —— FileHelper.saveFileGachaItemsPath / saveFileAchievementsPath
+    package              —— FileHelper.saveFilePackagePath(应用内更新下载的APK)
+  三者都取自 context.getExternalFilesDir(null),对应 external-files-path。
+  FileProvider 的调用点只有两处:FileHelper.getContentUriForFile 与
+  SystemService.installAndroidApplication。
+
+  原先 5 条全是 path=".",其中 external-path 映射的是整个共享外部存储根
+  (/storage/emulated/0/,含 DCIM/Download 及其他应用的公共文件),属过宽授权:
+  一旦将来有人对该范围内的文件调用 getUriForFile,授权粒度就是共享存储任意文件。
+  这里按实际用途收窄,并去掉零调用的 files/cache/external/external-cache 四条。
+
+  注意 FileHelper.rootPath(公共 Documents/PaimonsNotebook)只经 MediaStore 写入
+  用于存图,从不调用 getUriForFile,故不需要 external-path。
+-->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <files-path name="files" path="." />
-    <cache-path name="cache" path="." />
-    <external-path name="external" path="." />
     <external-files-path name="external-files" path="." />
-    <external-cache-path name="external-cache" path="." />
 </paths>
