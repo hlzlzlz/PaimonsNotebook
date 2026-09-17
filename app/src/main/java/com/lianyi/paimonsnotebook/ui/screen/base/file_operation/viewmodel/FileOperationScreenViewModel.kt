@@ -43,6 +43,14 @@ open class FileOperationScreenViewModel : ViewModel() {
     //当前操作的记录索引
     private var operationRecordIndex = -1
 
+    /*
+    * 安全取当前操作的文件
+    * operationRecordIndex初值为-1,且删除/重命名后updateFileList()会让旧索引失效,
+    * 原先直接用fileList[operationRecordIndex]会抛IndexOutOfBoundsException。
+    * */
+    private fun currentOperationData(): FileOperationData? =
+        fileList.getOrNull(operationRecordIndex)
+
     fun onRequestDismissInputDialog() {
         showInputDialog = false
     }
@@ -85,8 +93,15 @@ open class FileOperationScreenViewModel : ViewModel() {
 
 
     private fun setPropertyListData() {
+        val data = currentOperationData()
+
+        if (data == null) {
+            "该文件已不存在,请刷新后重试".warnNotify(false)
+            return
+        }
+
         showLoadingDialog = true
-        val file = fileList[operationRecordIndex].file
+        val file = data.file
 
         viewModelScope.launchIO {
             getPropertyListData(file,
@@ -103,7 +118,7 @@ open class FileOperationScreenViewModel : ViewModel() {
         }
     }
 
-    fun getCurrentOperationFile() = fileList[operationRecordIndex]
+    fun getCurrentOperationFile() = currentOperationData()
 
     /*
     * 当长按item时,当前是长按调用删除
@@ -126,7 +141,14 @@ open class FileOperationScreenViewModel : ViewModel() {
     }
 
     fun onClickSend() {
-        val file = fileList[operationRecordIndex].file
+        val data = currentOperationData()
+
+        if (data == null) {
+            "该文件已不存在,请刷新后重试".warnNotify(false)
+            return
+        }
+
+        val file = data.file
         val uri = FileHelper.getContentUriForFile(file)
 
         HomeHelper.goActivityByIntentNewTask {
@@ -142,7 +164,14 @@ open class FileOperationScreenViewModel : ViewModel() {
 
     //确认删除
     fun confirmDelete() {
-        val data = fileList[operationRecordIndex]
+        val data = currentOperationData()
+
+        if (data == null) {
+            "该文件已不存在,请刷新后重试".warnNotify(false)
+            onRequestDismissPropertiesDialog()
+            dismissConfirmDeleteDialog()
+            return
+        }
 
         val name = data.name
         val deleteResult = data.file.delete()
@@ -169,7 +198,16 @@ open class FileOperationScreenViewModel : ViewModel() {
 
         val dest = getDestFile(value)
 
-        val renameSuccess = fileList[operationRecordIndex].file.renameTo(dest)
+        val data = currentOperationData()
+
+        if (data == null) {
+            "该文件已不存在,请刷新后重试".warnNotify(false)
+            onRequestDismissInputDialog()
+            onRequestDismissPropertiesDialog()
+            return
+        }
+
+        val renameSuccess = data.file.renameTo(dest)
 
         if (renameSuccess) {
             "文件重命名成功".notify()

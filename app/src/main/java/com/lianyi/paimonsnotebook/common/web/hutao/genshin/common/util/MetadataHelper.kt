@@ -99,10 +99,32 @@ object MetadataHelper {
     }
 
     private suspend fun metadataNeedUpdate(): Boolean {
+        //本次会话已校验过且未发生下载时,直接复用上次结果。
+        //全量校验需要逐个读取并哈希约19MB的元数据文件(154个),
+        //而checkAndUpdateMetadata会被首页初始化与设置页手动同步分别触发,
+        //短时间内重复校验没有意义。
+        if (lastVerifyTime > 0 &&
+            System.currentTimeMillis() - lastVerifyTime < MetadataVerifyInterval
+        ) {
+            return false
+        }
+
         updateMetadataHashMap()
 
-        return getDownloadFileNameListFromMetadataMap().isNotEmpty()
+        val needUpdate = getDownloadFileNameListFromMetadataMap().isNotEmpty()
+
+        if (!needUpdate) {
+            lastVerifyTime = System.currentTimeMillis()
+        }
+
+        return needUpdate
     }
+
+    //上次完成全量校验(且结果是不需要更新)的时间戳
+    private var lastVerifyTime = 0L
+
+    //全量校验结果的有效期
+    private const val MetadataVerifyInterval = 5 * 60 * 1000L
 
     private var isUpdating = false
 
@@ -198,6 +220,8 @@ object MetadataHelper {
             }
 
             if (allSuccess) {
+                //下载成功说明本地文件已变化,作废校验缓存,下次调用重新比对
+                lastVerifyTime = 0L
                 onSuccess.invoke()
             } else {
                 onFailed.invoke()

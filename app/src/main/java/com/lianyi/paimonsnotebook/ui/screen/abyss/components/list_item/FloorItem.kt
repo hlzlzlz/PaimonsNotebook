@@ -124,7 +124,11 @@ private fun FloorLevelItem(
             Text(text = "第${level.index}间", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(1.dp))
             Text(
-                text = TimeHelper.getTime(level.battles.first().timestamp.toLongOrNull() ?: 0L),
+                //battles声明非空但服务端可能返回空数组,Gson也会把缺失字段塞成null,
+                //原先直接first()会抛NoSuchElementException
+                text = TimeHelper.getTime(
+                    level.battles.firstOrNull()?.timestamp?.toLongOrNull() ?: 0L
+                ),
                 fontSize = 10.sp
             )
         }
@@ -166,7 +170,7 @@ private fun FloorLevelItem(
         }
     }
     val topAvatars = remember {
-        level.battles.first().avatars.map {
+        level.battles.firstOrNull()?.avatars.orEmpty().map {
             getAvatarFromMetadata.invoke(it.id) to it.level
         }
     }
@@ -188,7 +192,7 @@ private fun FloorLevelItem(
         }
     }
     val bottomAvatars = remember {
-        level.battles.last().avatars.map {
+        level.battles.lastOrNull()?.avatars.orEmpty().map {
             getAvatarFromMetadata.invoke(it.id) to it.level
         }
     }

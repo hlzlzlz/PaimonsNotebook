@@ -114,7 +114,7 @@ open class FileOperationScreen : BaseActivity() {
                 if (viewModel.showConfirmDeleteDialog) {
                     ConfirmDialog(
                         title = viewModel.confirmDialogTitle,
-                        content = "确定要删除[${viewModel.getCurrentOperationFile().name}]吗?删除后无法恢复!",
+                        content = "确定要删除[${viewModel.getCurrentOperationFile()?.name ?: ""}]吗?删除后无法恢复!",
                         onConfirm = viewModel::confirmDelete,
                         onCancel = viewModel::dismissConfirmDeleteDialog
                     )
@@ -124,7 +124,7 @@ open class FileOperationScreen : BaseActivity() {
                     InputDialog(
                         title = "文件重命名",
                         placeholder = "请输入新的文件名,文件名不可重复",
-                        initialValue = (viewModel.getCurrentOperationFile().name ?: "")
+                        initialValue = (viewModel.getCurrentOperationFile()?.name ?: "")
                             .split(".")
                             .first(),
                         onConfirm = viewModel::onInputDialogConfirm,
