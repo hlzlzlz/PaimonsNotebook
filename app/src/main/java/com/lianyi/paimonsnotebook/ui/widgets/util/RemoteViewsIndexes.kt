@@ -4,7 +4,9 @@ import com.lianyi.paimonsnotebook.common.database.app_widget_binding.entity.AppW
 import com.lianyi.paimonsnotebook.ui.widgets.common.data.RemoteViewsInfo
 import com.lianyi.paimonsnotebook.ui.widgets.core.BaseRemoteViews
 import com.lianyi.paimonsnotebook.ui.widgets.remoteviews.genshin.daily_note.DailyNote2X1RemoteViews
+import com.lianyi.paimonsnotebook.ui.widgets.remoteviews.genshin.daily_note.DailyNote2X2RemoteViews
 import com.lianyi.paimonsnotebook.ui.widgets.remoteviews.genshin.daily_note.DailyNoteOverview3X2RemoteViews
+import com.lianyi.paimonsnotebook.ui.widgets.remoteviews.genshin.daily_note.DailyNoteOverview4X3RemoteViews
 import com.lianyi.paimonsnotebook.ui.widgets.remoteviews.genshin.daily_note.Expedition3X1RemoteViews
 import com.lianyi.paimonsnotebook.ui.widgets.remoteviews.genshin.daily_note_widget.DailyNoteWidget2X1RemoteViews
 import com.lianyi.paimonsnotebook.ui.widgets.remoteviews.genshin.daily_note_widget.HomeCoinRingProgressBar1X1RemoteViews
@@ -19,8 +21,10 @@ import com.lianyi.paimonsnotebook.ui.widgets.util.enums.RemoteViewsDataType
 import com.lianyi.paimonsnotebook.ui.widgets.util.enums.RemoteViewsType
 import com.lianyi.paimonsnotebook.ui.widgets.widget.AppWidgetCommon1X1
 import com.lianyi.paimonsnotebook.ui.widgets.widget.AppWidgetCommon2X1
+import com.lianyi.paimonsnotebook.ui.widgets.widget.AppWidgetCommon2X2
 import com.lianyi.paimonsnotebook.ui.widgets.widget.AppWidgetCommon3X1
 import com.lianyi.paimonsnotebook.ui.widgets.widget.AppWidgetCommon3X2
+import com.lianyi.paimonsnotebook.ui.widgets.widget.AppWidgetCommon4X3
 
 /*
 * 远端视图索引
@@ -163,6 +167,26 @@ object RemoteViewsIndexes {
                 remoteViewsName = "实时便笺3*2",
                 remoteViewsType = RemoteViewsType.DailyNote,
                 configurationOptions = defaultConfigurationOptionsUser
+            ),
+            //2*2与4*3组件此前无任何视图登记(上游遗留),这里复用相邻尺寸的布局与内容
+            DailyNote2X2RemoteViews::class.java.name to RemoteViewsInfo(
+                appWidgetClass = AppWidgetCommon2X2::class.java,
+                remoteViewsClass = DailyNote2X2RemoteViews::class.java,
+                dataType = setOf(RemoteViewsDataType.DailyNote),
+                remoteViewsName = "实时便笺2*2",
+                remoteViewsType = RemoteViewsType.DailyNote,
+                configurationOptions = defaultConfigurationOptionsGameRole
+            ),
+            DailyNoteOverview4X3RemoteViews::class.java.name to RemoteViewsInfo(
+                appWidgetClass = AppWidgetCommon4X3::class.java,
+                remoteViewsClass = DailyNoteOverview4X3RemoteViews::class.java,
+                dataType = setOf(RemoteViewsDataType.DailyNote),
+                remoteViewsName = "实时便笺4*3",
+                remoteViewsType = RemoteViewsType.DailyNote,
+                //dataType为DailyNote的视图必须选角色:AppWidgetRemoViewsHelper依据
+                //configuration.bindingGameRole.playerUid请求数据,且本视图要显示角色昵称。
+                //而bindingGameRole只在showGameRole分支被写入,选User会永远拿不到它
+                configurationOptions = defaultConfigurationOptionsGameRole
             ),
         )
     }

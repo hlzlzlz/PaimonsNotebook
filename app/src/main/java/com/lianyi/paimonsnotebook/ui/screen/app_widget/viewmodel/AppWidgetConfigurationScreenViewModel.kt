@@ -57,6 +57,10 @@ class AppWidgetConfigurationScreenViewModel : ViewModel() {
     var firstEntry by mutableStateOf(false)
         private set
 
+    //当前尺寸没有任何远端视图可配置(配置界面需要显示提示而不是空白页)
+    var noAvailableRemoteViews by mutableStateOf(false)
+        private set
+
     var enableMetadata = false
         private set
 
@@ -139,6 +143,10 @@ class AppWidgetConfigurationScreenViewModel : ViewModel() {
             if (list.isNotEmpty()) {
                 val remoteViewsInfo = list.first().second
                 setConfigurationInfo(remoteViewsInfo)
+            } else {
+                //该尺寸没有任何远端视图登记:原先静默跳过,配置界面会是一片空白
+                //(名称/描述/预览全为空),用户既不知道原因也无法保存
+                noAvailableRemoteViews = true
             }
         } else {
             val remoteViewsInfo =
@@ -379,6 +387,13 @@ class AppWidgetConfigurationScreenViewModel : ViewModel() {
     }
 
     fun submit() {
+        //没有任何远端视图被选中时不能保存:否则会写入remoteViewsClassName为空的绑定,
+        //组件后续更新时Class.forName("")必然失败,只会在桌面上留下一个永远空白的组件
+        if (configuration.remoteViewsClassName.isEmpty()) {
+            "当前组件尺寸没有可用的远端视图".errorNotify(false)
+            return
+        }
+
         if (configuration.showUser && configuration.bindUser == null) {
             "你还没有绑定用户".errorNotify(false)
             return

@@ -21,8 +21,15 @@ import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.ui.screen.app_widget.data.RemoteViewsPreviewAnimData
 import kotlin.math.roundToInt
 
+/*
+* 原粹树脂恢复时间2*1预览
+*
+* 该预览展示"原粹树脂/数量/恢复时间",与ResinRecoverTime2X1RemoteViews
+* (布局widget_layout_resin_2_1_recover_time)的内容一致。
+* 函数与文件名中的2X2是上游把该视图由2*2改名为2*1时遗留的旧名,内容从未改变。
+* */
 @Composable
-fun RemoteViews2X2Preview(
+fun ResinRecoverTime2X1RemoteViewsPreview(
     previewAnimData: RemoteViewsPreviewAnimData
 ) {
     Column(

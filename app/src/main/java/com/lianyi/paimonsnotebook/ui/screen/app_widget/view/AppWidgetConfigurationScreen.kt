@@ -36,6 +36,7 @@ import com.lianyi.paimonsnotebook.R
 import com.lianyi.paimonsnotebook.common.components.dialog.InformationDialog
 import com.lianyi.paimonsnotebook.common.components.layout.ShowIf
 import com.lianyi.paimonsnotebook.common.components.lazy.ContentSpacerLazyColumn
+import com.lianyi.paimonsnotebook.common.components.placeholder.EmptyPagePlaceholder
 import com.lianyi.paimonsnotebook.common.components.placeholder.TextPlaceholder
 import com.lianyi.paimonsnotebook.common.components.popup.ColorPickerPopup
 import com.lianyi.paimonsnotebook.common.components.widget.TextButton
@@ -88,6 +89,27 @@ class AppWidgetConfigurationScreen : BaseActivity() {
     @Composable
     private fun Content() {
         val scope = rememberCoroutineScope()
+
+        //该尺寸没有任何远端视图登记时,直接给出可读的提示,
+        //否则用户看到的是一片空白且无法保存
+        if (viewModel.noAvailableRemoteViews) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(BackGroundColor),
+                contentAlignment = Alignment.Center
+            ) {
+                EmptyPagePlaceholder(title = "当前组件尺寸暂无可用的视图") {
+                    Text(
+                        text = "请移除该组件后改用其他尺寸的桌面组件",
+                        fontSize = 14.sp,
+                        color = Info
+                    )
+                }
+            }
+            return
+        }
+
         ContentSpacerLazyColumn(
             modifier = Modifier
                 .fillMaxSize()
