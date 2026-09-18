@@ -8,6 +8,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lianyi.paimonsnotebook.common.extension.data_store.editValue
 import com.lianyi.paimonsnotebook.common.extension.scope.launchIO
+import com.lianyi.paimonsnotebook.common.extension.scope.launchMain
+import com.lianyi.paimonsnotebook.common.extension.scope.withContextMain
 import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
 import com.lianyi.paimonsnotebook.common.extension.string.notify
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
@@ -71,7 +73,8 @@ class SplashScreenViewModel : ViewModel() {
             PreferenceKeys.EnableMetadata.editValue(true)
             PreferenceKeys.OnLaunchShowEnableMetadataHint.editValue(false)
 
-            showEnableMetadataHint = false
+            //Compose状态的写入必须在主线程
+            withContextMain { showEnableMetadataHint = false }
 
             val initialMetadataDownload = dataStoreValuesFirstLambda {
                 this[PreferenceKeys.InitialMetadataDownload] ?: false
@@ -82,7 +85,7 @@ class SplashScreenViewModel : ViewModel() {
                 return@launch
             }
 
-            showLoading = true
+            withContextMain { showLoading = true }
 
             MetadataHelper.updateMetadata(updateMap = true,
                 onFailed = {
@@ -96,10 +99,19 @@ class SplashScreenViewModel : ViewModel() {
 
                     onSuccess.invoke()
                 }, onLoadMetadataFile = {
-                    currentMetadataLoadCount++
-                    maxMetadataCount = it
+                    /*
+                    * 该回调是非suspend的(不能直接调withContextMain),
+                    * 且由 MetadataHelper 内多个async并发触发 —— 原先直接
+                    * currentMetadataLoadCount++ 既跨线程写Compose状态,
+                    * 又是非原子的自增。改为投递到主线程执行:Main是单线程,
+                    * 顺带把并发自增也串行化了。
+                    * */
+                    viewModelScope.launchMain {
+                        currentMetadataLoadCount++
+                        maxMetadataCount = it
+                    }
                 }) {
-                showLoading = false
+                withContextMain { showLoading = false }
             }
         }
     }
