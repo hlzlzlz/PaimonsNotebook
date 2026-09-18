@@ -64,6 +64,14 @@ class HutaoStatisticsClient {
     suspend fun getRoleCombatStatistics(last: Boolean = false): HutaoResponseData<HutaoRoleCombatStatisticsData>? =
         get("/RoleCombat/Statistics?Last=$last", HutaoRoleCombatStatisticsData::class.java)
 
+    //角色配装(同队角色/所持武器/所穿圣遗物)
+    suspend fun getAvatarCollocation(last: Boolean = false): HutaoResponseData<List<HutaoAvatarCollocationData>>? =
+        getList("/Statistics/Avatar/AvatarCollocation?Last=$last", HutaoAvatarCollocationData::class.java)
+
+    //武器配队(使用该武器的角色占比)
+    suspend fun getWeaponCollocation(last: Boolean = false): HutaoResponseData<List<HutaoWeaponCollocationData>>? =
+        getList("/Statistics/Weapon/WeaponCollocation?Last=$last", HutaoWeaponCollocationData::class.java)
+
     /*
     * 注:原 getAvatarStrategies()(打 /strategy/all 取角色精确攻略帖ID)已删除。
     *

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Text
@@ -31,10 +32,12 @@ import com.lianyi.core.ui.components.text.InfoText
 import com.lianyi.core.ui.components.text.PrimaryText
 import com.lianyi.paimonsnotebook.common.components.media.NetworkImage
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
+import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoAvatarCollocationData
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoAvatarFloorRateData
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoHoldingRateEntry
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoOverviewData
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoTeamCombinationData
+import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoWeaponCollocationData
 import com.lianyi.paimonsnotebook.ui.theme.Black_60
 import com.lianyi.paimonsnotebook.ui.theme.CardBackGroundColor
 
@@ -390,4 +393,293 @@ private fun DeltaText(
         fontSize = fontSize,
         fontWeight = fontWeight
     )
+}
+
+/*
+* 角色配装页
+*
+* 每个角色一张卡:头部是同队角色(与谁一起打),其后是所持武器、所穿圣遗物。
+* 按AvatarId排序,只展示占比最高的若干项。
+* */
+@Composable
+internal fun HutaoAvatarCollocationPage(
+    collocations: List<HutaoAvatarCollocationData>?,
+    getAvatar: (Int) -> com.lianyi.paimonsnotebook.common.web.hutao.genshin.avatar.AvatarData?,
+    getWeapon: (Int) -> com.lianyi.paimonsnotebook.common.web.hutao.genshin.weapon.WeaponData?
+) {
+    val list = collocations ?: return
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp, 2.dp)
+                    .radius(6.dp)
+                    .background(CardBackGroundColor)
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                PrimaryText(text = "角色配装 · 全服统计", textSize = 15.sp)
+                InfoText(text = "数据来自玩家上传的深渊记录:同队角色为与其同队出场的比例,武器/圣遗物为其所持比例")
+            }
+        }
+
+        items(
+            items = list.sortedByDescending { it.Avatars.firstOrNull()?.Rate ?: 0.0 },
+            key = { entry -> "collocation_${entry.AvatarId}" }
+        ) { entry ->
+            val avatar = getAvatar(entry.AvatarId)
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp, 2.dp)
+                    .radius(6.dp)
+                    .background(CardBackGroundColor)
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                //角色名
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    NetworkImage(
+                        url = avatar?.iconUrl ?: "",
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    PrimaryText(
+                        text = avatar?.name ?: "${entry.AvatarId}",
+                        textSize = 15.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                //同队角色
+                if (entry.Avatars.isNotEmpty()) {
+                    CollocationSectionTitle("常见队友")
+
+                    entry.Avatars.sortedByDescending { it.Rate }.take(6).forEach { rate ->
+                        val teammate = getAvatar(rate.Item)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            NetworkImage(
+                                url = teammate?.iconUrl ?: "",
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            PrimaryText(
+                                text = teammate?.name ?: "${rate.Item}",
+                                textSize = 13.sp,
+                                bold = false,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            InfoText(
+                                text = String.format("%.1f%%", rate.Rate * 100),
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+
+                //所持武器
+                if (entry.Weapons.isNotEmpty()) {
+                    CollocationSectionTitle("常用武器")
+
+                    entry.Weapons.sortedByDescending { it.Rate }.take(6).forEach { rate ->
+                        val weapon = getWeapon(rate.Item)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            NetworkImage(
+                                url = weapon?.iconUrl ?: "",
+                                modifier = Modifier.size(28.dp),
+                                contentScale = ContentScale.Fit
+                            )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            PrimaryText(
+                                text = weapon?.name ?: "${rate.Item}",
+                                textSize = 13.sp,
+                                bold = false,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            InfoText(
+                                text = String.format("%.1f%%", rate.Rate * 100),
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+
+                //所穿圣遗物(Item形如"套装Id-件数")
+                if (entry.Reliquaries.isNotEmpty()) {
+                    CollocationSectionTitle("常用圣遗物")
+
+                    entry.Reliquaries.sortedByDescending { it.Rate }.take(6).forEach { rate ->
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            PrimaryText(
+                                text = formatReliquaryItem(rate.Item),
+                                textSize = 13.sp,
+                                bold = false,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            InfoText(
+                                text = String.format("%.1f%%", rate.Rate * 100),
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/*
+* 武器配队页
+*
+* 每把武器一张卡:列出使用该武器的角色及占比(相当于"这把武器给谁用")。
+* 元数据里没有的武器Id直接跳过,避免展示一堆纯数字。
+* */
+@Composable
+internal fun HutaoWeaponCollocationPage(
+    collocations: List<HutaoWeaponCollocationData>?,
+    getAvatar: (Int) -> com.lianyi.paimonsnotebook.common.web.hutao.genshin.avatar.AvatarData?,
+    getWeapon: (Int) -> com.lianyi.paimonsnotebook.common.web.hutao.genshin.weapon.WeaponData?
+) {
+    val list = collocations ?: return
+
+    //只保留元数据里能找到的武器,并按最高使用率排序
+    val displayList = list
+        .filter { getWeapon(it.WeaponId) != null }
+        .sortedByDescending { entry -> entry.Avatars.maxOfOrNull { it.Rate } ?: 0.0 }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp, 2.dp)
+                    .radius(6.dp)
+                    .background(CardBackGroundColor)
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                PrimaryText(text = "武器配队 · 全服统计", textSize = 15.sp)
+                InfoText(
+                    text = "共 ${displayList.size} 把武器有配队数据;" +
+                            "百分比为该角色使用此武器的比例"
+                )
+            }
+        }
+
+        items(
+            items = displayList,
+            key = { entry -> "weapon_${entry.WeaponId}" }
+        ) { entry ->
+            val weapon = getWeapon(entry.WeaponId)
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp, 2.dp)
+                    .radius(6.dp)
+                    .background(CardBackGroundColor)
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                //武器名
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    NetworkImage(
+                        url = weapon?.iconUrl ?: "",
+                        modifier = Modifier.size(36.dp),
+                        contentScale = ContentScale.Fit
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    PrimaryText(
+                        text = weapon?.name ?: "${entry.WeaponId}",
+                        textSize = 15.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                entry.Avatars.sortedByDescending { it.Rate }.take(8).forEach { rate ->
+                    val avatar = getAvatar(rate.Item)
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        NetworkImage(
+                            url = avatar?.iconUrl ?: "",
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        PrimaryText(
+                            text = avatar?.name ?: "${rate.Item}",
+                            textSize = 13.sp,
+                            bold = false,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        InfoText(
+                            text = String.format("%.1f%%", rate.Rate * 100),
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CollocationSectionTitle(text: String) {
+    InfoText(text = text, fontSize = 12.sp)
+}
+
+/*
+* 圣遗物Item形如 "2150321-4",末位是件数;这里转成 "套装 2150321 · 4件套"
+* 套装名需要ReliquarySet元数据,而本页只按Id展示 —— 不做名称映射以免给出错误名称。
+* */
+private fun formatReliquaryItem(item: String): String {
+    val parts = item.split("-")
+
+    return if (parts.size == 2) {
+        "套装 ${parts[0]} · ${parts[1]} 件套"
+    } else {
+        item
+    }
 }

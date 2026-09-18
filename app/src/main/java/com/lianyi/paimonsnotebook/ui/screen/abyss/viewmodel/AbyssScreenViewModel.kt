@@ -16,18 +16,22 @@ import com.lianyi.paimonsnotebook.common.service.geetest.CardVerificationService
 import com.lianyi.paimonsnotebook.common.util.enums.LoadingState
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.AvatarService
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.MonsterService
+import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.WeaponService
+import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoAvatarCollocationData
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoAvatarFloorRateData
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoHoldingRateData
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoHoldingRateEntry
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoOverviewData
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoStatisticsClient
 import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoTeamCombinationData
+import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoWeaponCollocationData
 import com.lianyi.paimonsnotebook.common.view.HoyolabWebActivity
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.binding.UserGameRoleData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.GameRecordClient
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.abyss.SpiralAbyssData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.avatar.AvatarData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.monster.MonsterData
+import com.lianyi.paimonsnotebook.common.web.hutao.genshin.weapon.WeaponData
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -35,11 +39,11 @@ import kotlinx.coroutines.withContext
 
 class AbyssScreenViewModel : ViewModel() {
 
-    //0本期 1上期 2总览 3出场率 4使用率 5配队 6持有率
+    //0本期 1上期 2总览 3出场率 4使用率 5配队 6持有率 7角色配装 8武器装备
     var currentPageIndex by mutableIntStateOf(0)
 
     val tabs = arrayOf(
-        "本期", "上期", "全服总览", "出场率", "使用率", "配队", "持有率"
+        "本期", "上期", "全服总览", "出场率", "使用率", "配队", "持有率", "角色配装", "武器装备"
     )
 
     //本期与上期深渊记录
@@ -70,6 +74,14 @@ class AbyssScreenViewModel : ViewModel() {
     var holdingRate by mutableStateOf<List<HutaoHoldingRateEntry>?>(null)
     var holdingRateLoadingState by mutableStateOf(LoadingState.Loading)
 
+    //角色配装
+    var avatarCollocation by mutableStateOf<List<HutaoAvatarCollocationData>?>(null)
+    var avatarCollocationLoadingState by mutableStateOf(LoadingState.Loading)
+
+    //武器配队
+    var weaponCollocation by mutableStateOf<List<HutaoWeaponCollocationData>?>(null)
+    var weaponCollocationLoadingState by mutableStateOf(LoadingState.Loading)
+
     private val gameRecordClient = GameRecordClient()
     private val statisticsClient = HutaoStatisticsClient()
 
@@ -84,6 +96,9 @@ class AbyssScreenViewModel : ViewModel() {
 
     private val avatarMap = mutableMapOf<Int, AvatarData>()
 
+    //武器Id -> 武器,供"角色配装/武器配队"解析名称与图标
+    private val weaponMap = mutableMapOf<Int, WeaponData>()
+
     private val monsterMap = mutableMapOf<String, MonsterData>()
 
     private var metadataLoaded = false
@@ -97,6 +112,10 @@ class AbyssScreenViewModel : ViewModel() {
                 }.avatarList.associateBy {
                     it.id
                 }
+
+                //武器元数据是本页新增依赖,取不到时只影响两个新标签页
+                weaponMap += WeaponService {
+                }.weaponMap
 
                 monsterMap += MonsterService {
                     setErrorStates()
@@ -154,6 +173,8 @@ class AbyssScreenViewModel : ViewModel() {
         appearanceRate = null
         usageRate = null
         teamCombination = null
+        avatarCollocation = null
+        weaponCollocation = null
 
         load(currentPageIndex)
     }
@@ -179,6 +200,8 @@ class AbyssScreenViewModel : ViewModel() {
             4 -> if (usageRate != null) return
             5 -> if (teamCombination != null) return
             6 -> if (holdingRate != null) return
+            7 -> if (avatarCollocation != null) return
+            8 -> if (weaponCollocation != null) return
         }
 
         setLoadingState(page, LoadingState.Loading)
@@ -271,6 +294,36 @@ class AbyssScreenViewModel : ViewModel() {
                         "获取持有率失败:${current?.message ?: "网络错误"}".errorNotify()
                     }
                 }
+
+                7 -> {
+                    val response = withContext(Dispatchers.IO) {
+                        statisticsClient.getAvatarCollocation(last)
+                    }
+
+                    if (response?.retcode == 0) {
+                        avatarCollocation = response.data
+                        avatarCollocationLoadingState =
+                            if (response.data.isNullOrEmpty()) LoadingState.Empty else LoadingState.Success
+                    } else {
+                        avatarCollocationLoadingState = LoadingState.Error
+                        "获取角色配装失败:${response?.message ?: "网络错误"}".errorNotify()
+                    }
+                }
+
+                8 -> {
+                    val response = withContext(Dispatchers.IO) {
+                        statisticsClient.getWeaponCollocation(last)
+                    }
+
+                    if (response?.retcode == 0) {
+                        weaponCollocation = response.data
+                        weaponCollocationLoadingState =
+                            if (response.data.isNullOrEmpty()) LoadingState.Empty else LoadingState.Success
+                    } else {
+                        weaponCollocationLoadingState = LoadingState.Error
+                        "获取武器配队失败:${response?.message ?: "网络错误"}".errorNotify()
+                    }
+                }
             }
         }
     }
@@ -301,7 +354,7 @@ class AbyssScreenViewModel : ViewModel() {
         }.sortedByDescending { it.HoldingRate }
     }
 
-    //按页设置对应的加载状态(0/1=深渊记录,2~6=统计页)
+    //按页设置对应的加载状态(0/1=深渊记录,2~8=统计页)
     private fun setLoadingState(page: Int, state: LoadingState) {
         when (page) {
             0 -> currentAbyssRecordLoadingState = state
@@ -311,6 +364,8 @@ class AbyssScreenViewModel : ViewModel() {
             4 -> usageRateLoadingState = state
             5 -> teamCombinationLoadingState = state
             6 -> holdingRateLoadingState = state
+            7 -> avatarCollocationLoadingState = state
+            8 -> weaponCollocationLoadingState = state
         }
     }
 
@@ -442,6 +497,8 @@ class AbyssScreenViewModel : ViewModel() {
     }
 
     fun getAvatarFromMetadata(avatarId: Int) = avatarMap[avatarId]
+
+    fun getWeaponFromMetadata(weaponId: Int) = weaponMap[weaponId]
 
     fun getMonsterFromMetadata(monsterName:String) = monsterMap[monsterName]
 
