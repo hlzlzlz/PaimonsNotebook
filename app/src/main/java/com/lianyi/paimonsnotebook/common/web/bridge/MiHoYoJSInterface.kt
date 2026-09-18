@@ -276,6 +276,12 @@ class MiHoYoJSInterface(
         * 若不校验,任何被导航到的第三方页面都能调用下列方法拿到ltoken/LTuid/
         * device_fp/DS,或用stoken换出新的cookie_token,等同于账号被接管。
         * 非敏感方法(closePage/showLoading等)不校验,以免影响正常页面交互。
+        *
+        * 已知局限:webView.url 返回的是顶层文档的url,因此"官方页面内嵌的
+        * 第三方iframe"仍能通过本校验。要彻底封堵需改用 androidx.webkit 的
+        * addWebMessageListener(按来源精确授权),但那会改变与米游社页面约定的
+        * JS 调用方式,风险高于收益。本校验已消除"整页导航到第三方域名"这一
+        * 主要攻击面,iframe 场景作为已知残余风险记录在案。
         * */
         if (param.method in SENSITIVE_METHODS && !isCurrentPageTrusted()) {
             println("MiHoYoJSInterface: 拒绝来自非官方域的敏感调用 ${param.method} url=${webView.url}")
