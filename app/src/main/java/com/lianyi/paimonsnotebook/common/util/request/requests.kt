@@ -203,13 +203,24 @@ suspend inline fun <reified T> Request.getAsJson(
     return try {
         val pair = this.getAsTextWithHeader(client)
 
-        val result = Gson().fromJson<ResultData<T>>(pair.first, type)
-
-        if (carryResponseHeaders) {
-            result.setResponseHeaders(pair.second)
+        /*
+        * Gson().fromJson 在输入为空串或字面量 "null" 时返回 null,
+        * 而本函数声明返回非空 ResultData。HTTP 成功但响应体为空
+        * (例如某些错误响应)会走到这里,若继续按非空使用会抛异常。
+        * 与 catch 分支保持一致,用同一段 JSON 构造可读的错误结果
+        * (data 为 null,由 Gson 写入,避免手工做 null as T 这种不安全转换)。
+        * */
+        Gson().fromJson<ResultData<T>>(pair.first, type)?.let { result ->
+            if (carryResponseHeaders) {
+                result.setResponseHeaders(pair.second)
+            }
+            return result
         }
 
-        result
+        Gson().fromJson(
+            "{\"retcode\":${ResultData.RESPONSE_CONVERT_EXCEPTION},\"message\":\"响应体为空\",\"data\":null}",
+            getParameterizedType(ResultData::class.java, T::class.java)
+        )
     } catch (e: Exception) {
         e.printStackTrace()
         Gson().fromJson(
