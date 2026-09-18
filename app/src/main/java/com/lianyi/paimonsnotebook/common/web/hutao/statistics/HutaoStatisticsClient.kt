@@ -15,10 +15,25 @@ import java.lang.reflect.Type
 class HutaoStatisticsClient {
 
     companion object {
-        //主域名与备用域名
+        /*
+        * 主域名与备用域名
+        *
+        * 注意:备用域必须是 homa.hutaorp.org,不能写 api.snaphutaorp.org。
+        * 实测(2026-09-18)api.snaphutaorp.org 不服务 Statistics 系列路由:
+        *   api.snaphutaorp.org/Statistics/Overview             -> 404
+        *   api.snaphutaorp.org/Statistics/Avatar/HoldingRate   -> 404
+        *   api.snaphutaorp.org/git-repository/all              -> 200(同域其它路由正常)
+        * 即该域是活的,只是没有这批路由 —— 写在这里等于备用域永远404,
+        * 主域一挂6个统计端点会全部返回空;而404被 getAsJson(永不抛异常)
+        * 与 json.isBlank() 静默吞掉,所以一直没被发现。
+        *
+        * homa.hutaorp.org 是胡桃官方的主/备成对域(见其 Web/ServerDomain.cs:
+        * snaphutaorp.org <-> hutaorp.org),实测6个端点在备用域上全部200,
+        * 且响应字节数与主域逐一相同。
+        * */
         private val hosts = listOf(
             "https://homa.snaphutaorp.org",
-            "https://api.snaphutaorp.org"
+            "https://homa.hutaorp.org"
         )
 
         private const val StrategyHost = "https://api.snaphutaorp.org"
