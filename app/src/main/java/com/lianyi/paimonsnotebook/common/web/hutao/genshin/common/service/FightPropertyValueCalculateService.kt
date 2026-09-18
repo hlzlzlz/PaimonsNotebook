@@ -2,6 +2,7 @@ package com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service
 
 import com.lianyi.paimonsnotebook.common.extension.list.takeFirstIf
 import com.lianyi.paimonsnotebook.common.util.json.JSON
+import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.LevelLimit
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.wiki.GrowCurveData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.wiki.PromoteData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.format.FightPropertyFormat
@@ -77,7 +78,8 @@ class FightPropertyValueCalculateService(growCurveFile: File, promoteFile: File)
         promoteId: Int,
         level: Int,
         promoted: Boolean,
-        maxLevel: Int = 90
+        //默认按角色上限;武器侧调用需显式传入(见 LevelLimit)
+        maxLevel: Int = LevelLimit.AvatarMaxLevel
     ): Float {
         //通过突破id获取突破成长曲线
         val promoteGrowCurveMap = promoteMap[promoteId]

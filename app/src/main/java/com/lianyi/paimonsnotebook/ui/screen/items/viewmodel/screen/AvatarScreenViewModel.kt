@@ -13,6 +13,7 @@ import com.lianyi.paimonsnotebook.common.util.enums.LoadingState
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.avatar.AvatarData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.AvatarService
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.MaterialService
+import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.LevelLimit
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.format.AvatarSkillFormat
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.format.FightPropertyFormat
 import com.lianyi.paimonsnotebook.ui.screen.items.data.cultivate.CultivateConfigData
@@ -237,9 +238,9 @@ class AvatarScreenViewModel : ItemBaseViewModel<AvatarData>() {
 
         val avatar = this.currentItem ?: return
 
-        //TODO 角色等级上限提升至100
-        val avatarMaxLevel = 90
-        val skillMaxLevel = 10
+        //角色等级上限已随游戏版本提升至100(原为硬编码90),见 LevelLimit 注释
+        val avatarMaxLevel = LevelLimit.AvatarMaxLevel
+        val skillMaxLevel = LevelLimit.SkillMaxLevel
 
         cultivateConfigList += CultivateConfigData(
             name = "角色等级",

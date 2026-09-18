@@ -4,6 +4,7 @@ import com.google.gson.annotations.SerializedName
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.conveter.EquipIconConverter
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.conveter.GachaEquipImgConverter
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.conveter.WeaponTypeIconConverter
+import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.LevelLimit
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.QualityType
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.WeaponType
 
@@ -54,7 +55,7 @@ data class WeaponData(
         get() = QualityType.getQualityBgByType(rankLevel)
 
     val maxLevel:Int
-        get() = if(rankLevel >= 3) 90 else 70
+        get() = LevelLimit.weaponMaxLevel(rankLevel)
 
     data class Affix(
         val Descriptions: List<Description>,

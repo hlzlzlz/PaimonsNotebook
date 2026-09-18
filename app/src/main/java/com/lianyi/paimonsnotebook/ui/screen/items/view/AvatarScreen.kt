@@ -18,6 +18,7 @@ import com.lianyi.paimonsnotebook.ui.screen.items.components.content.ItemScreenC
 import com.lianyi.paimonsnotebook.ui.screen.items.components.cultivate.AvatarCultivateConfigCard
 import com.lianyi.paimonsnotebook.ui.screen.items.components.information.InformationItem
 import com.lianyi.paimonsnotebook.ui.screen.items.components.item.avatar.content.information.AvatarInformationContent
+import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.LevelLimit
 import com.lianyi.paimonsnotebook.ui.screen.items.components.item.avatar.content.skill.AvatarSkillContent
 import com.lianyi.paimonsnotebook.ui.screen.items.components.item.material.ItemMaterialContent
 import com.lianyi.paimonsnotebook.ui.screen.items.components.item.property.ItemPropertyContent
@@ -110,7 +111,7 @@ class AvatarScreen : ComponentActivity() {
                 0 -> ItemPropertyContent(
                     iconUrl = viewModel.currentItem!!.iconUrl,
                     name = viewModel.currentItem!!.name,
-                    maxLevel = 90,
+                    maxLevel = LevelLimit.AvatarMaxLevel,
                     compareIconUrl = viewModel.compareItem?.iconUrl ?: "",
                     propertyList = viewModel.propertyList,
                     compareItemPropertyList = viewModel.compareItemPropertyList,
