@@ -43,12 +43,23 @@ object FileHelper {
         "${BuildConfig.APPLICATION_ID}.provider"
     }
 
-    private val privateStoragePath by lazy {
-        context.getExternalFilesDir(null)
-    }
+    /*
+    * 应用私有外部目录(/sdcard/Android/data/<pkg>/files)。
+    *
+    * getExternalFilesDir 在外部存储未挂载/不可用时返回 null,
+    * 而下面所有路径都直接对它解引用(原先用 !!),此时会 NPE。
+    * 该路径是启动与导出等核心链路的依赖,故回退到内部存储
+    * context.filesDir(它永不为 null),保证功能可用而不是崩溃。
+    *
+    * 注意:回退目标 filesDir 对应 FileProvider 的 files-path,
+    * 而正常情况下对应 external-files-path,故 provider_paths.xml
+    * 两条都必须保留(见该文件注释)。
+    * */
+    private val privateStoragePath: File
+        get() = context.getExternalFilesDir(null) ?: context.filesDir
 
     //如果有外部存储权限就存储到外部的documents文件夹
-    private val rootPath: File?
+    private val rootPath: File
         get() = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
             ?.resolve("PaimonsNotebook") ?: privateStoragePath
 
@@ -66,32 +77,27 @@ private const val FILE_BUFFER_SIZE = 1024 * 8
     * 此文件夹不能存储任何持久文件,每次启动时会删除该文件夹
     * */
     private val tempFilePath
-        get() = rootPath?.resolve("temp")!!
+        get() = rootPath.resolve("temp")
 
     //存储图片的路径
     private val saveImagePath
-        get() =
-            rootPath?.resolve("image")!!
+        get() = rootPath.resolve("image")
 
     //存储元数据的路径
     val saveFileMetadataPath
-        get() =
-            privateStoragePath?.resolve("metadata")!!
+        get() = privateStoragePath.resolve("metadata")
 
     //存储安装包的路径
     private val saveFilePackagePath
-        get() =
-            privateStoragePath?.resolve("package")!!
+        get() = privateStoragePath.resolve("package")
 
     //存储祈愿记录的路径
     val saveFileGachaItemsPath
-        get() =
-            privateStoragePath?.resolve("gacha")!!
+        get() = privateStoragePath.resolve("gacha")
 
     //存储成就记录的路径
     val saveFileAchievementsPath
-        get() =
-            privateStoragePath?.resolve("achievements")!!
+        get() = privateStoragePath.resolve("achievements")
 
     //写外部存储文件的权限
     val hasWriteExternalStorage

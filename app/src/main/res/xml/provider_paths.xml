@@ -2,21 +2,28 @@
 <!--
   FileProvider 可见路径。
 
-  实际被使用的只有 external-files-path:
+  实际被使用的目录:
     gacha / achievements —— FileHelper.saveFileGachaItemsPath / saveFileAchievementsPath
     package              —— FileHelper.saveFilePackagePath(应用内更新下载的APK)
-  三者都取自 context.getExternalFilesDir(null),对应 external-files-path。
+  三者都取自 FileHelper.privateStoragePath。
+
+  两条路径都必须保留,因为 privateStoragePath 会回退:
+    正常情况 context.getExternalFilesDir(null) -> external-files-path
+    外部存储不可用时回退到 context.filesDir  -> files-path
+  若只声明 external-files-path,在外部存储不可用的设备上回退后会因
+  getUriForFile 找不到匹配路径而抛 IllegalArgumentException,
+  导致导出分享与APK安装失效。
+
   FileProvider 的调用点只有两处:FileHelper.getContentUriForFile 与
   SystemService.installAndroidApplication。
 
   原先 5 条全是 path=".",其中 external-path 映射的是整个共享外部存储根
-  (/storage/emulated/0/,含 DCIM/Download 及其他应用的公共文件),属过宽授权:
-  一旦将来有人对该范围内的文件调用 getUriForFile,授权粒度就是共享存储任意文件。
-  这里按实际用途收窄,并去掉零调用的 files/cache/external/external-cache 四条。
-
-  注意 FileHelper.rootPath(公共 Documents/PaimonsNotebook)只经 MediaStore 写入
-  用于存图,从不调用 getUriForFile,故不需要 external-path。
+  (/storage/emulated/0/,含 DCIM/Download 及其他应用的公共文件),属过宽授权,
+  已删除;cache-path 与 external-cache-path 无任何调用,一并删除。
+  注意 FileHelper.rootPath(公共 Documents/PaimonsNotebook)只经 MediaStore
+  写入用于存图,从不调用 getUriForFile,故不需要 external-path。
 -->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <external-files-path name="external-files" path="." />
+    <files-path name="files" path="." />
 </paths>
