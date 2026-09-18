@@ -28,8 +28,34 @@ import kotlinx.coroutines.launch
 class MiHoYoJSInterface(
     private val user: User,
     private val webView: WebView,
+    //首次加载的url,用作webView.url尚未就绪时的兜底
+    private val initialUrl: String = "",
     private val closePage: () -> Unit = {}
 ) {
+
+    companion object {
+        /*
+        * 需要校验来源的方法。
+        * 这些方法会泄露账号凭证(ltoken/LTuid)、设备指纹(device_fp)、
+        * 接口签名(DS),或能用stoken换出新的cookie_token,一旦被第三方页面
+        * 调用等同于账号被接管,因此必须确认调用方来自官方域。
+        * */
+        private val SENSITIVE_METHODS = setOf(
+            "getActionTicket",
+            "getCookieInfo",
+            "getCookieToken",
+            "getDS",
+            "getDS2",
+            "getHTTPRequestHeaders",
+            "getUserInfo",
+        )
+
+        //域名匹配逻辑见 WebViewUrlAllowlist(单独抽出以便单元测试)
+        fun isTrustedUrl(url: String?) = WebViewUrlAllowlist.isTrustedUrl(url)
+    }
+
+    //当前页面是否可信(webView.url未就绪时回退到首次加载的url)
+    private fun isCurrentPageTrusted() = isTrustedUrl(webView.url ?: initialUrl)
 
     private val authClient by lazy {
         AuthClient()
@@ -244,7 +270,17 @@ class MiHoYoJSInterface(
     fun postMessage(str: String) {
         val param = JSON.parse<JsParams<Any?>>(str)
 
-        println("param = ${str}")
+        /*
+        * 来源校验:addJavascriptInterface注入的桥对本WebView加载的任意页面可见,
+        * 而本Activity允许导航到外部链接(帖子内的超链接/服务器下发的page)。
+        * 若不校验,任何被导航到的第三方页面都能调用下列方法拿到ltoken/LTuid/
+        * device_fp/DS,或用stoken换出新的cookie_token,等同于账号被接管。
+        * 非敏感方法(closePage/showLoading等)不校验,以免影响正常页面交互。
+        * */
+        if (param.method in SENSITIVE_METHODS && !isCurrentPageTrusted()) {
+            println("MiHoYoJSInterface: 拒绝来自非官方域的敏感调用 ${param.method} url=${webView.url}")
+            return
+        }
 
         //用launchSafeIO:本方法由WebView页面回调,内部有网络请求与JSON解析,
         //裸launch抛异常会直接杀掉进程

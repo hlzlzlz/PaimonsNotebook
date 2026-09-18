@@ -97,10 +97,6 @@ class HoyolabWebActivity : BaseActivity() {
                     return true
                 }
             }
-
-            addJavascriptInterface(MiHoYoJSInterface(user, webView) {
-                finish()
-            }, "MiHoYoJSInterface")
         }
 
         val url = getExtraUrl(role)
@@ -108,6 +104,14 @@ class HoyolabWebActivity : BaseActivity() {
         webView.setMiyouSheWebViewCookie(
             cookieToken = user.userEntity.cookieToken, lToken = user.userEntity.ltoken,sToken = user.userEntity.stoken
         )
+
+        //把首个url一并交给桥:webView.url在页面加载完成前为null,
+        //此时需要用它判断来源是否可信
+        webView.addJavascriptInterface(
+            MiHoYoJSInterface(user, webView, url) { finish() },
+            "MiHoYoJSInterface"
+        )
+
         webView.loadUrl(url)
     }
 
