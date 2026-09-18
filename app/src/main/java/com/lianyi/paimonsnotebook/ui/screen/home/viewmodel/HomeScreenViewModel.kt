@@ -26,6 +26,7 @@ import com.lianyi.paimonsnotebook.common.extension.data_store.editValue
 import com.lianyi.paimonsnotebook.common.extension.intent.setComponentName
 import com.lianyi.paimonsnotebook.common.extension.intent.setRequestCode
 import com.lianyi.paimonsnotebook.common.extension.scope.launchIO
+import com.lianyi.paimonsnotebook.common.extension.scope.withContextMain
 import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
 import com.lianyi.paimonsnotebook.common.extension.string.notify
 import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
@@ -93,27 +94,37 @@ class HomeScreenViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             launch {
                 SettingsHelper.configurationFlow.collect {
-                    configurationData = it
-                    checkOverlayPermission()
+                    //Compose状态的写入必须在主线程(见AbyssScreenViewModel的同类注释),
+                    //否则可能不被观察,表现为界面永久不刷新
+                    withContextMain {
+                        configurationData = it
+                        checkOverlayPermission()
+                    }
                 }
             }
             launch {
                 HomeHelper.modalItemsFlow.collect {
-                    modalItems.clear()
-                    modalItems += it
+                    withContextMain {
+                        modalItems.clear()
+                        modalItems += it
+                    }
                 }
             }
             launch {
                 AccountHelper.selectedUserFlow.collect {
-                    selectedUser = it
+                    withContextMain {
+                        selectedUser = it
+                    }
                     loadTravelersDiary(it)
                     loadCardPools(it)
                 }
             }
             launch {
                 DailyNoteHelper.dailyNoteFlow.collect {
-                    dailyNoteList.clear()
-                    dailyNoteList.addAll(it)
+                    withContextMain {
+                        dailyNoteList.clear()
+                        dailyNoteList.addAll(it)
+                    }
                 }
             }
             launch {
@@ -210,9 +221,13 @@ class HomeScreenViewModel : ViewModel() {
 
     private suspend fun getWebHome() {
         webHomeClient.getWebHome().apply {
-            if (success) {
+            //data声明非空但服务端可能返回null,直接解引用会NPE;
+            //本方法位于无try/catch的协程内,异常会静默杀掉进程
+            val carousels = data?.carousels
+
+            if (success && carousels != null) {
                 bannerList.clear()
-                bannerList.addAll(data.carousels)
+                bannerList.addAll(carousels)
             } else {
                 "轮播图请求失败:${retcode}".errorNotify()
             }
@@ -223,13 +238,15 @@ class HomeScreenViewModel : ViewModel() {
     private suspend fun getOfficialRecommendedPosts() {
         noticeStatus = LoadingState.Loading
         webHomeClient.getOfficialRecommendedPosts().apply {
-            if (success) {
+            val list = data?.list
+
+            if (success && list != null) {
                 noticeList.clear()
-                noticeList.addAll(data.list)
+                noticeList.addAll(list)
                 //原先成功/失败分支都没再更新noticeStatus,该状态会永久停在Loading;
                 //UI当前未消费它,但保留正确终态,以免后续接入时踩坑
                 noticeStatus =
-                    if (data.list.isEmpty()) LoadingState.Empty else LoadingState.Success
+                    if (list.isEmpty()) LoadingState.Empty else LoadingState.Success
             } else {
                 noticeStatus = LoadingState.Error
                 "公告列表请求失败:${retcode}".errorNotify()
@@ -248,9 +265,11 @@ class HomeScreenViewModel : ViewModel() {
     //获取近期活动
     private suspend fun getNearActivity() {
         webHomeClient.getNearActivity().apply {
-            if (success && data.list.isNotEmpty()) {
+            val list = data?.list
+
+            if (success && !list.isNullOrEmpty()) {
                 nearActivity.clear()
-                data.list.forEach { hots ->
+                list.forEach { hots ->
                     if (hots.id == 48) {
                         hots.children.forEach { group ->
                             if (group.id == 52) {
