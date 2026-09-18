@@ -109,6 +109,16 @@ open class FileOperationScreenViewModel : ViewModel() {
                     propertyList.clear()
                     propertyList += it
 
+                    //propertyList为空时不能弹属性弹窗:PropertiesDialog会用
+                    //properties.maxOf{...}计算键宽,maxOf对空集合抛NoSuchElementException。
+                    //GachaItemsImportService在UIGF JSON缺少uigf_version/version时会
+                    //返回emptyList,故该路径可达
+                    if (propertyList.isEmpty()) {
+                        showLoadingDialog = false
+                        "无法解析该文件的属性信息".warnNotify(false)
+                        return@getPropertyListData
+                    }
+
                     showPropertiesDialog = true
                     showLoadingDialog = false
                 }, {

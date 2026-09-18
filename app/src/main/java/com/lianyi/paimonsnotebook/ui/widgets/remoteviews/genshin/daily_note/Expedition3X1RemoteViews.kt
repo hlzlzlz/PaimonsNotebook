@@ -51,7 +51,12 @@ internal class Expedition3X1RemoteViews(
                     val imageFile =
                         PaimonsNotebookImageLoader.getCacheImageFileByUrl(expedition.avatar_side_icon)
                     val bitmap = BitmapFactory.decodeFile(imageFile?.path)
-                    setImageViewBitmap(R.id.avatar, bitmap)
+                    //图片尚未下载完/下载失败时imageFile为null,decodeFile返回null。
+                    //BaseRemoteViews已对同类情况判空,这里补齐,避免把null交给
+                    //RemoteViews(该路径由系统定时回调驱动,异常会静默杀进程)
+                    if (bitmap != null) {
+                        setImageViewBitmap(R.id.avatar, bitmap)
+                    }
 
                     val second = expedition.remained_time.toLongOrNull() ?: 1L
 

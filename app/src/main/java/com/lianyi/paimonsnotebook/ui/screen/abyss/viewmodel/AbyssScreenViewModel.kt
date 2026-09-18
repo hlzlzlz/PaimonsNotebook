@@ -301,8 +301,11 @@ class AbyssScreenViewModel : ViewModel() {
         }.sortedByDescending { it.HoldingRate }
     }
 
+    //按页设置对应的加载状态(0/1=深渊记录,2~6=统计页)
     private fun setLoadingState(page: Int, state: LoadingState) {
         when (page) {
+            0 -> currentAbyssRecordLoadingState = state
+            1 -> previousAbyssRecordLoadingState = state
             2 -> overviewLoadingState = state
             3 -> appearanceRateLoadingState = state
             4 -> usageRateLoadingState = state
@@ -331,81 +334,109 @@ class AbyssScreenViewModel : ViewModel() {
         if (state == LoadingState.Error) return
 
         viewModelScope.launch {
-            val userAndUid =
-                UserAndUid(
-                    userEntity = currentUser!!.userEntity,
-                    playerUid = PlayerUid.fromGameRole(role = currentGameRole!!)
-                )
-
-            val result = withContext(Dispatchers.IO) {
-                gameRecordClient.getSpiralAbyssData(
-                    user = userAndUid, scheduleType = scheduleType[pageIndex]
-                )
-            }
-
-            if (result.success) {
-                val data =
-                    result.data.copy(floors = result.data.floors.sortedByDescending { it.index })
-
-                val resultState = if (data.floors.isEmpty()) {
-                    LoadingState.Empty
-                } else {
-                    LoadingState.Success
-                }
-
-                when (pageIndex) {
-                    0 -> {
-                        currentAbyssRecord = data
-                        currentAbyssRecordLoadingState = resultState
-                    }
-
-                    1 -> {
-                        previousAbyssRecord = data
-                        previousAbyssRecordLoadingState = resultState
-                    }
-                }
-            } else {
-                var finalState = LoadingState.Error
-
-                //1034风控:App内滑块验证后自动重试,失败时回退到网页验证确认框
-                if (result.validate) {
-                    val challenge = CardVerificationService.verify(
-                        currentUser!!.userEntity, CardVerificationService.PATH_SPIRAL_ABYSS
+            /*
+            * 整体try/catch:本方法内的CardVerificationService.verify带withTimeout(180s),
+            * 用户触发1034风控后不完成滑块会抛TimeoutCancellationException,
+            * 打断协程导致下面的LoadingState赋值永不执行 —— 界面永久停在Loading且无提示。
+            * RoleCombatScreenViewModel已按同样理由加过兜底,此处补齐。
+            * (CancellationException会被协程框架特殊处理,表现为静默挂起而非杀进程)
+            * */
+            try {
+                val userAndUid =
+                    UserAndUid(
+                        userEntity = currentUser!!.userEntity,
+                        playerUid = PlayerUid.fromGameRole(role = currentGameRole!!)
                     )
 
-                    if (challenge != null) {
-                        val retry = withContext(Dispatchers.IO) {
-                            gameRecordClient.getSpiralAbyssData(
-                                user = userAndUid, scheduleType = scheduleType[pageIndex], challenge = challenge
-                            )
+                val result = withContext(Dispatchers.IO) {
+                    gameRecordClient.getSpiralAbyssData(
+                        user = userAndUid, scheduleType = scheduleType[pageIndex]
+                    )
+                }
+
+                if (result.success) {
+                    //data声明非空但服务端可能返回null,直接解引用会NPE
+                    val resultData = result.data
+
+                    if (resultData == null) {
+                        setLoadingState(pageIndex, LoadingState.Error)
+                        "深渊数据为空".errorNotify()
+                        return@launch
+                    }
+
+                    val data =
+                        resultData.copy(floors = resultData.floors.sortedByDescending { it.index })
+
+                    val resultState = if (data.floors.isEmpty()) {
+                        LoadingState.Empty
+                    } else {
+                        LoadingState.Success
+                    }
+
+                    when (pageIndex) {
+                        0 -> {
+                            currentAbyssRecord = data
+                            currentAbyssRecordLoadingState = resultState
                         }
 
-                        if (retry.success) {
-                            val data =
-                                retry.data.copy(floors = retry.data.floors.sortedByDescending { it.index })
+                        1 -> {
+                            previousAbyssRecord = data
+                            previousAbyssRecordLoadingState = resultState
+                        }
+                    }
+                } else {
+                    var finalState = LoadingState.Error
 
-                            finalState = if (data.floors.isEmpty()) LoadingState.Empty else LoadingState.Success
+                    //1034风控:App内滑块验证后自动重试,失败时回退到网页验证确认框
+                    if (result.validate) {
+                        val challenge = CardVerificationService.verify(
+                            currentUser!!.userEntity, CardVerificationService.PATH_SPIRAL_ABYSS
+                        )
 
-                            when (pageIndex) {
-                                0 -> currentAbyssRecord = data
-                                1 -> previousAbyssRecord = data
+                        if (challenge != null) {
+                            val retry = withContext(Dispatchers.IO) {
+                                gameRecordClient.getSpiralAbyssData(
+                                    user = userAndUid, scheduleType = scheduleType[pageIndex], challenge = challenge
+                                )
+                            }
+
+                            //同样先判空,再解引用
+                            val retryData = retry.data
+
+                            if (retry.success && retryData != null) {
+                                val data =
+                                    retryData.copy(floors = retryData.floors.sortedByDescending { it.index })
+
+                                finalState = if (data.floors.isEmpty()) LoadingState.Empty else LoadingState.Success
+
+                                when (pageIndex) {
+                                    0 -> currentAbyssRecord = data
+                                    1 -> previousAbyssRecord = data
+                                }
                             }
                         }
                     }
-                }
 
-                if (finalState != LoadingState.Success && finalState != LoadingState.Empty) {
-                    showConfirmDialog = result.validate
-                    if (!result.validate) {
-                        "获取深渊数据失败:${result.message}[${result.retcode}]".errorNotify()
+                    if (finalState != LoadingState.Success && finalState != LoadingState.Empty) {
+                        showConfirmDialog = result.validate
+                        if (!result.validate) {
+                            "获取深渊数据失败:${result.message}[${result.retcode}]".errorNotify()
+                        }
+                        finalState = LoadingState.Error
                     }
-                    finalState = LoadingState.Error
-                }
 
-                when (pageIndex) {
-                    0 -> currentAbyssRecordLoadingState = finalState
-                    1 -> previousAbyssRecordLoadingState = finalState
+                    when (pageIndex) {
+                        0 -> currentAbyssRecordLoadingState = finalState
+                        1 -> previousAbyssRecordLoadingState = finalState
+                    }
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                //超时/取消:必须让界面脱离Loading,否则永久转圈
+                setLoadingState(pageIndex, LoadingState.Error)
+                throw e
+            } catch (e: Exception) {
+                setLoadingState(pageIndex, LoadingState.Error)
+                "获取深渊数据时出现异常:${e.message ?: "未知错误"}".errorNotify()
             }
         }
     }

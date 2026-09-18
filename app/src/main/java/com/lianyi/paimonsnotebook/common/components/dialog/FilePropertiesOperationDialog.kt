@@ -78,7 +78,9 @@ fun FilePropertiesOperationDialog(
 
             val keyWidth =
                 with(LocalDensity.current) {
-                    (fontSize * properties.maxOf { it.first.length }).toDp()
+                    //maxOf对空集合抛NoSuchElementException,调用方虽已过滤,
+                    //此处再兜一层(默认0即不额外撑宽)
+                    (fontSize * (properties.maxOfOrNull { it.first.length } ?: 0)).toDp()
                 }
 
             Column(

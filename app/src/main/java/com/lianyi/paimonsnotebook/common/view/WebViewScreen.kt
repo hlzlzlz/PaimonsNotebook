@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import com.lianyi.paimonsnotebook.BuildConfig
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
 import com.lianyi.paimonsnotebook.ui.theme.PaimonsNotebookTheme
 
@@ -17,8 +18,18 @@ class WebViewScreen : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        WebView.setWebContentsDebuggingEnabled(true)
-        
+
+        /*
+        * setWebContentsDebuggingEnabled 是进程级静态开关:一旦执行,
+        * 同进程内所有 WebView 都能被 chrome://inspect 远程调试 ——
+        * 包括 HoyolabWebActivity 里那个持有 .mihoyo.com 会话 cookie 的 WebView,
+        * 等同于凭据泄露。原先无条件开启,release 包同样生效。
+        * 该开关只在开发期需要,故用 BuildConfig.DEBUG 门禁。
+        * */
+        if (BuildConfig.DEBUG) {
+            WebView.setWebContentsDebuggingEnabled(true)
+        }
+
         setContent {
             PaimonsNotebookTheme(hideNavigationBar = true, hideStatusBar = true) {
                 AndroidView(factory = {
