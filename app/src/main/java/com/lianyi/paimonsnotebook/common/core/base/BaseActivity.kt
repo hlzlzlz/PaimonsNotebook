@@ -57,19 +57,42 @@ open class BaseActivity(
         }
     }
 
+    /*
+    * 屏幕方向监听器。
+    *
+    * 原先它是setRequestedOrientation()里的一个临时对象,enable()之后引用即丢失,
+    * 而OrientationEventListener被SensorManager注册后会持有强引用,
+    * 全项目没有任何一处调用disable() → Activity永远无法被回收。
+    * 每个页面进出一次就泄漏一个Activity并留下一个持续回调的传感器监听
+    * (回调里还会访问已销毁Activity的contentResolver)。
+    * 现持有为字段,并在onDestroy中disable()。
+    * */
+    private var orientationEventListener: ScreenOrientationEventListener? = null
+
     @SuppressLint("SourceLockedOrientationActivity", "WrongConstant")
     private fun setRequestedOrientation() {
         //设置通过传感器控制屏幕旋转方向
         if (enableSensor) {
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 
-            ScreenOrientationEventListener(this) {
+            orientationEventListener = ScreenOrientationEventListener(this) {
                 requestedOrientation = it
-            }.enable()
+            }.apply { enable() }
         } else if (initOrientation != -1) {
             //锁定方向
             requestedOrientation = initOrientation
         }
+    }
+
+    override fun onDestroy() {
+        //注销传感器监听,避免泄漏Activity
+        try {
+            orientationEventListener?.disable()
+        } catch (_: Exception) {
+        }
+        orientationEventListener = null
+
+        super.onDestroy()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
