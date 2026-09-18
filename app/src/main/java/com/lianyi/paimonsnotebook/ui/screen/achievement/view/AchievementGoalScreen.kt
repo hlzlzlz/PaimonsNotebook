@@ -180,7 +180,10 @@ class AchievementGoalScreen : BaseActivity() {
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                     ) {
 
-                        items(viewModel.achievementList) { item ->
+                        //必须给key:switchSortType() 会原地重排 achievementList,
+                        //无key时Compose按位置匹配,行内 remember{getAchievementEntity(id)}
+                        // 会留在错误的行上 —— 表现为"完成于"显示上一个占位者的时间
+                        items(viewModel.achievementList, key = { it.id }) { item ->
                             Column(
                                 modifier = Modifier
                                     .padding(vertical = 4.dp)

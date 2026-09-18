@@ -86,7 +86,9 @@ class PlayerCharacterScreen : BaseActivity() {
                             statusBarPaddingEnabled = false
                         ) {
 
-                            items(viewModel.characterList) { characterData ->
+                            //必须给key:characterList 在切换角色时会整体清空重填,
+                            //无key时Compose按位置匹配,行内状态会串到别的角色上
+                            items(viewModel.characterList, key = { it.id }) { characterData ->
                                 PlayerCharacterListCard(
                                     characterData = characterData,
                                     getAvatarDataById = viewModel::getAvatarDataById,

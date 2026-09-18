@@ -123,7 +123,9 @@ class AchievementScreen : BaseActivity() {
                     }
                 }
 
-                items(viewModel.achievementGoalList) { item ->
+                //必须给key:achievementGoalList 会被 switchSortType() 原地重排,
+                //无key时Compose按位置匹配,行内remember的状态会留在错误的行上
+                items(viewModel.achievementGoalList, key = { it.goal.id }) { item ->
                     Column(
                         modifier = Modifier
                             .padding(vertical = 4.dp)

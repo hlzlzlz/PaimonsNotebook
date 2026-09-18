@@ -31,6 +31,7 @@ import com.lianyi.paimonsnotebook.common.components.dialog.ConfirmDialog
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
 import com.lianyi.paimonsnotebook.common.extension.data_store.editValue
 import com.lianyi.paimonsnotebook.common.extension.scope.launchIO
+import com.lianyi.paimonsnotebook.common.extension.scope.launchMain
 import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
 import com.lianyi.paimonsnotebook.common.extension.string.notify
 import com.lianyi.paimonsnotebook.common.extension.string.show
@@ -404,6 +405,14 @@ class SettingScreenViewModel : ViewModel() {
     //下载进度
     private var downloadProgress by mutableFloatStateOf(0f)
 
+    /*
+    * 上次提交进度的时间戳,用于节流。
+    * onProgress 每读满一个缓冲区(8KB)就被调一次,6.5MB的安装包约800次;
+    * 每次都投递一个协程到主线程既浪费又会让进度条抖动。
+    * 这里限制为约100ms更新一次(下载本身是秒级操作,肉眼足够顺滑)。
+    * */
+    private var lastProgressPostTime = 0L
+
     //下载状态
     private var downloadState by mutableStateOf(DownloadState.Empty)
 
@@ -474,7 +483,22 @@ class SettingScreenViewModel : ViewModel() {
                                         downloadState = DownloadState.Error
                                     },
                                     onProgress = {
-                                        downloadProgress = it
+                                        /*
+                                        * onProgress 由 ProgressResponseBody.read() 在
+                                        * OkHttp 的线程上直接调用(不在任何协程上下文里),
+                                        * 而 downloadProgress 是 Compose 状态,
+                                        * 必须回到主线程写;并按100ms节流,
+                                        * 避免每个8KB缓冲区都投递一次协程。
+                                        * */
+                                        val now = System.currentTimeMillis()
+
+                                        if (now - lastProgressPostTime >= 100L) {
+                                            lastProgressPostTime = now
+
+                                            viewModelScope.launchMain {
+                                                downloadProgress = it
+                                            }
+                                        }
                                     }
                                 )
                             }
