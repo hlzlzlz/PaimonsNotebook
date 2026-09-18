@@ -168,6 +168,9 @@
             android:name=".ui.screen.guide.view.GuideScreen"
             android:theme="@style/Theme.PaimonsNotebook" />
         <activity
+            android:name=".ui.screen.announcement.view.AnnouncementScreen"
+            android:theme="@style/Theme.PaimonsNotebook" />
+        <activity
             android:name=".common.view.VideoPlayScreen"
             android:configChanges="orientation|screenSize"
             android:theme="@style/Theme.PaimonsNotebookNoTranslucent"

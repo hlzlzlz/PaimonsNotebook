@@ -10,6 +10,7 @@ import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
 import com.lianyi.paimonsnotebook.common.util.json.JSON
 import com.lianyi.paimonsnotebook.common.util.parameter.getParameterizedType
 import com.lianyi.paimonsnotebook.ui.screen.abyss.view.AbyssScreen
+import com.lianyi.paimonsnotebook.ui.screen.announcement.view.AnnouncementScreen
 import com.lianyi.paimonsnotebook.ui.screen.role_combat.view.RoleCombatScreen
 import com.lianyi.paimonsnotebook.ui.screen.travelers_diary.view.TravelersDiaryScreen
 import com.lianyi.paimonsnotebook.ui.screen.achievement.view.AchievementScreen
@@ -139,6 +140,12 @@ object HomeHelper {
             icon = R.drawable.ic_genshin_game_spiral_abyss,
             target = RoleCombatScreen::class.java,
             sortIndex = 92
+        ),
+        ModalItemData(
+            name = "游戏公告",
+            icon = R.drawable.ic_genshin_game_ggc_book,
+            target = AnnouncementScreen::class.java,
+            sortIndex = 96
         ),
     )
 
