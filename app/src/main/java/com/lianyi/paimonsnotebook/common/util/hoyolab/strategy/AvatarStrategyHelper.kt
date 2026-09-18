@@ -1,73 +1,62 @@
 package com.lianyi.paimonsnotebook.common.util.hoyolab.strategy
 
-import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoAvatarStrategyData
-import com.lianyi.paimonsnotebook.common.web.hutao.statistics.HutaoStatisticsClient
+import java.net.URLEncoder
 
 /*
 * 角色攻略链接
 *
-* 优先使用胡桃API的strategy接口拿"精确攻略帖"链接(需联网且接口可用);
-* 该接口目前实测返回404(同域其它路由正常,属路由下线而非鉴权),
-* 此时退化为可直接打开的攻略站直链。
+* 直接返回B站原神Wiki的该角色攻略页。
 *
-* 注意:退化链接是必要的 —— 原实现取不到strategyId就返回null,
-* 而调用方是 strategyUrl?.let { ... } ,即按钮直接不渲染,
-* 功能静默消失且无任何提示(见 AvatarInformationContent:126)。
+* 历史:原实现先请求胡桃API的 /strategy/all 取"精确攻略帖ID",
+* 取不到就返回 null,而调用方写的是 strategyUrl?.let { ... },
+* 即按钮直接不渲染 —— 功能静默消失且无任何提示。
+*
+* 实测(2026-09-18)该路由在两个域上均已下线:
+*   api.snaphutaorp.org/strategy/all   -> 404
+*   api.hutaorp.org/strategy/all       -> 404
+*   api.snaphutaorp.org/strategy/item  -> 404
+*   api.hutaorp.org/strategy/item      -> 404
+* 同域 git-repository/all -> 200,证明域是活的,属"路由不存在"而非鉴权/网络问题。
+*
+* 所以"先试接口、失败再退化"是纯浪费 —— 每次冷启动都会白白打一次必然404的请求。
+* 现在把B站直链作为唯一路径,不再发该请求(对应方法已从 HutaoStatisticsClient 删除)。
+*
+* 胡桃工具箱自己的攻略命令也是这个结局:它走 /strategy 的
+* ChineseStrategyCommand / OverseaStrategyCommand 同样取不到数据,
+* 而它唯一可用的 BilibiliStrategyCommand 用的正是下面这个URL格式
+* (见 WikiAvatarStrategyComponent.cs),与本实现一致。
+* 详见 memory/hutao-comparison-round2.md 第3节。
 * */
 object AvatarStrategyHelper {
 
-    private val client = HutaoStatisticsClient()
+    //B站原神Wiki的攻略页前缀,实测对中文角色名返回200
+    private const val BiliWikiStrategyPrefix = "https://wiki.biligame.com/ys/"
 
-    private var strategies: Map<String, HutaoAvatarStrategyData>? = null
-    private var fetched = false
-
-    private suspend fun ensureFetched() {
-        if (fetched) {
-            return
-        }
-
-        //先取数据再置位:置位必须放在成功之后,
-        //否则首次请求因网络抖动失败后fetched已为true,本安装内永久不再重试
-        val data = try {
-            client.getAvatarStrategies()?.data
-        } catch (e: Exception) {
-            null
-        }
-
-        if (data != null) {
-            strategies = data
-            fetched = true
-        }
-    }
+    //攻略子页名(需URL编码后再拼,否则URL里会带裸中文)
+    private const val StrategySuffix = "攻略"
 
     /*
     * 获取角色攻略页链接
     *
-    * avatarName:角色名,用于退化为攻略站直链
+    * avatarName:角色名,与其后的"攻略"子页名都会被URL编码
     *
-    * 接口可用时返回米游社精确攻略帖,否则返回B站原神Wiki的该角色攻略页。
-    * 两者都是普通网页,交由系统浏览器打开。
+    * 角色名为空时返回null(调用方不渲染按钮)。
+    * 返回的是普通网页,交由系统浏览器打开。
     * */
-    suspend fun getStrategyUrl(avatarId: Int, avatarName: String): String? {
-        ensureFetched()
-
-        val strategyId = strategies?.get("$avatarId")?.mys_strategy_id
-
-        if (strategyId != null && strategyId > 0) {
-            return "https://bbs.mihoyo.com/ys/strategy/channel/map/39/$strategyId?bbs_presentation_style=no_header"
-        }
-
-        //接口不可用时退化为Wiki直链(实测该站点对中文角色名返回200)
+    fun getStrategyUrl(avatarId: Int, avatarName: String): String? {
+        //avatarId当前未参与拼URL(胡桃的精确攻略帖接口已下线),
+        //保留形参以免调用方与胡桃侧签名脱钩,后续若接口恢复可在此接回
         if (avatarName.isBlank()) {
             return null
         }
 
-        val encodedName = try {
-            java.net.URLEncoder.encode(avatarName, "UTF-8")
+        return try {
+            //分段编码:斜杠必须保留为路径分隔符,不能一起编成%2F
+            val encodedName = URLEncoder.encode(avatarName, "UTF-8")
+            val encodedSuffix = URLEncoder.encode(StrategySuffix, "UTF-8")
+            "$BiliWikiStrategyPrefix$encodedName/$encodedSuffix"
         } catch (e: Exception) {
-            return null
+            null
         }
-
-        return "https://wiki.biligame.com/ys/$encodedName/攻略"
     }
 }

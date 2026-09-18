@@ -37,7 +37,6 @@ import com.lianyi.paimonsnotebook.ui.theme.Black_10
 import com.lianyi.paimonsnotebook.ui.theme.White_40
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.runtime.LaunchedEffect
 import com.lianyi.paimonsnotebook.common.components.widget.TextButton
 
 @Composable
@@ -115,12 +114,10 @@ internal fun AvatarInformationContent(
 
 
         //角色攻略入口
-        var strategyUrl by remember(avatar) {
-            mutableStateOf<String?>(null)
-        }
-
-        LaunchedEffect(avatar) {
-            strategyUrl = AvatarStrategyHelper.getStrategyUrl(avatar.id, avatar.name)
+        //getStrategyUrl已是纯函数(B站直链拼接,无网络请求),
+        //故直接用remember计算,不再走LaunchedEffect —— 否则首帧为null会让按钮闪一下
+        val strategyUrl = remember(avatar) {
+            AvatarStrategyHelper.getStrategyUrl(avatar.id, avatar.name)
         }
 
         strategyUrl?.let { url ->

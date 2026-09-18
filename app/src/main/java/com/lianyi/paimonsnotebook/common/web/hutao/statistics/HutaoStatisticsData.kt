@@ -84,9 +84,3 @@ data class HutaoRoleCombatStatisticsData(
         val Rate: Double
     )
 }
-
-//角色攻略ID
-data class HutaoAvatarStrategyData(
-    val mys_strategy_id: Int,
-    val hoyolab_strategy_id: Int
-)

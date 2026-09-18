@@ -36,8 +36,6 @@ class HutaoStatisticsClient {
             "https://homa.hutaorp.org"
         )
 
-        private const val StrategyHost = "https://api.snaphutaorp.org"
-
         private fun parameterized(raw: Class<*>, arg: Type): ParameterizedType =
             getParameterizedType(raw, arg)
     }
@@ -66,28 +64,23 @@ class HutaoStatisticsClient {
     suspend fun getRoleCombatStatistics(last: Boolean = false): HutaoResponseData<HutaoRoleCombatStatisticsData>? =
         get("/RoleCombat/Statistics?Last=$last", HutaoRoleCombatStatisticsData::class.java)
 
-    //全角色攻略ID
-    suspend fun getAvatarStrategies(): HutaoResponseData<Map<String, HutaoAvatarStrategyData>>? {
-        val json = buildRequest {
-            url("$StrategyHost/strategy/all")
-        }.getAsText(applicationOkHttpClient)
-
-        if (json.isBlank()) {
-            return null
-        }
-
-        return try {
-            JSON.parse<HutaoResponseData<Map<String, HutaoAvatarStrategyData>>>(
-                json,
-                parameterized(
-                    HutaoResponseData::class.java,
-                    parameterized(Map::class.java, String::class.java)
-                )
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
+    /*
+    * 注:原 getAvatarStrategies()(打 /strategy/all 取角色精确攻略帖ID)已删除。
+    *
+    * 实测(2026-09-18)该路由在两个域上都已下线:
+    *   api.snaphutaorp.org/strategy/all                        -> 404
+    *   api.hutaorp.org/strategy/all                            -> 404
+    *   api.snaphutaorp.org/strategy/item?item_id=10000002      -> 404
+    *   api.hutaorp.org/strategy/item?item_id=10000002          -> 404
+    *   api.snaphutaorp.org/git-repository/all?name=Snap.Metadata -> 200(同域对照)
+    * 即"路由不存在",不是鉴权或网络问题。
+    *
+    * 胡桃工具箱自己的同名功能(WikiAvatarStrategyComponent 的
+    * ChineseStrategyCommand / OverseaStrategyCommand)走的就是这两个路由,
+    * 因此它那两个按钮同样是坏的;它唯一还能用的 BilibiliStrategyCommand
+    * 走的是纯拼接的B站Wiki直链,与本项目现在的默认路径一致。
+    * 详见 memory/hutao-comparison-round2.md 第3节。
+    * */
 
     //data为单个对象的请求
     private suspend fun <T : Any> get(
