@@ -350,11 +350,37 @@ private const val FILE_BUFFER_SIZE = 1024 * 8
     fun extractZipFile(file: File, target: String) {
         val zipFile = ZipFile(file.absoluteFile)
 
+        //目标目录的规范路径,用于校验解压结果不会逃逸出去
+        val targetDir = File(target)
+        val targetCanonicalPath = targetDir.canonicalPath
+
         for (entry in zipFile.entries()) {
-            val item = File(target, entry.name)
+            val item = File(targetDir, entry.name)
+
+            /*
+            * Zip Slip 防护:zip 条目名可以包含 ../ 或绝对路径,
+            * 直接 File(target, entry.name) 会被写到目标目录之外
+            * (例如条目名 "../../foo" 可覆盖应用私有目录里的任意文件)。
+            * 这里用 canonicalPath 归一化后再确认它仍在目标目录内。
+            * */
+            val itemCanonicalPath = try {
+                item.canonicalPath
+            } catch (e: Exception) {
+                continue
+            }
+
+            if (itemCanonicalPath != targetCanonicalPath &&
+                !itemCanonicalPath.startsWith(targetCanonicalPath + File.separator)
+            ) {
+                continue
+            }
+
             if (entry.isDirectory) {
                 item.mkdirs()
             } else {
+                //条目可能位于尚未创建的中间目录下,先建父目录
+                item.parentFile?.mkdirs()
+
                 val arr = zipFile.getInputStream(entry).use {
                     it.readBytes()
                 }
