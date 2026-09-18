@@ -120,7 +120,7 @@ internal fun AvatarInformationContent(
         }
 
         LaunchedEffect(avatar) {
-            strategyUrl = AvatarStrategyHelper.getMysStrategyUrl(avatar.id)
+            strategyUrl = AvatarStrategyHelper.getStrategyUrl(avatar.id, avatar.name)
         }
 
         strategyUrl?.let { url ->
