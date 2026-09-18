@@ -1,11 +1,9 @@
 package com.lianyi.paimonsnotebook.common.util.notification
 
 import androidx.compose.runtime.mutableStateListOf
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.common.extension.scope.withContextMain
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -34,11 +32,21 @@ object PaimonsNotebookNotification {
             keepShow = keepShow
         )
 
-        CoroutineScope(Dispatchers.Unconfined).launch {
-            mutex.withLock {  }
-
-            withContextMain {
-                notifications.add(data)
+        /*
+        * 用launchSafeIO而非裸CoroutineScope(Dispatchers.Unconfined):
+        * Unconfined会直接在调用线程上开始执行,块内同步抛出的异常会沿调用栈
+        * 传播到调用方(String.notify()是全程最高频的辅助方法),且没有兜底。
+        *
+        * 另外原先这里是 mutex.withLock {  } —— 空临界区,真正需要保护的
+        * notifications.add 反而在锁外;而 remove() 里的 removeIf 在锁内,
+        * 两者并发时会与Compose对同一 SnapshotStateList 的迭代冲突。
+        * 现把 add 纳入同一把锁。
+        * */
+        launchSafeIO {
+            mutex.withLock {
+                withContextMain {
+                    notifications.add(data)
+                }
             }
 
             //设置自动消失
@@ -64,7 +72,8 @@ object PaimonsNotebookNotification {
     }
 
     fun removeNotifyById(id: String) {
-        CoroutineScope(Dispatchers.Unconfined).launch {
+        //同上:裸CoroutineScope(Unconfined)无异常兜底
+        launchSafeIO {
             remove(id)
         }
     }

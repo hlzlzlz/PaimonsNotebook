@@ -12,6 +12,23 @@ object TimeHelper {
         Locale.CHINA
     }
 
+    /*
+    * SimpleDateFormat 不是线程安全的:format()/parse() 会改写其内部 Calendar。
+    * 本 object 把 16 个格式化器缓存为单例,而调用方横跨主线程(Compose 渲染)、
+    * IO 协程、图片加载回调与 WorkManager 工作线程 —— 并发调用会产出错乱的时间串,
+    * 或从 Calendar 内部抛出 ArrayIndexOutOfBoundsException/NumberFormatException。
+    *
+    * 这里用锁串行化所有 format/parse 调用。持锁时间极短(纯内存格式化),
+    * 且保留了缓存带来的零分配收益,比每次 new 一个 SimpleDateFormat 更划算。
+    * */
+    private val formatLock = Any()
+
+    private fun formatWith(sdf: SimpleDateFormat, timeStamp: Long): String =
+        synchronized(formatLock) { sdf.format(timeStamp) }
+
+    private fun parseWith(sdf: SimpleDateFormat, text: String): Long? =
+        synchronized(formatLock) { sdf.parse(text)?.time }
+
     private val YY_MM_DD_HH_MM_SS by lazy {
         SimpleDateFormat("yyyy-MM-dd HH:mm:ss", locale)
     }
@@ -109,7 +126,8 @@ object TimeHelper {
             TimeStampType.DD_HH -> DD_HH
         }
 
-        return sdf.format(
+        return formatWith(
+            sdf,
             if (timeStamp < 9999999999L) {
                 timeStamp * 1000
             } else {
@@ -188,7 +206,7 @@ object TimeHelper {
     fun getRecoverTime(second: Long, currentTimeStamp: Long = System.currentTimeMillis()): String {
         val finishTimeStamp = currentTimeStamp + (second * 1000L)
 
-        val formatString = HH_MM.format(finishTimeStamp)
+        val formatString = formatWith(HH_MM, finishTimeStamp)
 
         return "${getDiffDayText(second)} $formatString"
     }
@@ -198,9 +216,9 @@ object TimeHelper {
     fun getDiffDayText(second: Long, currentTimeStamp: Long = System.currentTimeMillis()): String {
         val finishTimeStamp = currentTimeStamp + (second * 1000L)
 
-        val todayDataString = YY_MM_DD.format(currentTimeStamp)
+        val todayDataString = formatWith(YY_MM_DD, currentTimeStamp)
         val todayLimitTimeStamp =
-            YY_MM_DD_HH_MM_SS.parse("$todayDataString 23:59:59")?.time
+            parseWith(YY_MM_DD_HH_MM_SS, "$todayDataString 23:59:59")
                 ?: 0L
 
         val diffValue = (finishTimeStamp - todayLimitTimeStamp)

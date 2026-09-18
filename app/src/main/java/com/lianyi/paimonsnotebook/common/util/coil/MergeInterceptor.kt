@@ -4,6 +4,7 @@ import coil.intercept.Interceptor
 import coil.request.ImageResult
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -22,7 +23,21 @@ import kotlin.coroutines.resumeWithException
 object MergeInterceptor : Interceptor {
     private val pendingContinuationMap: HashMap<String, MutableList<CancellableContinuation<Unit>>> = hashMapOf()
     private val pendingContinuationMapLock = Any()
-    private val notifyScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    /*
+    * 兜底异常处理器。
+    *
+    * SupervisorJob 只阻止兄弟协程被连带取消,并不吞异常;本 scope 原先没有
+    * CoroutineExceptionHandler,而三处 launch 都在调用 resume()/resumeWithException()。
+    * 对已 resume 过的 continuation 再 resume 会抛 IllegalStateException,
+    * 未捕获即走默认处理器杀掉整个进程(CAOC 配 BACKGROUND_MODE_SILENT,无崩溃页)。
+    * 本拦截器注册在全局 ImageLoader 上,每次图片加载都会经过,故必须兜底。
+    * */
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        throwable.printStackTrace()
+    }
+
+    private val notifyScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
     private val EMPTY_LIST = mutableListOf<CancellableContinuation<Unit>>()
 
     private fun triggerSuccessor(key: String) {
