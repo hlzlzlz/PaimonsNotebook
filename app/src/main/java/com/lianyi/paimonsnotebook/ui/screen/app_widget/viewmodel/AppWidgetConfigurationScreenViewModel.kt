@@ -182,7 +182,20 @@ class AppWidgetConfigurationScreenViewModel : ViewModel() {
     }
 
     private fun setConfigurationInfo(remoteViewsInfo: RemoteViewsInfo?) {
-        if (remoteViewsInfo == null) return
+        if (remoteViewsInfo == null) {
+            /*
+            * 查不到登记信息时必须把已写入的类名清掉。
+            *
+            * 本Activity是exported的(APPWIDGET_CONFIGURE),且extras的key名
+            * (REMOTE_VIEWS_CLASS_NAME等)就编在公开的DEX里,任意应用都能显式启动并
+            * 传入任意字符串。原先这里直接return、不清类名,而submit()只校验
+            * isEmpty() → 未登记的类名照样能落库;该组件下次刷新时
+            * RemoteViewsIndexes 会对它执行 Class.forName(...).newInstance(...),
+            * 等于让外部应用指定要反射实例化的类。
+            * */
+            configuration.remoteViewsClassName = ""
+            return
+        }
 
         configuration.setValueForRemoteViewsInfo(remoteViewsInfo)
     }

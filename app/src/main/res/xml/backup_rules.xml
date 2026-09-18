@@ -17,4 +17,18 @@
     <!-- 排除图片缓存与元数据(体积大且可重新下载) -->
     <exclude domain="file" path="image_cache" />
     <exclude domain="external" path="metadata" />
+
+    <!--
+    排除 WebView 数据目录。
+    HoyolabWebActivity 会把 cookie_token/ltoken/stoken 写入 CookieManager,
+    WebView 将 .mihoyo.com/.miyoushe.com 的 cookie 持久化在 app_webview/ 下,
+    而该目录位于 getDataDir()(root域),默认会被云备份/换机迁移带走 ——
+    仅排除 database 与 datastore 并不够,账号 cookie 仍会泄漏。
+    -->
+    <exclude domain="root" path="app_webview" />
+
+    <!-- 排除导出的祈愿/成就记录与下载的安装包(可重新生成,且非必要) -->
+    <exclude domain="external" path="gacha" />
+    <exclude domain="external" path="achievements" />
+    <exclude domain="external" path="package" />
 </full-backup-content>

@@ -18,6 +18,14 @@
         <!-- 排除图片缓存与元数据(体积大且可重新下载) -->
         <exclude domain="file" path="image_cache" />
         <exclude domain="external" path="metadata" />
+
+        <!-- 排除 WebView 数据目录:HoyolabWebActivity 写入的账号 cookie 持久化于此 -->
+        <exclude domain="root" path="app_webview" />
+
+        <!-- 排除导出的记录与下载的安装包 -->
+        <exclude domain="external" path="gacha" />
+        <exclude domain="external" path="achievements" />
+        <exclude domain="external" path="package" />
     </cloud-backup>
 
     <!-- 换机迁移同样排除凭证,避免新设备直接继承登录态 -->
@@ -27,5 +35,9 @@
         <exclude domain="file" path="datastorePf.preferences_pb" />
         <exclude domain="file" path="image_cache" />
         <exclude domain="external" path="metadata" />
+        <exclude domain="root" path="app_webview" />
+        <exclude domain="external" path="gacha" />
+        <exclude domain="external" path="achievements" />
+        <exclude domain="external" path="package" />
     </device-transfer>
 </data-extraction-rules>
