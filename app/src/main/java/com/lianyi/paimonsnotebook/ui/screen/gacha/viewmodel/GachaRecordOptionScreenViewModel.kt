@@ -38,6 +38,7 @@ import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
 import com.lianyi.paimonsnotebook.common.extension.data_store.editValue
 import com.lianyi.paimonsnotebook.common.extension.intent.setComponentName
 import com.lianyi.paimonsnotebook.common.extension.scope.launchIO
+import com.lianyi.paimonsnotebook.common.extension.scope.launchMain
 import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
 import com.lianyi.paimonsnotebook.common.extension.string.notify
 import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
@@ -68,6 +69,7 @@ import com.lianyi.paimonsnotebook.ui.theme.Gray_F5
 import com.lianyi.paimonsnotebook.ui.theme.Primary_2
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -153,6 +155,80 @@ class GachaRecordOptionScreenViewModel : ViewModel() {
 
     var showChooseExportUidDialog by mutableStateOf(false)
 
+    /*
+    * 删除指定 uid 祈愿记录
+    *
+    * 背景:PN 的"多存档"其实就是按 uid 分组存同一张 gacha_items 表
+    * (主键 = id + uid),此前**没有任何删除入口** —— 用户导入错的记录、
+    * 或想清掉某个 uid 重新拉取时无从下手(DAO 的 deleteGachaLogItemByUid
+    * 早已存在但全树零调用)。
+    *
+    * 无需改动 Room schema:表结构与 DAO 都够用。
+    * */
+    var showDeleteUidDialog by mutableStateOf(false)
+        private set
+
+    //待删除的 uid(用于确认弹窗文案)
+    var pendingDeleteUid by mutableStateOf("")
+        private set
+
+    fun onDeleteUidClick() {
+        if (gachaRecordGameUidList.isEmpty()) {
+            "当前没有可删除的祈愿记录".notify()
+            return
+        }
+
+        pendingDeleteUid = currentGameUid.ifBlank { gachaRecordGameUidList.first() }
+        showDeleteUidDialog = true
+    }
+
+    fun onDeleteUidDialogDismissRequest() {
+        showDeleteUidDialog = false
+    }
+
+    fun onDeleteUidSelect(uid: String) {
+        pendingDeleteUid = uid
+    }
+
+    /*
+    * 确认删除:删掉该 uid 的全部祈愿记录,并在必要时切换当前 uid。
+    *
+    * 若删的是当前正在看的 uid,必须把它从"当前 uid"里挪走 ——
+    * 否则页面会继续按一个已无数据的 uid 查询,表现为空白页。
+    * */
+    fun onConfirmDeleteUid() {
+        val uid = pendingDeleteUid
+
+        if (uid.isBlank()) {
+            showDeleteUidDialog = false
+            return
+        }
+
+        viewModelScope.launchIO {
+            dao.deleteGachaLogItemByUid(uid)
+            dao.notifyRoomGachaItemsUpdate()
+
+            //等 room 的 flow 回调刷新列表后再判断当前 uid 是否还合法
+            val remaining = dao.getAllGameUidFlow().first()
+
+            if (uid == currentGameUid) {
+                val next = remaining.firstOrNull()
+
+                if (next == null) {
+                    //全删空了,清掉当前 uid 以免页面停在空 uid 上
+                    PreferenceKeys.GachaRecordCurrentGameUid.editValue("")
+                } else {
+                    PreferenceKeys.GachaRecordCurrentGameUid.editValue(next)
+                }
+            }
+
+            launchMain {
+                showDeleteUidDialog = false
+                "已删除 uid $uid 的祈愿记录".notify()
+            }
+        }
+    }
+
     private var activityResultFile: File? = null
 
     //存储权限检查方法
@@ -224,13 +300,29 @@ class GachaRecordOptionScreenViewModel : ViewModel() {
                 )
             }
         ),
-//        OptionListData(
-//            name = "删除记录",
-//            description = "从本地删除某个账号的祈愿记录",
-//            onClick = {
-//
-//            }
-//        ),
+        /*
+        * 原作者在此处留了"删除记录"的注释占位(未实现)。
+        *
+        * 本项落地:PN 的"多存档"就是按 uid 分组,此前没有任何删除入口,
+        * 用户导入错的记录或想清掉某个 uid 重新拉取时无从下手。
+        * 无需改 schema —— DAO 的 deleteGachaLogItemByUid 早已存在但零调用。
+        * */
+        OptionListData(
+            name = "删除祈愿记录",
+            description = "从本地删除指定 uid 的全部祈愿记录。删除后可用[记录获取]重新拉取;此操作不可撤销",
+            onClick = {
+                onDeleteUidClick()
+            },
+            slot = {
+                if (gachaRecordGameUidList.isNotEmpty()) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_chevron_right),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        ),
 //        OptionListData(
 //            name = "全量增加",
 //            description = "默认关闭,不再对记录进行重复性验证,将所有能够获取的数据保存到本地",

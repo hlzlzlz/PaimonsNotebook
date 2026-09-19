@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -147,6 +148,64 @@ class GachaRecordOptionScreen : BaseActivity() {
                         selected = version.storageValue == viewModel.currentUIGFVersionStorageValue,
                         onClick = { viewModel.onSelectUIGFVersion(version) }
                     )
+                }
+            }
+        }
+
+        /*
+        * 删除指定 uid 的祈愿记录
+        *
+        * 按钮用"删除"而非"确认":该操作不可撤销,按钮文案要能反映后果。
+        * 标题里带上待删 uid,避免用户在多个 uid 间选错。
+        * */
+        if (viewModel.showDeleteUidDialog) {
+            LazyColumnDialog(
+                title = "删除祈愿记录",
+                titleSpacer = 12.dp,
+                verticalSpacedBy = 4.dp,
+                onDismissRequest = viewModel::onDeleteUidDialogDismissRequest,
+                buttons = arrayOf("取消", "删除"),
+                onClickButton = {
+                    if (it == 1) {
+                        viewModel.onConfirmDeleteUid()
+                    } else {
+                        viewModel.onDeleteUidDialogDismissRequest()
+                    }
+                }
+            ) {
+                item {
+                    Text(
+                        text = "将删除 uid ${viewModel.pendingDeleteUid} 的全部祈愿记录," +
+                                "此操作不可撤销。删除后可通过[记录获取]重新拉取。",
+                        fontSize = 13.sp,
+                        color = Black_60,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+                }
+
+                items(viewModel.gachaRecordGameUidList) { uid ->
+                    val selected = uid == viewModel.pendingDeleteUid
+
+                    Row(
+                        modifier = Modifier
+                            .radius(4.dp)
+                            .fillMaxWidth()
+                            .clickable { viewModel.onDeleteUidSelect(uid) }
+                            .background(if (selected) CardBackGroundColor else Color.Transparent)
+                            .padding(10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = uid,
+                            fontSize = 15.sp,
+                            color = if (selected) Primary_2 else Color.Unspecified
+                        )
+
+                        if (selected) {
+                            Text(text = "✓", fontSize = 15.sp, color = Primary_2)
+                        }
+                    }
                 }
             }
         }
