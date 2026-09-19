@@ -1,6 +1,7 @@
 package com.lianyi.paimonsnotebook.common.view
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
@@ -85,18 +86,6 @@ class HoyolabWebActivity : BaseActivity() {
                 databaseEnabled = true
                 userAgentString = CoreEnvironment.HoyolabMobileUA
             }
-
-            webViewClient = object : WebViewClient() {
-                override fun shouldOverrideUrlLoading(
-                    view: WebView?,
-                    request: WebResourceRequest?
-                ): Boolean {
-                    if (view == null || request == null) return false
-
-                    view.loadUrl(request.url.toString())
-                    return true
-                }
-            }
         }
 
         val url = getExtraUrl(role)
@@ -105,12 +94,52 @@ class HoyolabWebActivity : BaseActivity() {
             cookieToken = user.userEntity.cookieToken, lToken = user.userEntity.ltoken,sToken = user.userEntity.stoken
         )
 
-        //把首个url一并交给桥:webView.url在页面加载完成前为null,
-        //此时需要用它判断来源是否可信
-        webView.addJavascriptInterface(
-            MiHoYoJSInterface(user, webView, url) { finish() },
-            "MiHoYoJSInterface"
-        )
+        /*
+        * 把首个url一并交给桥:webView.url在页面加载完成前为null,
+        * 此时需要用它判断来源是否可信。
+        * */
+        val jsInterface = MiHoYoJSInterface(user, webView, url) { finish() }
+
+        /*
+        * 让桥接侧持续获知当前页面url。
+        *
+        * 桥接方法由网页JS调用,运行在JavaBridge后台线程上,在该线程读
+        * webView.url 会因 checkThread() 抛 RuntimeException(本应用
+        * targetSdk=34,线程检查恒开)。所以url必须由主线程侧的WebViewClient
+        * 回调推送给桥,桥只读自己那份@Volatile副本。
+        *
+        * 三个回调都要接:
+        *   onPageStarted              —— 首次加载与整页导航
+        *   doUpdateVisitedHistory     —— 页内跳转(SPA改hash)、重定向
+        *   shouldOverrideUrlLoading   —— 外部链接被loadUrl进来时
+        * 少接任何一个,该场景下都会退回首次url判定,造成误拦或漏放。
+        * */
+        webView.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(
+                view: WebView?,
+                request: WebResourceRequest?
+            ): Boolean {
+                if (view == null || request == null) return false
+
+                val target = request.url.toString()
+                jsInterface.onPageUrlChanged(target)
+
+                view.loadUrl(target)
+                return true
+            }
+
+            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                super.onPageStarted(view, url, favicon)
+                jsInterface.onPageUrlChanged(url)
+            }
+
+            override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+                super.doUpdateVisitedHistory(view, url, isReload)
+                jsInterface.onPageUrlChanged(url)
+            }
+        }
+
+        webView.addJavascriptInterface(jsInterface, "MiHoYoJSInterface")
 
         webView.loadUrl(url)
     }

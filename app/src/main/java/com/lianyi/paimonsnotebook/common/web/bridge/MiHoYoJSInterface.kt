@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
 class MiHoYoJSInterface(
     private val user: User,
     private val webView: WebView,
-    //首次加载的url,用作webView.url尚未就绪时的兜底
+    //首次加载的url,用作主线程尚未上报页面url时的兜底
     private val initialUrl: String = "",
     private val closePage: () -> Unit = {}
 ) {
@@ -54,8 +54,37 @@ class MiHoYoJSInterface(
         fun isTrustedUrl(url: String?) = WebViewUrlAllowlist.isTrustedUrl(url)
     }
 
-    //当前页面是否可信(webView.url未就绪时回退到首次加载的url)
-    private fun isCurrentPageTrusted() = isTrustedUrl(webView.url ?: initialUrl)
+    /*
+    * 当前页面url,由主线程在页面导航时写入(见 onPageUrlChanged)。
+    *
+    * 不能在 postMessage 里直接读 webView.url:该方法由网页JS调用,运行在
+    * WebView 的私有后台线程(JavaBridge)上,而 WebView.getUrl() 第一行就是
+    * checkThread();本应用 targetSdk=34 >= JELLY_BEAN_MR2,sEnforceThreadChecking
+    * 恒为 true,于是在后台线程调用会抛 RuntimeException。
+    * 后果:所有敏感方法(它们都要过来源校验)在取url时就抛异常,页面拿不到
+    * 凭证/DS/请求头,表现为"便笺、签到等页面加载不出来或交互无效"。
+    *
+    * 因此改为:主线程通过 WebViewClient 回调把url写进本字段,桥接线程只读。
+    * @Volatile 保证桥接线程能看到主线程的最新写入。
+    * */
+    @Volatile
+    private var currentPageUrl: String? = null
+
+    /*
+    * 由主线程在页面开始加载/导航变化时调用,记录当前页面url。
+    * 桥接侧不再触碰 WebView,从而避免跨线程调用。
+    * */
+    fun onPageUrlChanged(url: String?) {
+        currentPageUrl = url
+    }
+
+    /*
+    * 当前页面是否可信。
+    *
+    * 只用主线程上报的url与首次加载的url,不读 webView.url(见 currentPageUrl 注释)。
+    * */
+    private fun isCurrentPageTrusted() =
+        isTrustedUrl(WebViewUrlAllowlist.resolvePageUrl(currentPageUrl, initialUrl))
 
     private val authClient by lazy {
         AuthClient()
@@ -277,14 +306,19 @@ class MiHoYoJSInterface(
         * device_fp/DS,或用stoken换出新的cookie_token,等同于账号被接管。
         * 非敏感方法(closePage/showLoading等)不校验,以免影响正常页面交互。
         *
-        * 已知局限:webView.url 返回的是顶层文档的url,因此"官方页面内嵌的
+        * 已知局限:本校验依据的是顶层文档的url(由主线程上报),因此"官方页面内嵌的
         * 第三方iframe"仍能通过本校验。要彻底封堵需改用 androidx.webkit 的
         * addWebMessageListener(按来源精确授权),但那会改变与米游社页面约定的
         * JS 调用方式,风险高于收益。本校验已消除"整页导航到第三方域名"这一
         * 主要攻击面,iframe 场景作为已知残余风险记录在案。
         * */
         if (param.method in SENSITIVE_METHODS && !isCurrentPageTrusted()) {
-            println("MiHoYoJSInterface: 拒绝来自非官方域的敏感调用 ${param.method} url=${webView.url}")
+            //注意:此处不能读 webView.url,原因同 currentPageUrl 注释(本方法运行在
+            //JavaBridge 后台线程,读 WebView 会抛 RuntimeException)。用上报值记录。
+            println(
+                "MiHoYoJSInterface: 拒绝来自非官方域的敏感调用 ${param.method} " +
+                        "url=${WebViewUrlAllowlist.resolvePageUrl(currentPageUrl, initialUrl)}"
+            )
             return
         }
 

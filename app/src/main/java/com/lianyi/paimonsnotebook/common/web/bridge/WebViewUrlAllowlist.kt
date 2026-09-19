@@ -49,6 +49,18 @@ object WebViewUrlAllowlist {
     }
 
     /*
+    * 决定"本次桥接调用应按哪个页面url判定来源"。
+    *
+    * 优先用主线程最近一次上报的url(见 MiHoYoJSInterface.onPageUrlChanged),
+    * 尚未上报过时回退到首次加载的url。
+    *
+    * 抽成纯函数是为了可单元测试:真正调用它的 MiHoYoJSInterface 需要 WebView
+    * 实例,无法在 JVM 单测里构造。
+    * */
+    fun resolvePageUrl(reportedUrl: String?, initialUrl: String?): String? =
+        reportedUrl?.takeIf { it.isNotBlank() } ?: initialUrl
+
+    /*
     * 从 url 解析 host 后判断是否可信。
     *
     * 用 Uri.parse 而不是手工切字符串:它能正确处理 userinfo

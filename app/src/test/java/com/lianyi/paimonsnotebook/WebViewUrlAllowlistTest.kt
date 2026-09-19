@@ -1,7 +1,9 @@
 package com.lianyi.paimonsnotebook
 
 import com.lianyi.paimonsnotebook.common.web.bridge.WebViewUrlAllowlist
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -62,5 +64,56 @@ class WebViewUrlAllowlistTest {
         assertFalse(WebViewUrlAllowlist.isTrustedHost(null))
         assertFalse(WebViewUrlAllowlist.isTrustedHost(""))
         assertFalse(WebViewUrlAllowlist.isTrustedHost("   "))
+    }
+
+    /*
+    * resolvePageUrl 决定"按哪个url判定来源"。
+    *
+    * 它存在的理由是:桥接方法运行在JavaBridge后台线程,不能在该线程读
+    * webView.url(getUrl()会checkThread()并抛RuntimeException)。
+    * 因此改由主线程上报url,本函数负责选择用哪一个。
+    * 选择逻辑一旦写反(例如让首次url盖过最新上报),就会出现
+    * "导航到第三方页后仍被判为可信"的漏放,故在此锁死。
+    * */
+    @Test
+    fun 优先使用主线程上报的url() {
+        assertEquals(
+            "https://bbs.mihoyo.com/article/1",
+            WebViewUrlAllowlist.resolvePageUrl(
+                reportedUrl = "https://bbs.mihoyo.com/article/1",
+                initialUrl = "https://webstatic.mihoyo.com/app/community-game-records/index.html"
+            )
+        )
+    }
+
+    @Test
+    fun 上报为空白时回退到首次url() {
+        val initial = "https://webstatic.mihoyo.com/x"
+
+        assertEquals(initial, WebViewUrlAllowlist.resolvePageUrl(null, initial))
+        assertEquals(initial, WebViewUrlAllowlist.resolvePageUrl("", initial))
+        assertEquals(initial, WebViewUrlAllowlist.resolvePageUrl("   ", initial))
+    }
+
+    @Test
+    fun 两者都缺失时返回null() {
+        assertNull(WebViewUrlAllowlist.resolvePageUrl(null, null))
+    }
+
+    /*
+    * 关键安全断言:导航到第三方页后,判定依据必须是该第三方url,
+    * 而不是仍停留在首次的官方url(否则敏感方法会被漏放)。
+    * */
+    @Test
+    fun 导航到第三方域后判定依据应随之改变() {
+        val official = "https://webstatic.mihoyo.com/x"
+
+        val resolved = WebViewUrlAllowlist.resolvePageUrl(
+            reportedUrl = "https://evil.example.com/steal",
+            initialUrl = official
+        )
+
+        assertEquals("https://evil.example.com/steal", resolved)
+        assertFalse(WebViewUrlAllowlist.isTrustedHost("evil.example.com"))
     }
 }
