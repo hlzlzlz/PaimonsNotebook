@@ -44,6 +44,7 @@ import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
 import com.lianyi.paimonsnotebook.common.util.data_store.dataStoreValues
 import com.lianyi.paimonsnotebook.common.util.file.FileHelper
+import com.lianyi.paimonsnotebook.common.util.metadata.genshin.uigf.UIGFExportVersion
 import com.lianyi.paimonsnotebook.common.util.metadata.genshin.uigf.UIGFHelper
 import com.lianyi.paimonsnotebook.common.util.system_service.SystemService
 import com.lianyi.paimonsnotebook.common.util.time.TimeHelper
@@ -76,7 +77,14 @@ class GachaRecordOptionScreenViewModel : ViewModel() {
 
     private var currentGameUid by mutableStateOf("")
 
-    private var gachaRecordExportToUIGFV3 by mutableStateOf(false)
+    private var gachaRecordExportToUIGFVersion by mutableStateOf(UIGFExportVersion.default)
+
+    //供 UI 判断当前选中项(不暴露可变状态本身)
+    val currentUIGFVersionStorageValue: String
+        get() = gachaRecordExportToUIGFVersion.storageValue
+
+    //UIGF 版本选择弹窗
+    var showUIGFVersionDialog by mutableStateOf(false)
 
     lateinit var startActivity: ActivityResultLauncher<Intent>
 
@@ -101,8 +109,11 @@ class GachaRecordOptionScreenViewModel : ViewModel() {
             }
             launch {
                 dataStoreValues {
-                    gachaRecordExportToUIGFV3 =
-                        it[PreferenceKeys.GachaRecordExportToUIGFV3] ?: false
+                    //读字符串版本值;历史 Boolean 键会被忽略,由 fromValue 兜底为默认
+                    gachaRecordExportToUIGFVersion =
+                        UIGFExportVersion.fromValue(
+                            it[PreferenceKeys.GachaRecordExportToUIGFVersion]
+                        )
                 }
             }
         }
@@ -339,31 +350,44 @@ class GachaRecordOptionScreenViewModel : ViewModel() {
             }
         ),
         OptionListData(
-            name = "启用UIGF V3标准导出",
-            description = "默认关闭,开启后,程序导出的Json将为UIGF V3标准,以兼容未支持高版本UIGF标准的程序",
+            name = "UIGF 导出格式",
+            description = "选择导出 Json 使用的 UIGF 标准版本。v4.0 兼容性最好;v4.1 相比 v4.0 仅新增星穹铁道卡池支持(原神部分完全相同);v4.2 为最新标准;v3.0 为旧标准,仅用于兼容未支持 v4 的工具",
             onClick = {
-                viewModelScope.launchIO {
-                    gachaRecordExportToUIGFV3 = !gachaRecordExportToUIGFV3
-                    PreferenceKeys.GachaRecordExportToUIGFV3.editValue(gachaRecordExportToUIGFV3)
-                }
+                showUIGFVersionDialog = true
             },
             slot = {
-                SettingsOptionSwitch(
-                    checked = gachaRecordExportToUIGFV3
+                com.lianyi.core.ui.components.text.InfoText(
+                    text = gachaRecordExportToUIGFVersion.label
                 )
             }
         ),
     )
 
+    fun dismissUIGFVersionDialog() {
+        showUIGFVersionDialog = false
+    }
+
+    //选择 UIGF 导出格式
+    fun onSelectUIGFVersion(version: UIGFExportVersion) {
+        gachaRecordExportToUIGFVersion = version
+        showUIGFVersionDialog = false
+
+        viewModelScope.launchIO {
+            PreferenceKeys.GachaRecordExportToUIGFVersion.editValue(version.storageValue)
+        }
+    }
+
     val aboutSettings = listOf(
         OptionListData(
             name = "当前UIGF版本",
-            description = "派蒙笔记本当前的UIGF版本",
+            description = "当前导出所使用的UIGF版本,可在祈愿设置中修改",
             onClick = {
-                "${PaimonsNotebookApplication.name}当前的UIGF版本是${UIGFHelper.UIGF_VERSION}".notify()
+                "${PaimonsNotebookApplication.name}当前的UIGF导出版本是${gachaRecordExportToUIGFVersion.label}".notify()
             },
             slot = {
-                com.lianyi.core.ui.components.text.InfoText(text = UIGFHelper.UIGF_VERSION)
+                com.lianyi.core.ui.components.text.InfoText(
+                    text = gachaRecordExportToUIGFVersion.label
+                )
             }
         ),
         OptionListData(
@@ -705,7 +729,8 @@ class GachaRecordOptionScreenViewModel : ViewModel() {
     }
 
     private fun onClickExportUIGFJson() {
-        if (gachaRecordExportToUIGFV3) {
+        //v3.0 只能导出单个 uid,v4.x 可多选
+        if (gachaRecordExportToUIGFVersion.isLegacyV3) {
 
             if (currentGameUid.isEmpty()) {
                 "请先选择一个uid".warnNotify(false)
@@ -749,11 +774,15 @@ class GachaRecordOptionScreenViewModel : ViewModel() {
             val fileName = "PaimonsNotebook UIGF_${System.currentTimeMillis()}"
             val file = FileHelper.getUIGFJsonSaveFile(fileName)
 
-            exportService.exportGachaRecordToUIGFJson(uidList, file, gachaRecordExportToUIGFV3)
+            exportService.exportGachaRecordToUIGFJson(
+                uidList,
+                file,
+                gachaRecordExportToUIGFVersion
+            )
 
             showLoadingDialog = false
 
-            "祈愿记录已导出,可通过[导出的祈愿记录功能]管理已导出的祈愿记录文件".notify(
+            "祈愿记录已导出(${gachaRecordExportToUIGFVersion.label}),可通过[导出的祈愿记录功能]管理已导出的祈愿记录文件".notify(
                 autoDismissTime = 5000
             )
         }

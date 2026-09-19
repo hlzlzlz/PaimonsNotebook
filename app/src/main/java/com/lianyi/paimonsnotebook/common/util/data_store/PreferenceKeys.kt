@@ -92,7 +92,23 @@ object PreferenceKeys {
         stringPreferencesKey("gachaRecordGameUidRegionMap")
     }
 
-    //导出V3记录,兼容低版本
+    /*
+    * 祈愿导出使用的 UIGF 版本
+    *
+    * 值为 "v3.0"/"v4.0"/"v4.1"/"v4.2"。
+    *
+    * 注:此处沿用旧的键名 gachaRecordExportToUIGFV3 但**类型由 Boolean 改为 String**。
+    * DataStore 的键由"名字+类型"共同决定身份,类型变了就等同于换了一个键,
+    * 旧 Boolean 值会被忽略、走默认值(v4.0),不会崩 —— 旧值本来也只是
+    * "是否导出 v3",无法表达 v4.1/v4.2,没有迁移价值。
+    * 读取处统一经 UIGFExportVersion.fromValue() 做兜底,脏数据不会导致导出出错。
+    * */
+    val GachaRecordExportToUIGFVersion by lazy {
+        stringPreferencesKey("gachaRecordExportToUIGFVersion")
+    }
+
+    //旧键,保留声明以免历史代码引用时报错;新代码请用 GachaRecordExportToUIGFVersion
+    @Deprecated("已被 GachaRecordExportToUIGFVersion 取代")
     val GachaRecordExportToUIGFV3 by lazy {
         booleanPreferencesKey("gachaRecordExportToUIGFV3")
     }

@@ -5,16 +5,21 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResult
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
@@ -23,12 +28,16 @@ import com.lianyi.paimonsnotebook.common.components.lazy.ContentSpacerLazyColumn
 import com.lianyi.paimonsnotebook.common.components.loading.LoadingAnimationPlaceholder
 import com.lianyi.paimonsnotebook.common.components.widget.ProgressBar
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
+import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
+import com.lianyi.paimonsnotebook.common.util.metadata.genshin.uigf.UIGFExportVersion
 import com.lianyi.paimonsnotebook.ui.screen.account.components.dialog.UserGameRolesDialog
 import com.lianyi.paimonsnotebook.ui.screen.gacha.components.dialog.ChooseGameUidDialog
 import com.lianyi.paimonsnotebook.ui.screen.gacha.viewmodel.GachaRecordOptionScreenViewModel
 import com.lianyi.paimonsnotebook.ui.screen.setting.components.SettingOptionGroup
 import com.lianyi.paimonsnotebook.ui.theme.BackGroundColor
+import com.lianyi.paimonsnotebook.ui.theme.Black_60
+import com.lianyi.paimonsnotebook.ui.theme.CardBackGroundColor
 import com.lianyi.paimonsnotebook.ui.theme.PaimonsNotebookTheme
 import com.lianyi.paimonsnotebook.ui.theme.Primary_2
 
@@ -119,6 +128,60 @@ class GachaRecordOptionScreen : BaseActivity() {
                 uidList = viewModel.gachaRecordGameUidList,
                 onConfirm = viewModel::confirmExportSelectedUidRecord,
                 viewModel::dismissChooseExportUidDialog
+            )
+        }
+
+        //UIGF 导出格式选择
+        if (viewModel.showUIGFVersionDialog) {
+            LazyColumnDialog(
+                title = "UIGF 导出格式",
+                titleSpacer = 16.dp,
+                verticalSpacedBy = 6.dp,
+                onDismissRequest = viewModel::dismissUIGFVersionDialog,
+                buttons = arrayOf("取消"),
+                onClickButton = { viewModel.dismissUIGFVersionDialog() }
+            ) {
+                items(UIGFExportVersion.all) { version ->
+                    UIGFVersionItem(
+                        version = version,
+                        selected = version.storageValue == viewModel.currentUIGFVersionStorageValue,
+                        onClick = { viewModel.onSelectUIGFVersion(version) }
+                    )
+                }
+            }
+        }
+    }
+
+    /*
+    * UIGF 版本选项
+    *
+    * 与项目其它选项保持一致:卡片底色 + radius(6.dp),选中项用主色文字区分。
+    * */
+    @Composable
+    private fun UIGFVersionItem(
+        version: UIGFExportVersion,
+        selected: Boolean,
+        onClick: () -> Unit
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .radius(6.dp)
+                .background(CardBackGroundColor)
+                .clickable(onClick = onClick)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = if (selected) "✓ ${version.label}" else version.label,
+                fontSize = 15.sp,
+                color = if (selected) Primary_2 else Color.Unspecified
+            )
+
+            Text(
+                text = version.description,
+                fontSize = 12.sp,
+                color = Black_60
             )
         }
     }
