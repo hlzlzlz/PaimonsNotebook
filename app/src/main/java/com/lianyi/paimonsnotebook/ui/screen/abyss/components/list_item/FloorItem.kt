@@ -39,6 +39,8 @@ import com.lianyi.paimonsnotebook.common.web.hutao.genshin.monster.MonsterData
 import com.lianyi.paimonsnotebook.ui.theme.Black
 import com.lianyi.paimonsnotebook.ui.theme.Black_10
 import com.lianyi.paimonsnotebook.ui.theme.Black_30
+import com.lianyi.paimonsnotebook.ui.theme.Black_60
+import com.lianyi.paimonsnotebook.ui.theme.CardBackGroundColor_Light_1
 
 @Composable
 fun FloorItem(
@@ -81,6 +83,18 @@ fun FloorItem(
                 }
             }
         }
+        /*
+        * 地脉异常(ley_line_disorder)
+        *
+        * 服务端一直随 floors 下发,但此前全树仅数据类声明、零渲染 ——
+        * 玩家看深渊页最需要知道的就是"这期地脉异常是什么"。
+        * 放在层标题下方、展开区域之上:即使折叠也可见(它是整层的全局信息,
+        * 不属于某一间),故不放进 AnimatedVisibility 内部。
+        * */
+        if (floor.ley_line_disorder.isNotEmpty()) {
+            LeyLineDisorder(floor.ley_line_disorder)
+        }
+
         AnimatedVisibility(visible = showAll) {
             Column {
                 floor.levels.forEachIndexed { index, level ->
@@ -101,6 +115,39 @@ fun FloorItem(
                     }
                 }
             }
+        }
+    }
+}
+
+/*
+* 地脉异常展示
+*
+* 一层可能有多条(如"火元素伤害提高75%"+"超载伤害提高200%"),逐条列出。
+* 用次级卡片底色与正文区分,避免与战斗记录抢视觉重心。
+* */
+@Composable
+private fun LeyLineDisorder(disorders: List<String>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .radius(4.dp)
+            .background(CardBackGroundColor_Light_1)
+            .padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = "地脉异常",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Black
+        )
+
+        disorders.forEach { disorder ->
+            Text(
+                text = disorder,
+                fontSize = 11.sp,
+                color = Black_60
+            )
         }
     }
 }
