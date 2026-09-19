@@ -22,6 +22,7 @@ import com.lianyi.paimonsnotebook.common.components.loading.ContentLoadingPlaceh
 import com.lianyi.paimonsnotebook.common.components.placeholder.EmptyPlaceholder
 import com.lianyi.paimonsnotebook.common.components.placeholder.ErrorPlaceholder
 import com.lianyi.paimonsnotebook.common.util.enums.LoadingState
+import com.lianyi.paimonsnotebook.common.util.time.TimeRemainingHelper
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.abyss.SpiralAbyssData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.avatar.AvatarData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.monster.MonsterData
@@ -173,6 +174,24 @@ private fun Content(
                             "获得渊星",
                             "${currentAbyssRecord.total_star}"
                         )
+
+                        /*
+                        * 本期剩余时间
+                        *
+                        * SpiralAbyssData 一直带 end_time,但此前深渊页零渲染 ——
+                        * 页面只有"最深抵达/战斗次数/获得渊星",玩家不知道本期还剩多久。
+                        * 已结束(服务端数据延迟等)时 formatRemaining 返回 null,整行不渲染。
+                        * */
+                        val remainingText = remember(currentAbyssRecord.end_time) {
+                            TimeRemainingHelper.formatRemaining(currentAbyssRecord.end_time)
+                        }
+
+                        if (remainingText != null) {
+                            AbyssOverviewInformationItem(
+                                "本期剩余",
+                                remainingText
+                            )
+                        }
 
                         Spacer(modifier = Modifier.weight(1f))
 
