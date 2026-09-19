@@ -44,6 +44,18 @@ interface AchievementsDao {
     fun getAchievementListByUserIdFlow(userId: Int): List<Achievements>
 
     /*
+    * 清空指定用户的全部成就记录
+    *
+    * 供 UIAF "完全覆盖" 导入策略使用(Overwrite 语义 = 先清空再写入)。
+    * 只按 user_id 删,不影响其它成就用户的数据。
+    *
+    * 注意:这是普通 suspend 函数而非 Flow,调用方须在 IO 线程执行
+    * (导入服务本就在 Dispatchers.IO 内)。
+    * */
+    @Query("delete from achievements where user_id = :userId")
+    suspend fun deleteAllByUserId(userId: Int)
+
+    /*
     * 通过成就id集合与用户id,获取数据库中的个数
     *
     * 调用此方法时应注意ids长度不能为大于999 - 其他变量占位符的个数,否则会导致解析失败,这是sqlite的硬性规定

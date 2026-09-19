@@ -8,8 +8,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Text
@@ -23,6 +25,7 @@ import com.lianyi.paimonsnotebook.common.components.dialog.PropertiesDialog
 import com.lianyi.paimonsnotebook.common.components.lazy.ContentSpacerLazyColumn
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
+import com.lianyi.paimonsnotebook.ui.screen.achievement.view.components.UIAFImportStrategySelector
 import com.lianyi.paimonsnotebook.ui.screen.achievement.viewmodel.AchievementOptionScreenViewModel
 import com.lianyi.paimonsnotebook.ui.screen.setting.components.SettingOptionGroup
 import com.lianyi.paimonsnotebook.ui.theme.BackGroundColor
@@ -99,7 +102,15 @@ class AchievementOptionScreen : BaseActivity() {
                         properties = viewModel.importPropertyList,
                         onDismissRequest = { viewModel.showImportResultDialog = false },
                         buttons = arrayOf("取消", "确认导入"),
-                        onButtonClick = viewModel::onPropertiesDialogButtonClick
+                        onButtonClick = viewModel::onPropertiesDialogButtonClick,
+                        //导入方式选择:原先只有"直接覆盖"一种行为且不给用户选择
+                        slot = {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            UIAFImportStrategySelector(
+                                selected = viewModel.importStrategy,
+                                onSelect = viewModel::onImportStrategySelect
+                            )
+                        }
                     )
                 }
 

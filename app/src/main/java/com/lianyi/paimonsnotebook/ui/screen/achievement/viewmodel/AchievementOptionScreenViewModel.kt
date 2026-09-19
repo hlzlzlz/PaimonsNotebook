@@ -36,6 +36,7 @@ import com.lianyi.paimonsnotebook.common.util.time.TimeHelper
 import com.lianyi.paimonsnotebook.ui.screen.achievement.service.AchievementExportService
 import com.lianyi.paimonsnotebook.ui.screen.achievement.service.AchievementImportService
 import com.lianyi.paimonsnotebook.ui.screen.achievement.util.enums.AchievementActionType
+import com.lianyi.paimonsnotebook.ui.screen.achievement.util.enums.UIAFImportStrategy
 import com.lianyi.paimonsnotebook.ui.screen.achievement.view.AchievementRecordExportDataScreen
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
 import com.lianyi.paimonsnotebook.ui.screen.setting.data.OptionListData
@@ -79,6 +80,18 @@ class AchievementOptionScreenViewModel : ViewModel() {
 
     //导入文件属性对话框
     var showImportResultDialog by mutableStateOf(false)
+
+    /*
+    * 本次导入使用的合并策略。
+    *
+    * 每次打开导入确认弹窗时重置为默认值,避免上一次的选择意外沿用到下一次
+    * (尤其 Overwrite 会清空本地记录,不能让它被"记住")。
+    * */
+    var importStrategy by mutableStateOf(UIAFImportStrategy.default)
+
+    fun onImportStrategySelect(strategy: UIAFImportStrategy) {
+        importStrategy = strategy
+    }
 
     //导入属性列表
     val importPropertyList = mutableListOf<Pair<String, String>>()
@@ -215,6 +228,8 @@ class AchievementOptionScreenViewModel : ViewModel() {
                         "导出时间" to TimeHelper.getTime(export_timestamp),
                     )
 
+                //每次打开确认弹窗都重置策略,避免上次的 Overwrite 被沿用到本次
+                importStrategy = UIAFImportStrategy.default
                 showImportResultDialog = true
             }
         }
@@ -367,13 +382,14 @@ class AchievementOptionScreenViewModel : ViewModel() {
         viewModelScope.launchIO {
             importService.importAchievementFromUIAFJson(
                 userId = userId,
-                file = activityResultFile
+                file = activityResultFile,
+                strategy = importStrategy
             )
 
             //触发room更新
             achievementUserDao.emitSelectedUserFlow()
 
-            "成就记录导入结束".notify()
+            "成就记录导入结束(${importStrategy.label})".notify()
         }
     }
 
@@ -411,6 +427,8 @@ class AchievementOptionScreenViewModel : ViewModel() {
                         "导出时间" to TimeHelper.getTime(export_timestamp),
                     )
 
+                //每次打开确认弹窗都重置策略,避免上次的 Overwrite 被沿用到本次
+                importStrategy = UIAFImportStrategy.default
                 showImportResultDialog = true
             }
         }

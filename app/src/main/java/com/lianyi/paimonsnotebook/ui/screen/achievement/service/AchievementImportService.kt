@@ -9,6 +9,7 @@ import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
 import com.lianyi.paimonsnotebook.common.util.json.JsonReaderHelper
 import com.lianyi.paimonsnotebook.common.util.metadata.genshin.uiaf.UIAFHelper
 import com.lianyi.paimonsnotebook.ui.screen.achievement.data.UIAFJsonData
+import com.lianyi.paimonsnotebook.ui.screen.achievement.util.enums.UIAFImportStrategy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -28,7 +29,7 @@ class AchievementImportService(
     * */
     private val cacheAchievementsRecordSize = 199
 
-    //stmt 缓存,一般情况下只会缓存最大值与最后一条不到最大值的记录
+    //stmt 缓存,键 = (SQL动词 + 条数) 的哈希
     private val stmtMap = mutableMapOf<Int, SupportSQLiteStatement>()
 
     private var cacheUIAFInfo: UIAFJsonData.Info? = null
@@ -103,7 +104,8 @@ class AchievementImportService(
     }
 
     suspend fun importAchievementFromUIAFJson(
-        userId: Int, file: File
+        userId: Int, file: File,
+        strategy: UIAFImportStrategy = UIAFImportStrategy.default
     ) {
         try {
             withContext(Dispatchers.IO) {
@@ -117,6 +119,16 @@ class AchievementImportService(
                     return@withContext
                 }
 
+                /*
+                * Overwrite 策略:先清空该用户全部记录,再写入导入数据。
+                *
+                * 必须在解析 list 之前执行 —— 若放到写入过程中清空,
+                * 会把同一批刚写入的数据也一并删掉。
+                * */
+                if (strategy.clearBeforeImport) {
+                    database.achievementsDao.deleteAllByUserId(userId)
+                }
+
                 val reader = JsonReader(InputStreamReader(file.inputStream()))
 
                 var objectEnd = false
@@ -125,7 +137,7 @@ class AchievementImportService(
                     reader, "list",
                     onFound = {
                         launchIO {
-                            saveUIAFJsonList(reader, userId)
+                            saveUIAFJsonList(reader, userId, strategy)
 
                             while (!objectEnd) {
                                 delay(1000)
@@ -151,17 +163,18 @@ class AchievementImportService(
 
     private fun achievementItemListFlush(
         list: List<Achievements>,
+        strategy: UIAFImportStrategy
     ) {
         //当列表大小超过一次性的解析个数时拆分集合递归调用
 
         val items = if (list.size > cacheAchievementsRecordSize) {
-            achievementItemListFlush(list.subList(cacheAchievementsRecordSize, list.size))
+            achievementItemListFlush(list.subList(cacheAchievementsRecordSize, list.size), strategy)
             list.subList(0, cacheAchievementsRecordSize - 1)
         } else {
             list
         }
 
-        saveToDB(items)
+        saveToDB(items, strategy)
     }
 
     /*
@@ -169,7 +182,8 @@ class AchievementImportService(
     * */
     private fun saveUIAFJsonList(
         reader: JsonReader,
-        userId: Int
+        userId: Int,
+        strategy: UIAFImportStrategy
     ) {
         reader.apply {
             beginArray()
@@ -206,7 +220,7 @@ class AchievementImportService(
                 )
 
                 if (list.size == cacheAchievementsRecordSize) {
-                    achievementItemListFlush(list)
+                    achievementItemListFlush(list, strategy)
                     list.clear()
                 }
 
@@ -216,7 +230,7 @@ class AchievementImportService(
 
             //最后不为空时才执行插入
             if (list.isNotEmpty()) {
-                achievementItemListFlush(list)
+                achievementItemListFlush(list, strategy)
             }
 
             list.clear()
@@ -224,13 +238,23 @@ class AchievementImportService(
         }
     }
 
-    private fun saveToDB(list: List<Achievements>) {
-        val stmt = if (stmtMap[list.size] != null) {
-            stmtMap[list.size]!!
+    private fun saveToDB(list: List<Achievements>, strategy: UIAFImportStrategy) {
+        /*
+        * 缓存键必须同时含 SQL 动词与条数。
+        *
+        * 原先只按 list.size 缓存,但语句前缀现在随策略变化
+        * (LazyMerge 是 INSERT OR IGNORE,其余是 INSERT OR REPLACE)——
+        * 若仍只按 size 缓存,先跑 LazyMerge 再跑 AggressiveMerge 时会
+        * 复用到 OR IGNORE 的语句,导致"覆盖"策略静默失效。
+        * */
+        val cacheKey = (strategy.sqlVerb + "_" + list.size).hashCode()
+
+        val stmt = if (stmtMap[cacheKey] != null) {
+            stmtMap[cacheKey]!!
         } else {
-            //重复主键更新
-            val sb =
-                StringBuilder("INSERT OR REPLACE INTO achievements(id,current,status,timestamp,user_id) VALUES ")
+            val sb = StringBuilder(
+                "${strategy.sqlVerb} INTO achievements(id,current,status,timestamp,user_id) VALUES "
+            )
             repeat(list.size) {
                 when (it) {
                     0 -> {}
@@ -245,7 +269,7 @@ class AchievementImportService(
 
             //缓存stmt
             database.compileStatement(sb.toString()).apply {
-                stmtMap[list.size] = this
+                stmtMap[cacheKey] = this
             }
         }
 
