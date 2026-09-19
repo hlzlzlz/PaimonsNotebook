@@ -323,6 +323,22 @@ open class ItemBaseViewModel<T>(private val observeCurrentItemState: Boolean = t
                 projectId = projectId,
                 count = it.num,
                 lackCount = it.lack_num,
+                /*
+                * 玩家实际持有 = 需要总数 - 缺少数。
+                *
+                * 与胡桃 InventoryService.cs 的算法一致:
+                *   (int)item.Num - item.LackNum
+                *
+                * 服务端只在请求带 uid/region 时才按该账号的真实库存计算
+                * lack_num;has_user_info 为 false 时二者退化为纯计算值,
+                * 相减得 0 —— 此时标记为未知(-1),避免 UI 显示
+                * "持有 0" 这种误导文案。
+                * */
+                ownedCount = if (result.has_user_info) {
+                    (it.num - it.lack_num).coerceAtLeast(0)
+                } else {
+                    CultivateItemMaterials.OWNED_COUNT_UNKNOWN
+                },
                 status = if (it.lack_num > 0) {
                     0
                 } else {

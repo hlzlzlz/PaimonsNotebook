@@ -5,8 +5,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,6 +26,7 @@ import com.lianyi.paimonsnotebook.common.database.cultivate.entity.CultivateItem
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.item.Material
 import com.lianyi.paimonsnotebook.ui.screen.items.components.item.icon.ItemIconCard
+import com.lianyi.paimonsnotebook.ui.theme.Black_60
 import com.lianyi.paimonsnotebook.ui.theme.White
 
 @Composable
@@ -91,5 +94,21 @@ fun VerticalCultivateMaterialItem(
             fontSize = 12.sp,
             color = content.second
         )
+
+        /*
+        * 玩家持有数(服务端 batch_compute 的 num - lack_num)
+        *
+        * 未知时 getOwnedCountText 返回 null,整块不渲染 ——
+        * 不显示"持有 0",避免让用户以为材料一个都没有。
+        * */
+        cultivateItemMaterials.getOwnedCountText()?.let { ownedText ->
+            Spacer(modifier = Modifier.width(6.dp))
+
+            Text(
+                text = ownedText,
+                fontSize = 11.sp,
+                color = Black_60
+            )
+        }
     }
 }

@@ -48,9 +48,18 @@ import com.lianyi.paimonsnotebook.common.database.user.entity.User
     autoMigrations = [
         AutoMigration(1, 2),
         AutoMigration(2, 3),
-        AutoMigration(3, 4)
+        AutoMigration(3, 4),
+        /*
+        * 4 -> 5:cultivate_item_materials 新增 owned_count(玩家实际持有数)。
+        *
+        * 该列在实体上带 defaultValue = "-1",故 AutoMigration 能自动补出
+        * 这条 ALTER TABLE(老数据一律填 -1 = 未知,UI 据此隐藏该行)。
+        * Room 会在编译期校验 schema,若迁移不可行会直接构建失败 ——
+        * 这比运行时崩溃好得多。
+        * */
+        AutoMigration(4, 5)
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class PaimonsNotebookDatabase : RoomDatabase() {

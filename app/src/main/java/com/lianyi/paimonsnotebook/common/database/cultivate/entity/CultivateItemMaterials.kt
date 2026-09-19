@@ -44,8 +44,28 @@ data class CultivateItemMaterials(
     val count: Int, //所需数量
     @ColumnInfo("lack_count")
     val lackCount: Int, //缺少数量
+    /*
+    * 玩家实际持有数量
+    *
+    * 服务端 batch_compute 在有 uid/region 时返回 num(需要总数)与 lack_num(缺少数),
+    * 二者相减即玩家实际持有 —— 与胡桃工具箱 InventoryItem 的算法一致
+    * (InventoryService.cs: (int)item.Num - item.LackNum)。
+    *
+    * 原先 PN 只存 count/lackCount,把"持有数"这条信息丢掉了:用户无法一眼看出
+    * "这个材料我有多少",只能靠缺少数反推。
+    *
+    * 默认 -1 表示未知(服务端未返回库存,如 has_user_info=false 时),
+    * UI 据此隐藏该行,而不是显示"持有 0"这种误导性文案。
+    * */
+    @ColumnInfo("owned_count", defaultValue = "-1")
+    val ownedCount: Int = OWNED_COUNT_UNKNOWN,
     val status: Int //状态
 ) {
+
+    companion object {
+        //持有数未知(服务端未返回库存信息)
+        const val OWNED_COUNT_UNKNOWN = -1
+    }
 
     /*
     * 用于临时存储完成状态
@@ -74,5 +94,20 @@ data class CultivateItemMaterials(
             "$count" to Warning
         } else {
             "$count" to Black
+        }
+
+    /*
+    * 持有数文案,形如 "持有 123"
+    *
+    * 未知(服务端未返回库存)时返回 null,由 UI 隐藏该行 ——
+    * 显示"持有 0"会让用户以为材料真的一个都没有。
+    *
+    * 抽成纯函数便于单测:它同时被普通材料行与武器材料行复用。
+    * */
+    fun getOwnedCountText(): String? =
+        if (ownedCount == OWNED_COUNT_UNKNOWN) {
+            null
+        } else {
+            "持有 $ownedCount"
         }
 }
