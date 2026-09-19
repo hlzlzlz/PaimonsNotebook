@@ -365,8 +365,80 @@ class RoleCombatScreen : BaseActivity() {
                 }
             }
 
+            if (viewModel.hardChallengePopularity?.avatar_list?.isNotEmpty() == true) {
+                item {
+                    HardChallengePopularityCard()
+                }
+            }
+
             item {
                 com.lianyi.core.ui.components.spacer.NavigationBarPaddingSpacer()
+            }
+        }
+    }
+
+    /*
+    * 全服热门角色
+    *
+    * 服务端只返回一份有序名单(avatar_list),**不含任何比例数值**,
+    * 所以这里只按返回顺序标名次,不要编造百分比 —— 与剧诗全服统计
+    * (那边有 BackupAvatarRates 的 Rate)不同。
+    * */
+    @Composable
+    private fun HardChallengePopularityCard() {
+        val avatars = viewModel.hardChallengePopularity?.avatar_list
+        if (avatars.isNullOrEmpty()) return
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp, 0.dp)
+                .radius(2.dp)
+                .background(White)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            PrimaryText(text = "全服热门角色", textSize = 15.sp)
+
+            InfoText(
+                text = "本期幽境危战中全服使用最多的角色,按顺序排列",
+                fontSize = 12.sp
+            )
+
+            avatars.forEachIndexed { index, avatar ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    InfoText(
+                        text = "${index + 1}",
+                        fontSize = 13.sp,
+                        modifier = Modifier.width(26.dp)
+                    )
+
+                    NetworkImage(
+                        url = avatar.image,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    PrimaryText(
+                        text = avatar.name,
+                        textSize = 14.sp,
+                        bold = false,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    RoundedTag(
+                        text = "${avatar.rarity}星",
+                        backGroundColor = CardBackGroundColor_Gray_Dark,
+                        textColor = Black_60
+                    )
+                }
             }
         }
     }

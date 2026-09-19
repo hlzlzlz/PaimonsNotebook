@@ -23,6 +23,7 @@ import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.characte
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.character.CharacterListData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.daily_note.DailyNoteData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.hard_challenge.HardChallengeData
+import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.hard_challenge.HardChallengePopularityData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.ledger.LedgerData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.role_combat.RoleCombatData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.verification.GeetestVerificationData
@@ -153,6 +154,25 @@ class GameRecordClient {
         }
 
     }.getAsJson<HardChallengeData>()
+
+    //幽境危战 全服热门角色
+    suspend fun getHardChallengePopularity(
+        user: UserAndUid,
+        challenge: String = "",
+    ) = buildRequest {
+        url(ApiEndpoints.gameRecordHardChallengePopularity(user.playerUid))
+
+        setUserWithFp(user.userEntity, CookieHelper.Type.Cookie)
+
+        setXRpcClientType(EnvironmentClientType.WEB)
+
+        setDynamicSecret(DynamicSecret.SaltType.X4, DynamicSecret.Version.Gen2)
+
+        if (challenge.isNotBlank() && challenge != "error") {
+            setXRpcChallenge(challenge)
+        }
+
+    }.getAsJson<HardChallengePopularityData>()
 
     suspend fun getCharacterList(
         user: UserAndUid,

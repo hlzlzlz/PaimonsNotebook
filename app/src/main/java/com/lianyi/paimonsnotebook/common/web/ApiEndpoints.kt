@@ -258,6 +258,12 @@ object ApiEndpoints {
         "${ApiTakumiRecordApi}/hard_challenge?role_id=${uid.value}&server=${uid.region}&need_detail=true"
 
     /// <summary>
+    /// 幽境危战 全服热门角色(与胡桃工具箱 HardChallengePage 的全服统计页同源)
+    /// </summary>
+    fun gameRecordHardChallengePopularity(uid: PlayerUid) =
+        "${ApiTakumiRecordApi}/hard_challenge/popularity?role_id=${uid.value}&server=${uid.region}"
+
+    /// <summary>
     /// 旅行者札记 当月原石摩拉收支 month=0表示当月
     /// </summary>
     fun gameRecordLedgerMonthInfo(month: Int, uid: PlayerUid) =

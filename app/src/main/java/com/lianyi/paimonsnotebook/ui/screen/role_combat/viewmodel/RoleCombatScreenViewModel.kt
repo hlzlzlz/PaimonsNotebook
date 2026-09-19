@@ -18,6 +18,7 @@ import com.lianyi.paimonsnotebook.common.view.HoyolabWebActivity
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.binding.UserGameRoleData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.GameRecordClient
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.hard_challenge.HardChallengeData
+import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.hard_challenge.HardChallengePopularityData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.role_combat.RoleCombatData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.avatar.AvatarData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.AvatarService
@@ -39,6 +40,10 @@ class RoleCombatScreenViewModel : ViewModel() {
 
     var hardChallengeData by mutableStateOf<HardChallengeData?>(null)
     var hardChallengeLoadingState by mutableStateOf(LoadingState.Loading)
+
+    //幽境危战 全服热门角色(与个人战绩相互独立,一方失败不影响另一方)
+    var hardChallengePopularity by mutableStateOf<HardChallengePopularityData?>(null)
+        private set
 
     //胡桃全服剧诗统计,不依赖登录用户
     var statistics by mutableStateOf<HutaoRoleCombatStatisticsData?>(null)
@@ -219,42 +224,11 @@ class RoleCombatScreenViewModel : ViewModel() {
                 }
 
                 1 -> {
-                    val result = withContext(Dispatchers.IO) {
-                        gameRecordClient.getHardChallengeData(userAndUid)
-                    }
-                    if (result.success) {
-                        hardChallengeData = result.data
-                        val entry = result.data.data?.firstOrNull()
-                        hardChallengeLoadingState =
-                            if (entry == null || entry.single?.has_data != true) LoadingState.Empty else LoadingState.Success
-                    } else {
-                        //1034风控:App内滑块验证后自动重试
-                        if (result.validate) {
-                            val challenge = CardVerificationService.verify(
-                                user.userEntity, CardVerificationService.PATH_HARD_CHALLENGE
-                            )
+                    val challengeToken = loadHardChallenge(userAndUid)
 
-                            if (challenge != null) {
-                                val retry = withContext(Dispatchers.IO) {
-                                    gameRecordClient.getHardChallengeData(userAndUid, challenge)
-                                }
-
-                                if (retry.success) {
-                                    hardChallengeData = retry.data
-                                    val entry = retry.data.data?.firstOrNull()
-                                    hardChallengeLoadingState =
-                                        if (entry == null || entry.single?.has_data != true) LoadingState.Empty else LoadingState.Success
-                                    return@launch
-                                }
-                            }
-
-                            hardChallengeLoadingState = LoadingState.Error
-                            showConfirmDialog = true
-                        } else {
-                            hardChallengeLoadingState = LoadingState.Error
-                            "获取幽境危战数据失败:${result.message}".errorNotify()
-                        }
-                    }
+                    //全服热门与个人战绩是两次独立请求:个人战绩失败(含风控未通过)时
+                    //仍照常尝试拉取热门,不让一个卡片拖垮另一个
+                    loadHardChallengePopularity(userAndUid, challengeToken)
                 }
             }
             } catch (e: Exception) {
@@ -264,6 +238,77 @@ class RoleCombatScreenViewModel : ViewModel() {
                 setLoadingState(page, LoadingState.Error)
                 "获取战斗记录失败:${e.message ?: "未知错误"}".errorNotify()
             }
+        }
+    }
+
+    /*
+    * 幽境危战个人战绩
+    *
+    * 返回通过风控后拿到的 challenge 令牌,供后续请求复用;
+    * 未通过风控或无需验证时返回 ""(调用方据此决定是否再弹验证框)。
+    * */
+    private suspend fun loadHardChallenge(userAndUid: UserAndUid): String {
+        val user = currentUser ?: return ""
+
+        val result = withContext(Dispatchers.IO) {
+            gameRecordClient.getHardChallengeData(userAndUid)
+        }
+
+        if (result.success) {
+            hardChallengeData = result.data
+            val entry = result.data.data?.firstOrNull()
+            hardChallengeLoadingState =
+                if (entry == null || entry.single?.has_data != true) LoadingState.Empty else LoadingState.Success
+            return ""
+        }
+
+        //1034风控:App内滑块验证后自动重试
+        if (result.validate) {
+            val challenge = CardVerificationService.verify(
+                user.userEntity, CardVerificationService.PATH_HARD_CHALLENGE
+            )
+
+            if (challenge != null) {
+                val retry = withContext(Dispatchers.IO) {
+                    gameRecordClient.getHardChallengeData(userAndUid, challenge)
+                }
+
+                if (retry.success) {
+                    hardChallengeData = retry.data
+                    val entry = retry.data.data?.firstOrNull()
+                    hardChallengeLoadingState =
+                        if (entry == null || entry.single?.has_data != true) LoadingState.Empty else LoadingState.Success
+                    return challenge
+                }
+            }
+
+            hardChallengeLoadingState = LoadingState.Error
+            showConfirmDialog = true
+            return ""
+        }
+
+        hardChallengeLoadingState = LoadingState.Error
+        "获取幽境危战数据失败:${result.message}".errorNotify()
+        return ""
+    }
+
+    /*
+    * 幽境危战 全服热门角色
+    *
+    * 该端点与个人战绩同属幽境危战路由,共用同一个风控路径
+    * (胡桃工具箱的 CardVerificationHeaders.CreateForHardChallenge 两者也共用),
+    * 故沿用上一步已通过验证的 challenge 令牌,避免连续弹两次滑块。
+    *
+    * 失败**不**改 hardChallengeLoadingState:那是个人战绩卡片的加载态,
+    * 热门拉不到只应让热门卡片自己消失,不能把整页判成 Error。
+    * */
+    private suspend fun loadHardChallengePopularity(userAndUid: UserAndUid, challenge: String) {
+        val result = withContext(Dispatchers.IO) {
+            gameRecordClient.getHardChallengePopularity(userAndUid, challenge)
+        }
+
+        if (result.success) {
+            hardChallengePopularity = result.data
         }
     }
 
