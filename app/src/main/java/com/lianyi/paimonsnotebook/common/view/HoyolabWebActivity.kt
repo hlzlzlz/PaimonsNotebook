@@ -122,7 +122,19 @@ class HoyolabWebActivity : BaseActivity() {
                 if (view == null || request == null) return false
 
                 val target = request.url.toString()
-                jsInterface.onPageUrlChanged(target)
+
+                /*
+                * 只在主框架导航时上报。
+                *
+                * AOSP 明确:本回调"may be called for subframes"。若把子框架
+                * 的url也写进判定依据,官方页面里嵌了第三方iframe时会先把
+                * 当前页判成不可信,导致该官方页面的桥接调用被误拦 ——
+                * 正是本次要修的这类故障。子框架导航后若真的改变了顶层文档,
+                * 随后的 onPageStarted 会带着正确的url上报。
+                * */
+                if (request.isForMainFrame) {
+                    jsInterface.onPageUrlChanged(target)
+                }
 
                 view.loadUrl(target)
                 return true
