@@ -29,11 +29,13 @@ import com.lianyi.paimonsnotebook.common.components.loading.ContentLoadingAnimat
 import com.lianyi.paimonsnotebook.common.components.loading.ContentLoadingLayout
 import com.lianyi.paimonsnotebook.common.components.placeholder.EmptyPlaceholder
 import com.lianyi.paimonsnotebook.common.components.placeholder.ErrorPlaceholder
+import com.lianyi.paimonsnotebook.common.components.spacer.StatusBarPaddingSpacer
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
 import com.lianyi.paimonsnotebook.common.database.disk_cache.entity.DiskCache
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.common.web.hoyolab.hk4e.announcement.AnnouncementItem
 import com.lianyi.paimonsnotebook.ui.screen.announcement.viewmodel.AnnouncementScreenViewModel
+import com.lianyi.paimonsnotebook.ui.theme.BackGroundColor
 import com.lianyi.paimonsnotebook.ui.theme.Black_60
 import com.lianyi.paimonsnotebook.ui.theme.CardBackGroundColor
 import com.lianyi.paimonsnotebook.ui.theme.PaimonsNotebookTheme
@@ -156,6 +158,11 @@ private fun AnnouncementListItem(
 *
 * 正文走 HtmlTextLazyColumn(与米游社帖子详情同一套渲染),
 * 它能处理 <p>/<img> 与超链接,故这里直接传原始 HTML。
+*
+* ⚠️ 必须自己铺 BackGroundColor 并补状态栏占位:
+* 列表页的背景与状态栏内边距来自 TabBarColumnLayout -> TopSlotColumnLayout,
+* 而详情页是提前 return 的独立分支、绕过了那套布局,不补的话整页背景透明
+* (露出 Activity 的 window 底色),且正文会顶到状态栏下面。
 * */
 @Composable
 private fun AnnouncementDetailContent(
@@ -168,7 +175,13 @@ private fun AnnouncementDetailContent(
         return
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackGroundColor)
+    ) {
+        StatusBarPaddingSpacer()
+
         //返回 + 标题
         Row(
             modifier = Modifier
@@ -186,6 +199,7 @@ private fun AnnouncementDetailContent(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(BackGroundColor)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
