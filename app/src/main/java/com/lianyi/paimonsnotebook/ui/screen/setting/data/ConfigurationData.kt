@@ -49,6 +49,15 @@ class ConfigurationData {
     //原神运行时免打扰
     var enableDailyNoteNotifyDndGaming by mutableStateOf(ENABLE_DAILY_NOTE_DND_GAMING_DEFAULT)
 
+    /*
+    * 便笺 Webhook 推送地址(留空表示不推送)
+    *
+    * 开启后每轮便笺检查会把该 uid 的便笺数据以 JSON POST 到该地址,
+    * 请求头带 x-uid(与胡桃工具箱 DailyNoteWebhookOperation 一致)。
+    * 默认空字符串,即该功能默认不生效。
+    * */
+    var dailyNoteWebhookUrl by mutableStateOf("")
+
     companion object {
         val homeScreenDisplayStateDefault = HomeScreenDisplayState.Community
         const val ENABLE_OVERLAY_DEFAULT = false

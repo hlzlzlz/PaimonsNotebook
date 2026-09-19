@@ -48,7 +48,19 @@ object DailyNoteNotifyService {
             )
         }.first()
 
-        if (!enabled) {
+        /*
+        * Webhook 地址独立读取。
+        *
+        * 注意:Webhook 与"是否开启系统通知"是两件事 —— 用户可能只想要
+        * Webhook 推送而不想要系统通知,故不能因为它复用了本方法的
+        * 检查周期就要求 EnableDailyNoteNotify 也为真。
+        * 但若两者都没配,则直接返回,省掉整轮网络请求。
+        * */
+        val webhookUrl = context.datastorePf.data.map {
+            it[PreferenceKeys.DailyNoteWebhookUrl] ?: ""
+        }.first()
+
+        if (!enabled && !DailyNoteWebhook.isValidUrl(webhookUrl)) {
             return
         }
 
@@ -83,6 +95,26 @@ object DailyNoteNotifyService {
             }
 
             val data = result.data
+
+            /*
+            * Webhook 推送:每轮都推(不受抑制表影响)。
+            *
+            * 与系统通知不同 —— Webhook 的用途是让外部系统持续拿到最新数据,
+            * 若按"上升沿"只推一次,外部系统就拿不到后续变化。
+            * 放在通知评估之前,保证即使通知被免打扰跳过,数据仍然推送。
+            * */
+            if (DailyNoteWebhook.isValidUrl(webhookUrl)) {
+                DailyNoteWebhook.post(
+                    url = webhookUrl,
+                    uid = uid,
+                    data = data
+                )
+            }
+
+            //未开启系统通知时,本轮只做推送,不再评估提醒条件
+            if (!enabled) {
+                return@forEach
+            }
 
             //逐项评估,满足则记录条件键与提醒文案
             val triggered = mutableListOf<Pair<String, String>>()

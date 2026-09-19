@@ -28,6 +28,8 @@ import com.lianyi.core.ui.components.text.InfoText
 import com.lianyi.paimonsnotebook.R
 import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
 import com.lianyi.paimonsnotebook.common.components.dialog.ConfirmDialog
+import com.lianyi.paimonsnotebook.common.components.dialog.InputDialog
+import com.lianyi.paimonsnotebook.common.service.daily_note_notify.DailyNoteWebhook
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
 import com.lianyi.paimonsnotebook.common.extension.data_store.editValue
 import com.lianyi.paimonsnotebook.common.extension.scope.launchIO
@@ -239,6 +241,9 @@ class SettingScreenViewModel : ViewModel() {
 
     private var confirmResetConfigDialog by mutableStateOf(false)
 
+    //便笺 Webhook 地址输入弹窗
+    private var showWebhookUrlDialog by mutableStateOf(false)
+
     val othersSettings = listOf(
         OptionListData(
             name = "启动时检查更新",
@@ -372,6 +377,54 @@ class SettingScreenViewModel : ViewModel() {
                 SettingsOptionSwitch(
                     checked = configurationData.enableDailyNoteNotifyDndGaming
                 )
+            }
+        ),
+        OptionListData(
+            name = "便笺 Webhook 推送",
+            description = "填写一个 http/https 地址后,每轮便笺检查都会把该账号的便笺数据以 JSON POST 过去(请求头带 x-uid),便于接入 HomeAssistant 等外部系统。留空表示不推送。与系统通知相互独立",
+            onClick = {
+                showWebhookUrlDialog = true
+            },
+            slot = {
+                Text(
+                    text = if (configurationData.dailyNoteWebhookUrl.isBlank()) {
+                        "未设置"
+                    } else {
+                        configurationData.dailyNoteWebhookUrl
+                    },
+                    fontSize = 14.sp
+                )
+
+                if (showWebhookUrlDialog) {
+                    InputDialog(
+                        title = "便笺 Webhook 地址",
+                        placeholder = "https://example.com/webhook",
+                        initialValue = configurationData.dailyNoteWebhookUrl,
+                        hint = "留空表示不推送",
+                        onConfirm = { value ->
+                            viewModelScope.launchIO {
+                                val trimmed = value.trim()
+
+                                /*
+                                * 只在非空时校验格式:留空是合法的"关闭"操作。
+                                * 校验放在这里而不是等到推送时,是为了让用户
+                                * 立刻知道地址写错了,而不是默默不生效。
+                                * */
+                                if (trimmed.isNotEmpty() && !DailyNoteWebhook.isValidUrl(trimmed)) {
+                                    "地址无效,需以 http:// 或 https:// 开头".warnNotify(false)
+                                } else {
+                                    PreferenceKeys.DailyNoteWebhookUrl.editValue(trimmed)
+                                    "便笺 Webhook 地址已保存".notify()
+                                }
+
+                                showWebhookUrlDialog = false
+                            }
+                        },
+                        onCancel = {
+                            showWebhookUrlDialog = false
+                        }
+                    )
+                }
             }
         ),
         OptionListData(

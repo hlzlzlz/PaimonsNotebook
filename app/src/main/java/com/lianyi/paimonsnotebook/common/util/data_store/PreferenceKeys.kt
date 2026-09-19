@@ -205,6 +205,17 @@ object PreferenceKeys {
         booleanPreferencesKey("dailyNoteNotifyDndGaming")
     }
 
+    /*
+    * 便笺 Webhook 推送地址
+    *
+    * 开启后每轮便笺检查会把该 uid 的便笺数据以 JSON POST 到该地址
+    * (与胡桃工具箱的 DailyNoteWebhookOperation 行为一致)。
+    * 留空表示不推送。
+    * */
+    val DailyNoteWebhookUrl by lazy {
+        stringPreferencesKey("dailyNoteWebhookUrl")
+    }
+
     val StaticResourcesChannel by lazy {
         stringPreferencesKey("staticResourcesChannel")
     }

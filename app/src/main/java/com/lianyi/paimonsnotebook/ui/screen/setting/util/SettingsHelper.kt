@@ -55,6 +55,9 @@ object SettingsHelper {
                     enableDailyNoteNotifyDndGaming =
                         preferences[PreferenceKeys.DailyNoteNotifyDndGaming]
                             ?: ConfigurationData.ENABLE_DAILY_NOTE_DND_GAMING_DEFAULT
+                    //Webhook 地址默认空串(即不推送)
+                    dailyNoteWebhookUrl =
+                        preferences[PreferenceKeys.DailyNoteWebhookUrl] ?: ""
                 }
 
                 _ConfigurationData.emit(configurationData)
