@@ -21,7 +21,7 @@ class AnnouncementHelperTest {
         annId: Int,
         title: String = "标题$annId",
         startTime: String = "2026-09-12 21:15:00",
-        hasContent: Int = 1
+        hasContent: Boolean = true
     ) = AnnouncementItem(
         ann_id = annId,
         title = title,
@@ -158,7 +158,8 @@ class AnnouncementHelperTest {
 
     @Test
     fun `hasContent标记按has_content解析`() {
-        assertTrue(item(1, hasContent = 1).hasContent)
-        assertTrue(!item(2, hasContent = 0).hasContent)
+        //has_content 是布尔值(服务端返回 true/false),不是 0/1
+        assertTrue(item(1, hasContent = true).hasContent)
+        assertTrue(!item(2, hasContent = false).hasContent)
     }
 }

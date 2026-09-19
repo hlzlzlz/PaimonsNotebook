@@ -182,7 +182,7 @@ private fun AnnouncementDetailContent(
         }
 
         if (item.content.isBlank()) {
-            //正文接口失败或该条无正文(has_content=0)
+            //正文接口失败或该条无正文(has_content=false)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
