@@ -383,6 +383,14 @@ object ApiEndpoints {
         "${PublicOperationHk4eGachaInfoApi}/getGachaLog?${query}"
 
     /// <summary>
+    /// 获取千星奇域祈愿记录
+    /// </summary>
+    /// <param name="query">query string</param>
+    /// <returns>千星奇域祈愿记录信息Url</returns>
+    fun GachaInfoGetBeyondGachaLog(query: String) =
+        "${PublicOperationHk4eGachaInfoApi}/getBeyondGachaLog?${query}"
+
+    /// <summary>
     /// 获取 CookieToken
     /// </summary>
     const val AccountGetCookieTokenBySToken =

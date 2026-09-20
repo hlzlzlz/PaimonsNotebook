@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class GachaRecordService {
     private val dao = PaimonsNotebookDatabase.database.gachaItemsDao
+    private val beyondDao = PaimonsNotebookDatabase.database.beyondGachaItemsDao
 
     //祈愿记录总览数据流
     private val GachaRecordOverviewListFlow =
@@ -121,6 +122,12 @@ class GachaRecordService {
     //按uid取全部祈愿记录(保底统计用)
     fun getGachaItemsByUid(uid: String): List<com.lianyi.paimonsnotebook.common.database.gacha.entity.GachaItems> =
         dao.getGachaLogItemByUid(uid)
+
+    //按uid取全部千星奇域记录
+    fun getBeyondGachaItemsByUid(
+        uid: String
+    ): List<com.lianyi.paimonsnotebook.common.database.gacha.entity.BeyondGachaItems> =
+        if (uid.isBlank()) emptyList() else beyondDao.getByUid(uid)
 
     //获取记录总览
     private suspend fun getGachaRecordOverviewByUid() {

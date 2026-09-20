@@ -3,6 +3,7 @@ package com.lianyi.paimonsnotebook.ui.screen.gacha.service
 import com.google.gson.stream.JsonWriter
 import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
+import com.lianyi.paimonsnotebook.common.database.gacha.entity.BeyondGachaItems
 import com.lianyi.paimonsnotebook.common.database.gacha.entity.GachaItems
 import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
 import com.lianyi.paimonsnotebook.common.util.data_store.DataStoreHelper
@@ -157,15 +158,31 @@ class GachaItemsExportService(
                 endArray()
 
                 /*
-                * v4.2 起新增千星奇域字段。
-                * 本应用暂不采集千星奇域祈愿,故输出空数组 ——
-                * 规范允许"导出方可以选择性地填充针对每个游戏的字段或直接忽略",
-                * 且 v4.2 兼容 v4.1,填充空数组不影响其它工具读取 hk4e。
+                * v4.2 起新增千星奇域字段(hk4e_ugc)。
+                *
+                * ⚠️ 结构与 hk4e **同形**:都是**数组**,元素为
+                * {uid, timezone, lang, list}。这一点容易写错 ——
+                * 官方 schema 里 hk4e_ugc 的声明自相矛盾(写了 "type": "array"
+                * 却把 properties 直接挂在下面、没有 items),但:
+                *   1. "type": "array" 明确;
+                *   2. 参考实现(胡桃)是 ImmutableArray<UIGFEntry<Hk4eUGCItem>>,
+                *      与 hk4e 用**同一个** UIGFEntry<T> 模板,只是 T 不同。
+                * 故按数组处理(若按对象写,其它工具解析必然出错)。
+                *
+                * 条目字段与 hk4e **不同**:
+                *   少了 uigf_gacha_type / gacha_type / count
+                *   多了 schedule_id / op_gacha_type
+                *   名称字段是 item_name(而非 name)
+                *
+                * 无 UGC 记录时不写该字段 —— 规范允许"选择性地填充或直接忽略",
+                * 这样不含千星奇域的用户得到的 v4.2 与 v4.1 完全一致。
                 * */
                 if (uigfVersion == UIGFHelper.UIGFVersion.V4_2) {
-                    name(UIGFHelper.GameField.Hk4eUgc)
-                    beginArray()
-                    endArray()
+                    saveBeyondGachaUgc(
+                        writer = writer,
+                        uidList = uidList,
+                        timeZoneIdCacheMap = timeZoneIdCacheMap
+                    )
                 }
 
                 endObject()
@@ -176,11 +193,80 @@ class GachaItemsExportService(
         }
     }
 
-    //取该 uid 记录里的语言,缺失或为空时回退 zh-cn
-    private suspend fun getLangByUid(uid: String): String {
-        val list = dao.getGachaLogItemByUidPage(uid, 0, 1)
+    /*
+    * 写出 hk4e_ugc 数组
+    *
+    * 与 hk4e 一样是数组,元素为 {uid, timezone, lang, list};
+    * 只为**确有 UGC 记录**的 uid 生成元素(胡桃同样是
+    * `if (beyondDbItems.Length > 0)` 才加进结果集)。
+    * */
+    private suspend fun saveBeyondGachaUgc(
+        writer: JsonWriter,
+        uidList: List<String>,
+        timeZoneIdCacheMap: Map<String, Long>
+    ) {
+        val beyondDao = database.beyondGachaItemsDao
 
-        return (if (list.isNotEmpty()) list.first().lang else "zh-cn").ifBlank { "zh-cn" }
+        val uidWithRecords = uidList.filter { beyondDao.getCountByUid(it) > 0 }
+
+        if (uidWithRecords.isEmpty()) {
+            return
+        }
+
+        writer.apply {
+            name(UIGFHelper.GameField.Hk4eUgc)
+            beginArray()
+
+            uidWithRecords.forEach { uid ->
+                val timeZone = timeZoneIdCacheMap[uid] ?: UIGFHelper.getRegionTimeZoneByUid(uid)
+
+                beginObject()
+                name(UIGFHelper.Field.Info.Uid).value(uid)
+                name(UIGFHelper.Field.Info.TimeZone).value(timeZone)
+                name(UIGFHelper.Field.Info.Lang).value(getLangByUid(uid, beyond = true))
+
+                name("list")
+                beginArray()
+
+                var page = 0
+                var list: List<BeyondGachaItems>
+
+                do {
+                    list = beyondDao.getByUidPage(uid, page, queryPageSize)
+
+                    list.forEach { item ->
+                        beginObject()
+                        name(UIGFHelper.Field.Item.Id).value(item.id)
+                        name(UIGFHelper.Field.Beyond.ScheduleId).value(item.schedule_id)
+                        name(UIGFHelper.Field.Item.ItemType).value(item.item_type)
+                        name(UIGFHelper.Field.Item.ItemId).value(item.item_id)
+                        name(UIGFHelper.Field.Beyond.ItemName).value(item.item_name)
+                        name(UIGFHelper.Field.Item.RankType).value(item.rank_type)
+                        name(UIGFHelper.Field.Item.Time).value(item.time)
+                        name(UIGFHelper.Field.Beyond.OpGachaType).value(item.op_gacha_type)
+                        endObject()
+                    }
+
+                    page++
+                } while (list.size >= queryPageSize)
+
+                endArray()
+                endObject()
+            }
+
+            endArray()
+        }
+    }
+
+    //取该 uid 记录里的语言,缺失或为空时回退 zh-cn
+    private suspend fun getLangByUid(uid: String, beyond: Boolean = false): String {
+        val lang = if (beyond) {
+            database.beyondGachaItemsDao.getByUidPage(uid, 0, 1).firstOrNull()?.lang
+        } else {
+            dao.getGachaLogItemByUidPage(uid, 0, 1).firstOrNull()?.lang
+        }
+
+        return lang?.ifBlank { "zh-cn" } ?: "zh-cn"
     }
 
     private fun saveGachaItems(

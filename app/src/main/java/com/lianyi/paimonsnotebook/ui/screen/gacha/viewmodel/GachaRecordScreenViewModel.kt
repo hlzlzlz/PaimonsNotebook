@@ -15,6 +15,7 @@ import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.Avatar
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.GachaEventService
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.WeaponService
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.gacha_event.GachaEventEntry
+import com.lianyi.paimonsnotebook.ui.screen.gacha.data.BeyondGachaGroup
 import com.lianyi.paimonsnotebook.ui.screen.gacha.data.GachaOverviewListItem
 import com.lianyi.paimonsnotebook.ui.screen.gacha.service.GachaPityCalculator
 import com.lianyi.paimonsnotebook.ui.screen.gacha.service.GachaRecordService
@@ -28,8 +29,8 @@ class GachaRecordScreenViewModel : ViewModel() {
 
     var currentPageIndex by mutableIntStateOf(0)
 
-    //0总览 1保底 2复刻 3角色 4武器
-    val tabs = arrayOf("总览", "保底", "复刻", "角色", "武器")
+    //0总览 1保底 2复刻 3角色 4武器 5千星奇域
+    val tabs = arrayOf("总览", "保底", "复刻", "角色", "武器", "千星奇域")
 
     //保底统计
     var pityList by mutableStateOf<List<GachaPityCalculator.PoolPity>?>(null)
@@ -45,6 +46,12 @@ class GachaRecordScreenViewModel : ViewModel() {
         private set
 
     var overviewItemMap by mutableStateOf<Map<String, List<GachaOverviewListItem>>>(mapOf())
+        private set
+
+    //千星奇域记录(按卡池类型分组)
+    var beyondGroups by mutableStateOf<List<BeyondGachaGroup>?>(null)
+        private set
+    var beyondLoadingState by mutableStateOf(LoadingState.Loading)
         private set
 
     private val gachaRecordService = GachaRecordService()
@@ -253,6 +260,31 @@ class GachaRecordScreenViewModel : ViewModel() {
         when (pageIndex) {
             1 -> loadPity()
             2 -> loadCountdown()
+            5 -> loadBeyondGacha()
+        }
+    }
+
+    /*
+    * 加载千星奇域记录
+    *
+    * 该页只依赖当前选中的祈愿 uid(与总览同源),不需要额外参数。
+    * 用 beyondLoadingState 单独表达状态:千星奇域是可选数据,
+    * 没有记录时应显示"空"而不是让整个祈愿页报错。
+    * */
+    private fun loadBeyondGacha() {
+        viewModelScope.launch {
+            beyondLoadingState = LoadingState.Loading
+
+            val uid = gachaRecordService.currentUid()
+
+            val items = withContext(Dispatchers.IO) {
+                gachaRecordService.getBeyondGachaItemsByUid(uid)
+            }
+
+            val groups = BeyondGachaGroup.from(items)
+
+            beyondGroups = groups
+            beyondLoadingState = if (groups.isEmpty()) LoadingState.Empty else LoadingState.Success
         }
     }
 

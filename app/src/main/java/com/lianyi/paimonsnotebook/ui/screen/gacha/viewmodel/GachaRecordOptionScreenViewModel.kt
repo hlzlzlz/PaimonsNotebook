@@ -57,6 +57,7 @@ import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.binding.GameAuthKeyD
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.binding.GenAuthKeyData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.binding.UserGameRoleData
 import com.lianyi.paimonsnotebook.ui.screen.account.components.dialog.UserGameRolesDialog
+import com.lianyi.paimonsnotebook.ui.screen.gacha.service.BeyondGachaLogService
 import com.lianyi.paimonsnotebook.ui.screen.gacha.service.GachaItemsExportService
 import com.lianyi.paimonsnotebook.ui.screen.gacha.service.GachaItemsImportService
 import com.lianyi.paimonsnotebook.ui.screen.gacha.service.GachaLogService
@@ -131,6 +132,10 @@ class GachaRecordOptionScreenViewModel : ViewModel() {
 
     private val gachaLogService by lazy {
         GachaLogService()
+    }
+
+    private val beyondGachaLogService by lazy {
+        BeyondGachaLogService()
     }
 
     var showLoadingDialog by mutableStateOf(false)
@@ -723,10 +728,41 @@ class GachaRecordOptionScreenViewModel : ViewModel() {
             }
 
             if (success) {
+                //普通祈愿拉完后接着拉千星奇域(共用同一个 authkey)
+                fetchBeyondGachaLog(gameAuthKeyData = gameAuthKeyData, playerUid = playerUid)
+
                 "祈愿记录获取完毕".notify(closeable = true)
             }
 
             resetLocalValues()
+        }
+    }
+
+    /*
+    * 拉取千星奇域(UGC)祈愿记录
+    *
+    * 与普通祈愿**共用同一个 authkey**(服务端不区分,只是端点路径不同),
+    * 故不额外申请密钥、不额外弹滑块。
+    *
+    * 失败只提示不中断:千星奇域是附加数据,失败不应让"普通祈愿已获取成功"变成失败。
+    * 该账号没有千星奇域记录时服务端返回 retcode 0 + 空 list,属正常情况
+    * (实测本机账号就是如此),此时静默跳过,不打扰用户。
+    * */
+    private suspend fun fetchBeyondGachaLog(
+        gameAuthKeyData: GameAuthKeyData,
+        playerUid: PlayerUid
+    ) {
+        val result = beyondGachaLogService.fetchAndSave(
+            gameAuthKeyData = gameAuthKeyData,
+            playerUid = playerUid
+        ) { description ->
+            loadingDialogDescription = description
+        }
+
+        if (!result.success) {
+            "获取千星奇域记录失败:${result.errorMessage ?: "未知错误"}".warnNotify()
+        } else if (result.addedCount > 0) {
+            "千星奇域记录新增 ${result.addedCount} 条".notify(closeable = true)
         }
     }
 

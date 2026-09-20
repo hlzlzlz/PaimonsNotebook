@@ -17,8 +17,9 @@ object UIGFHelper {
     * 完全同构**,唯一差异是 info.version 字符串(这与胡桃的实现一致:
     * 它的 UIGF41ExportService 只是继承 40 并把 Version 改成 "v4.1")。
     *
-    * v4.2 比 v4.1 多一个顶层 hk4e_ugc 数组(千星奇域)。本项目目前不采集
-    * 千星奇域祈愿数据,故导出 4.2 时该字段输出为空数组 —— 符合规范里
+    * v4.2 比 v4.1 多一个顶层 hk4e_ugc 数组(千星奇域)。本项目**已采集**
+    * 千星奇域祈愿数据(见 BeyondGachaLogService),导出 4.2 时会写入真实记录;
+    * 该 uid 没有千星奇域记录时不写该字段 —— 符合规范里
     * "导出方可以选择性地填充针对每个游戏的字段或直接忽略"。
     * */
     enum class UIGFVersion(val value: String, val label: String, val description: String) {
@@ -35,7 +36,7 @@ object UIGFHelper {
         V4_2(
             value = "v4.2",
             label = "UIGF v4.2",
-            description = "最新标准,新增千星奇域字段(本应用暂不采集该数据,该字段将导出为空)"
+            description = "最新标准,新增千星奇域字段(导出时含已获取的千星奇域记录)"
         );
 
         companion object {
@@ -58,6 +59,56 @@ object UIGFHelper {
 
     //集录祈愿的类型码,公开以供保底计算等模块引用,避免各自硬编码造成漂移
     const val CHRONICLED_WISH = "500"
+
+    /*
+    * 千星奇域(UGC)卡池类型码
+    *
+    * 与上面 100~500 那套**不是同一套编码**,是服务端 op_gacha_type 的独立枚举
+    * (来源:胡桃 GachaType.cs 的 UGC 段 + UIGF v4.2 官方 schema 的
+    *  op_gacha_type enum,两处一致)。
+    *
+    *   1000  常驻(对应胡桃 UGCStandard)
+    *   2000  角色活动(UGCAvatarEventWish)
+    *   20011/20012  男性主角活动卡池(一/二)
+    *   20021/20022  女性主角活动卡池(一/二)
+    *
+    * 拉取记录时只需查 1000 与 2000 —— 胡桃 BeyondGachaLog.QueryTypes 也只列
+    * 这两个:20011/20012/20021/20022 是 2000 的"细分档位",服务端在
+    * 2000 里会一并返回(胡桃 GachaConfigTypeExtension 把 20011~20022 归一化
+    * 到 UGCAvatarEventWish 就是证据)。实测 6 个类型码都能返回 retcode 0。
+    * */
+    object BeyondGachaType {
+        const val STANDARD = "1000"
+        const val AVATAR_EVENT = "2000"
+        const val ACTIVITY_AVATAR_MALE_ONE = "20011"
+        const val ACTIVITY_AVATAR_MALE_TWO = "20012"
+        const val ACTIVITY_AVATAR_FEMALE_ONE = "20021"
+        const val ACTIVITY_AVATAR_FEMALE_TWO = "20022"
+
+        //实际用于拉取的类型(与胡桃 BeyondGachaLog.QueryTypes 一致)
+        val queryList = arrayOf(STANDARD, AVATAR_EVENT)
+
+        //全部已知类型,用于名称映射
+        val all = arrayOf(
+            STANDARD,
+            AVATAR_EVENT,
+            ACTIVITY_AVATAR_MALE_ONE,
+            ACTIVITY_AVATAR_MALE_TWO,
+            ACTIVITY_AVATAR_FEMALE_ONE,
+            ACTIVITY_AVATAR_FEMALE_TWO
+        )
+    }
+
+    //千星奇域卡池名称
+    fun getBeyondGachaName(type: String) = when (type) {
+        BeyondGachaType.STANDARD -> "千星奇域·常驻"
+        BeyondGachaType.AVATAR_EVENT -> "千星奇域·角色活动"
+        BeyondGachaType.ACTIVITY_AVATAR_MALE_ONE -> "千星奇域·活动(男主一)"
+        BeyondGachaType.ACTIVITY_AVATAR_MALE_TWO -> "千星奇域·活动(男主二)"
+        BeyondGachaType.ACTIVITY_AVATAR_FEMALE_ONE -> "千星奇域·活动(女主一)"
+        BeyondGachaType.ACTIVITY_AVATAR_FEMALE_TWO -> "千星奇域·活动(女主二)"
+        else -> type
+    }
 
 
     //当更新祈愿卡池类型时,需要在此处同步添加
@@ -180,6 +231,38 @@ object UIGFHelper {
 //                RankType,
 //                Id
 //            )
+        }
+
+        /*
+        * 千星奇域(hk4e_ugc)条目**独有**的字段
+        *
+        * 与 hk4e 条目的差异(依据 UIGF v4.2 官方 schema 的 hk4e_ugc 段):
+        *   少了:uigf_gacha_type / gacha_type / count
+        *   多了:schedule_id / op_gacha_type
+        *   名称字段叫 item_name,而不是 name
+        * */
+        object Beyond {
+            const val ScheduleId = "schedule_id"
+            const val ItemName = "item_name"
+            const val OpGachaType = "op_gacha_type"
+
+            /*
+            * is_up 不在 UIGF 规范里(规范只要求上面 8 个字段),
+            * 但服务端会返回、本地也保留,导入时若存在则读入。
+            * */
+            const val IsUp = "is_up"
+
+            //规范里 hk4e_ugc 条目要求全部 8 个字段(其中 5 个与 hk4e 同名,复用 Item 的定义)
+            val requiredFields = arrayOf(
+                Item.Id,
+                ScheduleId,
+                Item.ItemType,
+                Item.ItemId,
+                ItemName,
+                Item.RankType,
+                Item.Time,
+                OpGachaType
+            )
         }
     }
 

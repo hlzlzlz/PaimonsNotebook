@@ -25,7 +25,9 @@ import com.lianyi.paimonsnotebook.common.database.daily_note.entity.DailyNote
 import com.lianyi.paimonsnotebook.common.database.daily_note.entity.DailyNoteWidget
 import com.lianyi.paimonsnotebook.common.database.disk_cache.dao.DiskCacheDao
 import com.lianyi.paimonsnotebook.common.database.disk_cache.entity.DiskCache
+import com.lianyi.paimonsnotebook.common.database.gacha.dao.BeyondGachaItemsDao
 import com.lianyi.paimonsnotebook.common.database.gacha.dao.GachaItemsDao
+import com.lianyi.paimonsnotebook.common.database.gacha.entity.BeyondGachaItems
 import com.lianyi.paimonsnotebook.common.database.gacha.entity.GachaItems
 import com.lianyi.paimonsnotebook.common.database.user.dao.UserDao
 import com.lianyi.paimonsnotebook.common.database.user.entity.User
@@ -43,7 +45,8 @@ import com.lianyi.paimonsnotebook.common.database.user.entity.User
         CultivateProject::class,
         CultivateEntity::class,
         CultivateItems::class,
-        CultivateItemMaterials::class
+        CultivateItemMaterials::class,
+        BeyondGachaItems::class
     ],
     autoMigrations = [
         AutoMigration(1, 2),
@@ -57,15 +60,26 @@ import com.lianyi.paimonsnotebook.common.database.user.entity.User
         * Room 会在编译期校验 schema,若迁移不可行会直接构建失败 ——
         * 这比运行时崩溃好得多。
         * */
-        AutoMigration(4, 5)
+        AutoMigration(4, 5),
+        /*
+        * 5 -> 6:新增 beyond_gacha_items 表(千星奇域/UGC 祈愿记录)。
+        *
+        * 这是**新建表**而非给已有表加列,故无需 defaultValue ——
+        * AutoMigration 会生成 CREATE TABLE,老数据不受影响(新表为空)。
+        * 与 4->5 的区别:那次是加列(必须给默认值),这次是加表。
+        * */
+        AutoMigration(5, 6)
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class PaimonsNotebookDatabase : RoomDatabase() {
 
     //祈愿记录
     abstract val gachaItemsDao: GachaItemsDao
+
+    //千星奇域祈愿记录
+    abstract val beyondGachaItemsDao: BeyondGachaItemsDao
 
     //硬盘缓存
     abstract val diskCacheDao: DiskCacheDao

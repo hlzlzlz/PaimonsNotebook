@@ -4,6 +4,7 @@ import androidx.sqlite.db.SupportSQLiteStatement
 import com.google.gson.stream.JsonReader
 import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
+import com.lianyi.paimonsnotebook.common.database.gacha.entity.BeyondGachaItems
 import com.lianyi.paimonsnotebook.common.database.gacha.entity.GachaItems
 import com.lianyi.paimonsnotebook.common.extension.data_store.editValue
 import com.lianyi.paimonsnotebook.common.extension.file.createJsonReader
@@ -125,7 +126,134 @@ class GachaItemsImportService(
         //v4
         if (!uigfInfoCompat.version.isNullOrBlank()) {
             saveHK4EItems(file, gachaLogService)
+
+            /*
+            * v4.2 起可能有 hk4e_ugc(千星奇域)字段。
+            * 它是**可选**的(规范允许导出方忽略),所以:
+            *   - 字段不存在 -> 直接返回,不报错(v4.0/v4.1 文件、以及
+            *     不含千星奇域数据的 v4.2 文件都属于这种情况);
+            *   - 字段存在   -> 解析并入库。
+            * 注意不能因为缺少该字段就 error(),否则会把大量正常文件判为损坏。
+            * */
+            saveBeyondGachaUgcItems(file)
+
             return
+        }
+    }
+
+    /*
+    * 解析 UIGF v4.2 的 hk4e_ugc 数组
+    *
+    * 结构(与 hk4e 同形,元素为 {uid, timezone, lang, list}):
+    *   "hk4e_ugc": [ { "uid": "...", "timezone": 8, "lang": "zh-cn",
+    *                   "list": [ {id, schedule_id, item_type, item_id,
+    *                              item_name, rank_type, time, op_gacha_type} ] } ]
+    *
+    * 与 hk4e 的差异:条目字段不同(见 UIGFHelper.Field.Beyond),
+    * 且**不需要**查元数据 —— UGC 物品的名称/类型/星级都由记录自带
+    * (item_name/item_type/rank_type),本地元数据里没有千星奇域物品,
+    * 若照 hk4e 那样去 GachaLogService 查会必然找不到而报错。
+    * */
+    private suspend fun saveBeyondGachaUgcItems(file: File) {
+        val jsonReader = file.createJsonReader()
+
+        val hasUgc = jsonReader.findField(UIGFHelper.GameField.Hk4eUgc)
+
+        //可选字段,不存在即正常
+        if (!hasUgc) {
+            jsonReader.close()
+            return
+        }
+
+        val beyondDao = database.beyondGachaItemsDao
+
+        val list = mutableListOf<BeyondGachaItems>()
+
+        jsonReader.apply {
+            beginArray()
+
+            while (hasNext()) {
+                beginObject()
+
+                var uid = ""
+                var lang = "zh-cn"
+
+                while (hasNext()) {
+                    when (nextName()) {
+                        UIGFHelper.Field.Info.Uid -> uid = nextString()
+                        UIGFHelper.Field.Info.Lang -> lang = nextString()
+
+                        /*
+                        * timezone 在规范里是 integer,但导出方可能写成字符串
+                        * (hk4e 那边就有 export_timestamp 是 number|string 的先例),
+                        * 故用 nextString() 再自行解析,避免类型不符直接抛异常。
+                        *
+                        * 该值此处**不需要**保留:hk4e_ugc 里没有 region 字段,
+                        * 而实体上的 region 存的是服务端区域名(如 cn_gf01),
+                        * 二者语义不同,不能互相顶替 —— 故只消费不落库。
+                        * */
+                        UIGFHelper.Field.Info.TimeZone -> {
+                            nextString()
+                        }
+
+                        "list" -> {
+                            beginArray()
+
+                            while (hasNext()) {
+                                beginObject()
+
+                                val itemMap = mutableMapOf<String, String>()
+                                while (hasNext()) {
+                                    itemMap[nextName()] = nextString()
+                                }
+                                endObject()
+
+                                val id = itemMap[UIGFHelper.Field.Item.Id] ?: ""
+                                val opGachaType =
+                                    itemMap[UIGFHelper.Field.Beyond.OpGachaType] ?: ""
+
+                                //id 与卡池类型是主键/查询键,缺失则该条无意义
+                                if (id.isBlank() || uid.isBlank()) {
+                                    continue
+                                }
+
+                                list += BeyondGachaItems(
+                                    id = id,
+                                    uid = uid,
+                                    //UIGF 的 hk4e_ugc 不含 region,留空(不影响导出:
+                                    //导出用 UIGFHelper.getRegionTimeZoneByUid 推时区)
+                                    region = "",
+                                    schedule_id = itemMap[UIGFHelper.Field.Beyond.ScheduleId]
+                                        ?: "",
+                                    item_type = itemMap[UIGFHelper.Field.Item.ItemType] ?: "",
+                                    item_id = itemMap[UIGFHelper.Field.Item.ItemId] ?: "",
+                                    item_name = itemMap[UIGFHelper.Field.Beyond.ItemName]
+                                        ?: "",
+                                    rank_type = itemMap[UIGFHelper.Field.Item.RankType] ?: "",
+                                    is_up = itemMap[UIGFHelper.Field.Beyond.IsUp] ?: "0",
+                                    time = itemMap[UIGFHelper.Field.Item.Time] ?: "",
+                                    op_gacha_type = opGachaType,
+                                    lang = lang
+                                )
+                            }
+
+                            endArray()
+                        }
+
+                        else -> skipValue()
+                    }
+                }
+
+                endObject()
+            }
+
+            endArray()
+            close()
+        }
+
+        if (list.isNotEmpty()) {
+            beyondDao.insert(list)
+            beyondDao.notifyRoomUpdate()
         }
     }
 

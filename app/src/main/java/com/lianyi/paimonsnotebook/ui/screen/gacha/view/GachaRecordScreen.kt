@@ -25,6 +25,7 @@ import com.lianyi.paimonsnotebook.common.components.placeholder.ErrorPlaceholder
 import com.lianyi.paimonsnotebook.common.components.widget.button.TitleAndDescriptionActionButton
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.common.util.metadata.genshin.uigf.UIGFHelper
+import com.lianyi.paimonsnotebook.ui.screen.gacha.components.page.BeyondGachaPage
 import com.lianyi.paimonsnotebook.ui.screen.gacha.components.page.GachaCountdownPage
 import com.lianyi.paimonsnotebook.ui.screen.gacha.components.page.GachaItemsPage
 import com.lianyi.paimonsnotebook.ui.screen.gacha.components.page.GachaPityPage
@@ -120,6 +121,14 @@ class GachaRecordScreen : ComponentActivity() {
 
                         3 -> GachaItemsPage(viewModel.itemsList, UIGFHelper.ItemType.Avatar)
                         4 -> GachaItemsPage(viewModel.itemsList, UIGFHelper.ItemType.Weapon)
+
+                        5 -> ContentLoadingLayout(
+                            loadingState = viewModel.beyondLoadingState,
+                            successContent = {
+                                BeyondGachaPage(groups = viewModel.beyondGroups ?: emptyList())
+                            }
+                        )
+
                         else -> {
                             if (viewModel.gachaRecordOverview != null) {
                                 GachaRecordOverviewPage(
