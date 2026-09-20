@@ -10,19 +10,10 @@ package com.lianyi.paimonsnotebook.common.web.hoyolab.hk4e.announcement
 * (胡桃的 AnnouncementService 也是这么做的:取全部 content 建
 *  Dictionary<AnnId, Content> 再回填到列表条目)。
 *
-* 同时负责剥掉正文里的时间占位标签 —— 服务端下发的正文里可能带
-* <t time="..." > 这类客户端渲染占位,不处理会原样显示成一串尖括号。
-* 胡桃用 AnnouncementRegex.XmlTimeTagRegex 做同样的事。
+* 正文里的 <t> 时间占位标签由 HtmlSpanParser 负责折叠,本类不再做正则清洗
+* (原因见 cleanupContent 的说明)。
 * */
 object AnnouncementHelper {
-
-    /*
-    * 匹配 <t ...>内容</t> 形式的时间标签,只保留其文本内容
-    *
-    * 与胡桃的 XmlTimeTagRegex 等价(它取 Group[1],即标签内的文本)
-    * */
-    private val xmlTimeTagRegex =
-        Regex("""<t\b[^>]*>(.*?)</t>""", RegexOption.DOT_MATCHES_ALL)
 
     /*
     * 合并列表与正文,并清洗
@@ -56,15 +47,18 @@ object AnnouncementHelper {
     /*
     * 清洗正文 HTML
     *
-    * 目前只做一件事:把 <t ...>xxx</t> 折叠成 xxx。
-    * 其它标签(<p>/<img>)原样保留,交给 HtmlTextLazyColumn 渲染。
+    * ⚠️ 2026-09-20 更正:此前这里用正则把 `<t ...>xxx</t>` 折叠成 xxx,
+    * 但**服务端下发的是 HTML 转义形式** `&lt;t class="t_lc"&gt;2026/09/01 18:00&lt;/t&gt;`
+    * (34 条真实公告里实测 114 处),而正则匹配的是字面 `<t\b`,**根本匹配不到**
+    * ⇒ 用户看到的就是一串 `&lt;t class="t_lc"...&gt;` 尖括号。
+    *
+    * 现在不再在这里做正则替换:转义实体交给 HtmlSpanParser 处理 ——
+    * Jsoup 解析时会把 `&lt;t&gt;` 还原成字面文本,再由
+    * HtmlSpanParser.collapseTimeTags 折叠掉,转义与未转义两种形式都能覆盖。
+    *
+    * 保留本函数是为了不破坏既有调用点与测试,现在它只做"原样返回"。
     * */
-    fun cleanupContent(content: String): String =
-        if (content.isEmpty()) {
-            content
-        } else {
-            xmlTimeTagRegex.replace(content) { it.groupValues[1] }
-        }
+    fun cleanupContent(content: String): String = content
 
     /*
     * 统计非空分组数,用于判断"到底有没有公告"

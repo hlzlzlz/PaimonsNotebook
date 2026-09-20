@@ -1,6 +1,7 @@
 package com.lianyi.paimonsnotebook.common.components.layout.column
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -29,26 +31,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.graphics.toColorInt
-import androidx.core.text.HtmlCompat
 import androidx.core.text.toSpannable
 import com.lianyi.paimonsnotebook.common.components.layout.FoldTextContent
+import com.lianyi.paimonsnotebook.common.components.layout.table.HtmlTableContent
 import com.lianyi.paimonsnotebook.common.components.lazy.ContentSpacerLazyColumn
 import com.lianyi.paimonsnotebook.common.components.media.FullScreenImage
 import com.lianyi.paimonsnotebook.common.components.media.NetworkImage
 import com.lianyi.paimonsnotebook.common.components.placeholder.TextPlaceholder
 import com.lianyi.paimonsnotebook.common.components.placeholder.VideoPlayerPlaceholder
-import com.lianyi.paimonsnotebook.common.data.html.HtmlSpanData
 import com.lianyi.paimonsnotebook.common.data.html.HtmlTextData
 import com.lianyi.paimonsnotebook.common.database.disk_cache.entity.DiskCache
-import com.lianyi.paimonsnotebook.common.extension.string.show
 import com.lianyi.paimonsnotebook.common.extension.string.toAnnotatedString
+import com.lianyi.paimonsnotebook.common.util.html.HtmlSpanParser
 import com.lianyi.paimonsnotebook.common.util.html.HtmlSpanType
 import com.lianyi.paimonsnotebook.ui.theme.Black
 import com.lianyi.paimonsnotebook.ui.theme.LinkColor
-import okhttp3.internal.toHexString
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Element
 
 /*
 * 此组件仅用于转换文章详情页的html文本
@@ -73,7 +70,8 @@ fun HtmlTextLazyColumn(
     onVideoClick: () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
-    val htmlSpanData = getHtmlSpanDataList(htmlText)
+    //解析逻辑已抽到 HtmlSpanParser(纯函数,可被单测驱动)
+    val htmlSpanData = HtmlSpanParser.parse(htmlText)
 
     var imageFullScreen by remember {
         mutableStateOf(false)
@@ -186,6 +184,58 @@ fun HtmlTextLazyColumn(
 
                     }
 
+                    /*
+                    * 表格(2026-09-20 新增)
+                    *
+                    * 此前表格被当作图片渲染,表格位置会显示一张无关的默认占位图。
+                    * */
+                    HtmlSpanType.Table -> {
+                        item.tableData?.let { table ->
+                            HtmlTableContent(table = table)
+                        }
+                    }
+
+                    /*
+                    * 列表(2026-09-20 新增)
+                    *
+                    * 实测顶层 ol 18 个(104 个 li),此前整块丢弃。
+                    * 序号/项目符号已在解析阶段拼进文本,这里按行显示。
+                    * */
+                    HtmlSpanType.List -> {
+                        if (item.listItems.isNotEmpty()) {
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                item.listItems.forEach { line ->
+                                    Text(
+                                        text = line,
+                                        fontSize = fontSize,
+                                        color = Black
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    /*
+                    * 标题(2026-09-20 新增)
+                    *
+                    * 实测顶层 h4 8 个、h2 4 个,此前丢弃。
+                    * 按级别给不同字号,让公告的小节标题有层次。
+                    * */
+                    HtmlSpanType.Heading -> {
+                        val size = when (item.headingLevel) {
+                            1 -> 20.sp
+                            2 -> 18.sp
+                            3 -> 17.sp
+                            else -> 16.sp
+                        }
+
+                        TextBuildAnnotatedString(
+                            data = item.textList,
+                            fontSize = size,
+                            bold = true
+                        )
+                    }
+
                     else -> {
                         TextPlaceholder("此处使用了一个预料外的标签:[${item.data}]。\n向开发者反馈以解决此问题")
                     }
@@ -239,204 +289,20 @@ private fun TextBuildAnnotatedSpannableString(
 private fun TextBuildAnnotatedString(
     data: List<HtmlTextData>,
     fontSize: TextUnit,
+    bold: Boolean = false,
 ) {
     val text = buildAnnotatedString {
         data.forEach { item ->
-            withStyle(style = SpanStyle(color = item.color, fontSize = fontSize)) {
+            withStyle(
+                style = SpanStyle(
+                    color = item.color,
+                    fontSize = fontSize,
+                    fontWeight = if (bold) FontWeight.Bold else null
+                )
+            ) {
                 append(item.text)
             }
         }
     }
     Text(text = text)
-}
-
-//解析html内标签,包括颜色、样式等属性。
-private fun getHtmlSpanDataList(htmlText: String): List<HtmlSpanData> {
-    val document = Jsoup.parse(htmlText)
-    //获取顶层层级
-    val body = document.body().children()
-
-    val htmlSpanData = mutableListOf<HtmlSpanData>()
-
-    //此处根据获取到的标签名(it.tagName)来生成对应的组件
-    if (body.size > 0) {
-
-        body.forEach { parent ->
-
-            var alignment = Alignment.Start
-            var spanType = HtmlSpanType.P
-            var data = ""
-            val textList = mutableListOf<HtmlTextData>()
-            val titleList = mutableListOf<HtmlTextData>()
-
-            when (parent.tagName()) {
-                //文字类型
-                "p" -> {
-
-                    alignment = getAlign(parent)
-
-                    val parentHtmlText = parent.html()
-
-                    val text =
-                        HtmlCompat.fromHtml(parentHtmlText, HtmlCompat.FROM_HTML_MODE_LEGACY)
-                    textList += HtmlTextData(spannableString = text)
-                    spanType = HtmlSpanType.SP
-                }
-
-                //块类型 一般用于装填媒体内容,可折叠文本
-                "div" -> {
-
-                    spanType =
-                        if (parent.classNames().contains("ql-fold")) {
-                            //折叠文本
-                            parent.getElementsByClass("ql-fold-title-content").first()
-                                ?.getElementsByTag("span")
-                                ?.forEach { span ->
-                                    titleList += HtmlTextData(
-                                        text = span.text(),
-                                        color = getTextColorInStyle(span)
-                                    )
-                                }
-
-                            parent.getElementsByClass("ql-fold-content").first()
-                                ?.getElementsByTag("p")?.forEach { p ->
-                                    p?.getElementsByTag("span")?.forEach { text ->
-                                        textList += HtmlTextData(
-                                            text = text.text(),
-                                            color = getTextColorInStyle(text)
-                                        )
-                                    }
-                                    textList += HtmlTextData(
-                                        text = "\n",
-                                        color = Color.Transparent
-                                    )
-                                }
-
-                            HtmlSpanType.Fold
-                        } else if (parent.classNames().contains("ql-link-card")) {
-                            //外部链接
-                            val coverElement = parent.getElementsByClass("card-cover")
-                            if (coverElement.size > 0) {
-                                val cover = coverElement.first()
-                                val style = cover?.attr("style")
-                                style?.apply {
-                                    this.split(";").forEach { kv ->
-                                        val index = kv.indexOfFirst { it == ':' }
-
-                                        if (index != -1) {
-                                            val k = kv.slice((0 until index)).trim()
-                                            val v = kv.slice((index + 1 until kv.length)).trim()
-
-                                            if (k == "background-image") {
-                                                val imageUrl =
-                                                    v.removePrefix("url(\"").removeSuffix("\")")
-                                                data = imageUrl
-                                            }
-
-                                        }
-                                    }
-                                }
-                            }
-
-                            titleList += HtmlTextData(
-                                text = parent.getElementsByClass("card-title").text()
-                            )
-
-                            HtmlSpanType.LinkCard
-                        } else {
-                            if (parent.childrenSize() == 0) {
-                                HtmlSpanType.Video
-                            } else if (parent.children().firstOrNull()?.tagName() == "iframe") {
-                                data = parent.children().attr("video")
-                                HtmlSpanType.Video
-                            } else {
-                                data = parent.getElementsByTag("img").first()?.attr("src")
-                                    ?: "https://img-static.mihoyo.com/communityweb/upload/417976a3dacde790f947f8769d85d55c.png"
-                                HtmlSpanType.Img
-                            }
-                        }
-
-                }
-                //默认处理
-                else -> {
-                    data = parent.tagName()
-                }
-            }
-
-            htmlSpanData += HtmlSpanData(
-                type = spanType,
-                data = data,
-                textList = textList,
-                alignment = alignment,
-                clickable = false,
-                titleList = titleList
-            )
-        }
-    } else {
-        htmlSpanData += HtmlSpanData(
-            textList = listOf(
-                HtmlTextData(
-                    text = htmlText,
-                    color = Color.Black
-                )
-            )
-        )
-    }
-
-    return htmlSpanData
-}
-
-//获取元素中的对齐方式class,无返回TopStart
-private fun getAlign(element: Element): Alignment.Horizontal {
-    val elementClass = element.classNames()
-    return if ("ql-align-center" in elementClass) {
-        Alignment.CenterHorizontally
-    } else {
-        Alignment.Start
-    }
-}
-
-private fun getColorFromRgbColorText(colorString: String): Color {
-    val (r, g, b) = getRGBFromRgbColorText(colorString)
-
-    return Color(r, g, b)
-}
-
-private fun getRGBFromRgbColorText(colorString: String): Triple<Int, Int, Int> {
-    val rgbColor = colorString.replace("rgb(", "").replace(")", "").split(",")
-    val r = rgbColor.first().trim().toInt()
-    val g = rgbColor[1].trim().toInt()
-    val b = rgbColor.last().trim().toInt()
-
-    return Triple(r, g, b)
-}
-
-private fun getColorHexFromRgbColorText(colorString: String): String {
-    val (r, g, b) = getRGBFromRgbColorText(colorString)
-    return android.graphics.Color.rgb(r, g, b).toHexString()
-}
-
-//获取元素中style内color的值
-private fun getTextColorInStyle(element: Element): Color {
-    var color = Black
-
-    val style = element.attr("style")
-    val attrs = style.split(";")
-    attrs.forEach {
-        if (it.startsWith("color")) {
-            val colorString = it.split(":").last().trim()
-            color = if (colorString.startsWith("rgb")) {
-                getColorFromRgbColorText(colorString)
-            } else {
-                //当使用的不是常见的颜色单词时,颜色转换可能会发生异常
-                try {
-                    Color(colorString.toColorInt())
-                } catch (e: Exception) {
-                    "异常的颜色转换:${colorString}\n请向开发者反馈".show()
-                    Color.Black
-                }
-            }
-        }
-    }
-    return color
 }

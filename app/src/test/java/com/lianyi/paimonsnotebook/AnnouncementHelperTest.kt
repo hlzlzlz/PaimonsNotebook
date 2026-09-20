@@ -64,22 +64,31 @@ class AnnouncementHelperTest {
         assertEquals("<p>正文两百</p>", merged[0].list.first { it.ann_id == 200 }.content)
     }
 
+    /*
+    * ⚠️ 2026-09-20 更正:此用例原先断言"merge 会把 <t> 折叠成纯文本",
+    * 但那条断言建立在**错误的假设**上 —— 它喂的是**未转义**的 `<t time=...>`,
+    * 而服务端实际下发的是**转义形式** `&lt;t class="t_lc"&gt;`
+    * (34 条真实公告里实测 114 处)。
+    *
+    * 旧的正则匹配字面 `<t\b`,对转义形式**根本匹配不到** ⇒ 用户看到一串尖括号。
+    * 现在折叠职责移到 HtmlSpanParser(用 Jsoup 解析后再折叠,两种形式都覆盖),
+    * merge 只负责按 ann_id 回填、不再改动正文。
+    * 折叠行为的用例见 HtmlSpanParserTest。
+    * */
     @Test
-    fun `t时间标签被折叠为纯文本`() {
+    fun `merge不再改写正文标签交给解析层处理`() {
         val groups = listOf(
             AnnouncementGroup(list = listOf(item(1)), type_id = 1, type_label = "活动公告")
         )
-        val contents = listOf(
-            content(1, """活动时间：<t time="1234567890">2026/09/12 21:15</t> 开始""")
+        val html = """活动时间：<t time="1234567890">2026/09/12 21:15</t> 开始"""
+
+        val merged = AnnouncementHelper.merge(groups, listOf(content(1, html)))
+
+        assertEquals(
+            "merge 应原样保留正文(折叠由 HtmlSpanParser 负责)",
+            html,
+            merged[0].list.first().content
         )
-
-        val merged = AnnouncementHelper.merge(groups, contents)
-
-        val html = merged[0].list.first().content
-        assertTrue("不应残留 <t 标签", !html.contains("<t "))
-        assertTrue("不应残留 </t>", !html.contains("</t>"))
-        assertTrue("应保留标签内文本", html.contains("2026/09/12 21:15"))
-        assertTrue("应保留标签外文本", html.contains("活动时间："))
     }
 
     @Test

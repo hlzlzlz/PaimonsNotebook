@@ -12,12 +12,18 @@ import com.lianyi.paimonsnotebook.ui.theme.Black
 * alignment 对齐方式 默认左上
 * clickable 是否可点击,img与a标签可点击
 * titleList 当标题有多种颜色时,使用此集合来存储
+* tableData 表格数据(type == Table 时有效)
+* listItems 列表项文本(type == List 时有效,每项为一行,已带序号/项目符号前缀)
+* headingLevel 标题级别(type == Heading 时有效,2/3/4)
 * */
 data class HtmlSpanData(
     val type:HtmlSpanType = HtmlSpanType.P,
     val data:String = "",
-    val textList:List<HtmlTextData>,
+    val textList:List<HtmlTextData> = listOf(),
     val alignment: Alignment.Horizontal = Alignment.Start,
     val clickable:Boolean = false,
-    val titleList:List<HtmlTextData> = listOf()
+    val titleList:List<HtmlTextData> = listOf(),
+    val tableData: HtmlTableData? = null,
+    val listItems: List<String> = listOf(),
+    val headingLevel: Int = 0
 )
