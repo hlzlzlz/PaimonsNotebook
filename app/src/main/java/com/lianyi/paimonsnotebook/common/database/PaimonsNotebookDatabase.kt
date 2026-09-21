@@ -29,6 +29,8 @@ import com.lianyi.paimonsnotebook.common.database.gacha.dao.BeyondGachaItemsDao
 import com.lianyi.paimonsnotebook.common.database.gacha.dao.GachaItemsDao
 import com.lianyi.paimonsnotebook.common.database.gacha.entity.BeyondGachaItems
 import com.lianyi.paimonsnotebook.common.database.gacha.entity.GachaItems
+import com.lianyi.paimonsnotebook.common.database.ledger.dao.LedgerMonthSnapshotDao
+import com.lianyi.paimonsnotebook.common.database.ledger.entity.LedgerMonthSnapshot
 import com.lianyi.paimonsnotebook.common.database.user.dao.UserDao
 import com.lianyi.paimonsnotebook.common.database.user.entity.User
 
@@ -46,7 +48,8 @@ import com.lianyi.paimonsnotebook.common.database.user.entity.User
         CultivateEntity::class,
         CultivateItems::class,
         CultivateItemMaterials::class,
-        BeyondGachaItems::class
+        BeyondGachaItems::class,
+        LedgerMonthSnapshot::class
     ],
     autoMigrations = [
         AutoMigration(1, 2),
@@ -68,9 +71,14 @@ import com.lianyi.paimonsnotebook.common.database.user.entity.User
         * AutoMigration 会生成 CREATE TABLE,老数据不受影响(新表为空)。
         * 与 4->5 的区别:那次是加列(必须给默认值),这次是加表。
         * */
-        AutoMigration(5, 6)
+        AutoMigration(5, 6),
+        /*
+        * 6 -> 7:新增 ledger_month_snapshots 表(旅行者札记月度收支快照)。
+        * 同 5->6,新建表无需 defaultValue。
+        * */
+        AutoMigration(6, 7)
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 abstract class PaimonsNotebookDatabase : RoomDatabase() {
@@ -80,6 +88,9 @@ abstract class PaimonsNotebookDatabase : RoomDatabase() {
 
     //千星奇域祈愿记录
     abstract val beyondGachaItemsDao: BeyondGachaItemsDao
+
+    //旅行者札记月度快照
+    abstract val ledgerMonthSnapshotDao: LedgerMonthSnapshotDao
 
     //硬盘缓存
     abstract val diskCacheDao: DiskCacheDao

@@ -178,6 +178,14 @@ object AccountHelper {
         dao.delete(user)
         //删除绑定的桌面组件
         appWidgetBindingDao.deleteByUserMid(user.mid)
+
+        /*
+        * 札记月度快照**有意不在删除时清理**:
+        * 快照按游戏 uid 建键,而账号删除时其角色列表已不可得,
+        * 无法枚举该账号下所有 uid 做精确清理。
+        * 孤儿快照体积极小(每 uid 每月一行)且不会泄漏凭证,
+        * 若用户日后重新添加同一游戏角色,历史数据反而直接可用。
+        * */
     }
 
     private fun addUser(userEntity: UserEntity) {

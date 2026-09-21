@@ -9,10 +9,13 @@ import androidx.lifecycle.viewModelScope
 import com.lianyi.paimonsnotebook.common.data.hoyolab.PlayerUid
 import com.lianyi.paimonsnotebook.common.data.hoyolab.user.User
 import com.lianyi.paimonsnotebook.common.data.hoyolab.user.UserAndUid
+import com.lianyi.paimonsnotebook.common.database.ledger.dao.LedgerMonthSnapshotDao
+import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
 import com.lianyi.paimonsnotebook.common.database.user.util.AccountHelper
 import com.lianyi.paimonsnotebook.common.extension.intent.setComponentName
 import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
 import com.lianyi.paimonsnotebook.common.util.enums.LoadingState
+import com.lianyi.paimonsnotebook.common.util.metadata.genshin.ledger.LedgerSnapshotMapper
 import com.lianyi.paimonsnotebook.common.view.HoyolabWebActivity
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.binding.UserGameRoleData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.GameRecordClient
@@ -104,6 +107,21 @@ class TravelersDiaryScreenViewModel : ViewModel() {
             if (result.success) {
                 ledgerData = result.data
                 loadingState = LoadingState.Success
+
+                //落库快照:服务端只保留近期月份,过期即永久丢失;
+                //每次成功拉取都存一份(首次成功保留,重复拉取跳过)
+                result.data?.let { data ->
+                    withContext(Dispatchers.IO) {
+                        runCatching {
+                            PaimonsNotebookDatabase.database.ledgerMonthSnapshotDao.insertIfAbsent(
+                                LedgerSnapshotMapper.toSnapshot(
+                                    data = data,
+                                    savedAt = System.currentTimeMillis()
+                                )
+                            )
+                        }
+                    }
+                }
             } else {
                 loadingState = LoadingState.Error
                 showConfirmDialog = result.validate

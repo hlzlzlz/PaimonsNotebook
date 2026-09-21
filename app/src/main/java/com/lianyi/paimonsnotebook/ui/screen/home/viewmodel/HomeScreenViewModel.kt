@@ -22,7 +22,9 @@ import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.act_cale
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.event.miyolive.MiyoliveCodeData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.ledger.LedgerData
 import com.lianyi.paimonsnotebook.common.database.daily_note.util.DailyNoteHelper
+import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
 import com.lianyi.paimonsnotebook.common.database.user.util.AccountHelper
+import com.lianyi.paimonsnotebook.common.util.metadata.genshin.ledger.LedgerSnapshotMapper
 import com.lianyi.paimonsnotebook.common.extension.data_store.editValue
 import com.lianyi.paimonsnotebook.common.extension.intent.setComponentName
 import com.lianyi.paimonsnotebook.common.extension.intent.setRequestCode
@@ -515,6 +517,21 @@ class HomeScreenViewModel : ViewModel() {
             if (result.success) {
                 travelersDiaryLoadedMid = user.userEntity.mid
                 travelersDiaryData = result.data
+
+                //首页静默存档当月快照:服务端只保留近期月份,过期即永久丢失。
+                //用户只要打开过首页,当月数据就有本地留底(首次成功保留)。
+                result.data?.let { data ->
+                    withContext(Dispatchers.IO) {
+                        runCatching {
+                            PaimonsNotebookDatabase.database.ledgerMonthSnapshotDao.insertIfAbsent(
+                                LedgerSnapshotMapper.toSnapshot(
+                                    data = data,
+                                    savedAt = System.currentTimeMillis()
+                                )
+                            )
+                        }
+                    }
+                }
             }
         }
     }
