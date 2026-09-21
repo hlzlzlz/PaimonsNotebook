@@ -224,10 +224,13 @@ class HtmlSpanParserTest {
     /*
     * 被转义的 &lt;t&gt; 时间标签必须折叠成纯文本
     *
-    * ⚠️ 这是本次实测发现的另一个缺陷:服务端下发的是**转义形式**
+    * ⚠️ 服务端下发的是**转义形式**
     *   &lt;t class="t_lc" contenteditable="false"&gt;2026/09/01 18:00&lt;/t&gt;
     * (34 条公告里 114 处),而旧清洗正则匹配字面 `<t\b`,**根本匹配不到**,
     * 于是用户看到一串尖括号。
+    *
+    * ⚠️⚠️ 本条用例曾经**只检查 span.textList[].text,漏掉了真机路径**,
+    * 这正是它当时没能拦住"真机显示尖括号"的原因(见下一条用例)。
     * */
     @Test
     fun `转义的时间标签被折叠为纯文本`() {
@@ -255,6 +258,86 @@ class HtmlSpanParserTest {
             "时间文本应被保留,实际片段=${allText.filter { it.contains("2026/") }.take(2)}",
             allText.any { it.contains("2026/") }
         )
+    }
+
+    /*
+    * ⚠️ 真机路径必须也干净 —— 这是 1.8.13 漏掉的缺陷
+    *
+    * 用户真机截图(2026-09-21)显示 7.1 版本更新维护预告里
+    * `<t class="t_gl" contenteditable="false">2026/09/23 06:00</t>`
+    * **原样显示成了一串尖括号**,而 1.8.13 自称修好了这个问题。
+    *
+    * 根因(已实测确认):HtmlCompat.fromHtml 是 Android 平台 API,
+    *   - 真机:调用成功 -> 走 SP 分支 -> 该分支**从未折叠** -> 显示尖括号
+    *   - JVM:调用抛异常 -> 走降级分支 -> 该分支当时**有**折叠 -> 测试假绿
+    * 单测与真机走的是**不同分支**,所以 12 个用例全绿也没发现。
+    *
+    * 修复方式:把折叠提到 parse() 入口(collapseEscapedTimeTags)。
+    *
+    * ⚠️ 为什么断言"降级分支的输出"就能证明真机分支也干净(非循环论证):
+    *   两条分支都从 parse() 里**同一个** `cleaned` 变量派生 ——
+    *   Jsoup 解析的是 `cleaned`,而真机分支拿的 `parent.html()`
+    *   正是这个 Jsoup 文档的产物。所以只要输出里没有转义标签,
+    *   就说明**入口**确实洗过(因为降级分支自己已经不再折叠了,
+    *   见 parseParagraph 末尾的说明),入口洗过 => 两条分支都干净。
+    *
+    *   ⚠️ 我最初写了个 `deviceBranchInput()` 直接调 collapseEscapedTimeTags
+    *   来"模拟真机输入",那是**循环论证**:helper 自己调了折叠函数,
+    *   无论 parse() 有没有用它都会通过(实测确认:把入口改回不折叠时,
+    *   那条用例照样绿)。已删除,改用下面这种从 parse() 输出反推的写法。
+    * */
+    @Test
+    fun `真机分支收到的HTML不含转义时间标签`() {
+        val html = """<p style="white-space: pre-wrap;">制作组预计将于&lt;t class="t_gl" contenteditable="false"&gt;2026/09/23 06:00&lt;/t&gt;进行版本更新维护。</p>"""
+
+        val list = HtmlSpanParser.parse(html)
+
+        /*
+        * 在 JVM 里 parse() 必然走降级分支(SP 分支需要 Android 的
+        * HtmlCompat),所以这里拿到的是降级分支的输出。
+        * 按上面的推理,它干净 <=> 入口洗过 <=> 真机分支也干净。
+        * */
+        val fallbackText = list.flatMap { it.textList.map { t -> t.text } }.joinToString("")
+
+        assertTrue("应显示时间,实际=$fallbackText", fallbackText.contains("2026/09/23 06:00"))
+        assertTrue(
+            "入口未清洗转义标签(真机也会因此显示尖括号),实际=$fallbackText",
+            !fallbackText.contains("&lt;t") &&
+                !fallbackText.contains("contenteditable") &&
+                !fallbackText.contains("&lt;/t")
+        )
+    }
+
+    /*
+    * 用真实 7.1 公告(含 4 处转义时间标签)验证
+    *
+    * 夹具 AnnContent_time71.html 是用户截图那条公告(ann_id=21928)的原始正文字节。
+    * 这条公告是用户真机反馈的直接来源,必须锁住。
+    *
+    * ⚠️ 这是本次**唯一能拦住该缺陷**的用例:把 parse() 入口改回
+    * "不折叠"(即 1.8.13 的写法)后,它立刻失败(已实测)。
+    * */
+    @Test
+    fun `真实7_1公告不再显示尖括号`() {
+        val file = fixture("AnnContent_time71.html")
+        assumeTrue("缺少夹具: ${file.absolutePath}", file.exists())
+
+        val raw = file.readText()
+        assertTrue(
+            "夹具本身应含转义标签(否则这条用例没有意义)",
+            raw.contains("&lt;t")
+        )
+
+        //parse() 的输出(真机分支与降级分支同源,见上一条用例的推理)
+        val shown = HtmlSpanParser.parse(raw)
+            .flatMap { it.textList.map { t -> t.text } + it.listItems + it.titleList.map { t -> t.text } }
+            .joinToString("")
+
+        assertTrue(
+            "不应残留转义标签,实际片段=${shown.take(200)}",
+            !shown.contains("&lt;t") && !shown.contains("contenteditable")
+        )
+        assertTrue("应保留时间文本,实际=${shown.take(200)}", shown.contains("2026/09/23"))
     }
 
     /*

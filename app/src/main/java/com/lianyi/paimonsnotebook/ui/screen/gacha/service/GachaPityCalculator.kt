@@ -86,7 +86,18 @@ object GachaPityCalculator {
 
                 val rank = record.rank_type.toIntOrNull() ?: 3
 
-                if (rank <= 4) {
+                /*
+                * 四星保底:出四星**或更高**(五星)都要重置。
+                *
+                * ⚠️ 原实现是 `rank <= 4`,即"三星及以下才重置" —— 恰好写反:
+                *   - 三星占绝大多数,导致计数几乎每抽都被清零 => 该行恒为 0~1
+                *   - 而出五星时**不**重置 => 逻辑上更错
+                * 实测推演 [3,3,3,4,3,3,3,3,3,3]:期望 6,原实现给出 0。
+                *
+                * 这条 bug 是 2026-09-21 词典笔移植过程中发现的(见 memory/dictpen-port-plan.md),
+                * 此前 GachaPityCalculator **零测试覆盖**,所以一直没暴露。
+                * */
+                if (rank >= 4) {
                     pullsSincePurple = 0
                 }
 

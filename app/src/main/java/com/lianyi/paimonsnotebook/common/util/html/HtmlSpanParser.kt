@@ -57,7 +57,21 @@ object HtmlSpanParser {
             return emptyList()
         }
 
-        val document = Jsoup.parse(htmlText)
+        /*
+        * ⚠️ 时间标签必须在**分流之前**处理掉,这是 1.8.13 漏掉的一步。
+        *
+        * 1.8.13 只在"HtmlCompat 失败后的降级纯文本分支"里调了 collapseTimeTags,
+        * 而 HtmlCompat.fromHtml 是 Android 平台 API:
+        *   - 真机:调用成功 -> 走 SP 分支 -> **从未折叠** -> 用户看到一串尖括号
+        *   - JVM 单测:调用抛异常 -> 走降级分支 -> 折叠生效 -> **测试假绿**
+        * 即单测与真机走的是**不同分支**,12 个用例全绿也没能发现该缺陷。
+        *
+        * 现在改为在解析入口对原始 HTML 做一次预处理,与后续走哪个分支无关,
+        * 因此单测能真正覆盖真机行为。
+        * */
+        val cleaned = collapseEscapedTimeTags(htmlText)
+
+        val document = Jsoup.parse(cleaned)
         val body = document.body().children()
 
         if (body.isEmpty()) {
@@ -65,7 +79,7 @@ object HtmlSpanParser {
             return listOf(
                 HtmlSpanData(
                     textList = listOf(
-                        HtmlTextData(text = collapseTimeTags(htmlText), color = Black)
+                        HtmlTextData(text = collapseTimeTags(cleaned), color = Black)
                     )
                 )
             )
@@ -203,12 +217,23 @@ object HtmlSpanParser {
             return
         }
 
-        //降级:用 Jsoup 取纯文本
+        /*
+        * 降级:用 Jsoup 取纯文本
+        *
+        * ⚠️ 这里**故意不再**调 collapseTimeTags:时间标签的折叠统一由
+        * parse() 入口的 collapseEscapedTimeTags 负责(见该函数说明)。
+        *
+        * 这样做的另一个好处是**让单测真正能发现该缺陷**:
+        * 真机走 SP 分支、JVM 走本分支,两条分支的差异正是 1.8.13 漏测的原因。
+        * 把折叠收敛到入口后,两条分支共享同一份预处理,
+        * 于是"入口忘了折叠"这种错误在 JVM 单测里就会**直接失败**,
+        * 而不是像 1.8.13 那样 12 个用例全绿却线上照样显示尖括号。
+        * */
         out += HtmlSpanData(
             type = HtmlSpanType.P,
             textList = listOf(
                 HtmlTextData(
-                    text = collapseTimeTags(parent.text()),
+                    text = parent.text(),
                     color = getTextColorInStyle(parent)
                 )
             ),
@@ -562,9 +587,38 @@ object HtmlSpanParser {
     fun collapseTimeTags(text: String): String =
         timeTagRegex.replace(text) { it.groupValues[1] }
 
+    /*
+    * 折叠**尚未解析**的 HTML 源码里的转义时间标签
+    *
+    * 输入形如:
+    *   制作组预计将于&lt;t class="t_gl" contenteditable="false"&gt;2026/09/23 06:00&lt;/t&gt;进行…
+    * 输出:
+    *   制作组预计将于2026/09/23 06:00进行…
+    *
+    * 为什么必须在 Jsoup 之前做:
+    *   转义形式在 Jsoup 眼里只是**普通文本**,不是元素,所以
+    *   element.text() 会原样保留 "&lt;t …&gt;"。而真机路径
+    *   (HtmlCompat.fromHtml 成功)根本不经过 text(),它直接把
+    *   富文本交给渲染层 —— 于是尖括号就显示到了界面上。
+    *   在这里先把源码里的转义标签替换成纯文本,两条分支就都能拿到干净内容。
+    *
+    * 同时兼容未转义写法(<t ...>…</t>),避免服务端两种风格混用时漏掉。
+    * */
+    fun collapseEscapedTimeTags(html: String): String =
+        escapedTimeTagRegex.replace(html) { it.groupValues[1] }
+
     //匹配字面 <t ...>内容</t>
     private val timeTagRegex =
         Regex("""<t\b[^>]*>(.*?)</t>""", RegexOption.DOT_MATCHES_ALL)
+
+    /*
+    * 匹配**转义**形式 &lt;t ...&gt;内容&lt;/t&gt;
+    *
+    * 属性部分用 (?:&gt;|[^&]) 这类宽松匹配:转义后 '>' 变成 "&gt;",
+    * 属性里也可能含其它实体,所以不能简单用 [^>]*。
+    * */
+    private val escapedTimeTagRegex =
+        Regex("""&lt;t\b(?:(?!&lt;).)*?&gt;(.*?)&lt;/t&gt;""", RegexOption.DOT_MATCHES_ALL)
 
     //对齐方式
     private fun getAlign(element: Element): Alignment.Horizontal {
