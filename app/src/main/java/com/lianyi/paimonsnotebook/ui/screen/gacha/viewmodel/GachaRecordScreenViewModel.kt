@@ -18,6 +18,7 @@ import com.lianyi.paimonsnotebook.common.web.hutao.genshin.gacha_event.GachaEven
 import com.lianyi.paimonsnotebook.ui.screen.gacha.data.BeyondGachaGroup
 import com.lianyi.paimonsnotebook.ui.screen.gacha.data.GachaOverviewListItem
 import com.lianyi.paimonsnotebook.ui.screen.gacha.service.GachaPityCalculator
+import com.lianyi.paimonsnotebook.ui.screen.gacha.service.GachaWishHistory
 import com.lianyi.paimonsnotebook.ui.screen.gacha.service.GachaRecordService
 import com.lianyi.paimonsnotebook.ui.screen.gacha.view.GachaRecordOptionScreen
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
@@ -29,12 +30,16 @@ class GachaRecordScreenViewModel : ViewModel() {
 
     var currentPageIndex by mutableIntStateOf(0)
 
-    //0总览 1保底 2复刻 3角色 4武器 5千星奇域
-    val tabs = arrayOf("总览", "保底", "复刻", "角色", "武器", "千星奇域")
+    //0总览 1保底 2复刻 3角色 4武器 5千星奇域 6分析
+    val tabs = arrayOf("总览", "保底", "复刻", "角色", "武器", "千星奇域", "分析")
 
     //保底统计
     var pityList by mutableStateOf<List<GachaPityCalculator.PoolPity>?>(null)
     var pityLoadingState by mutableStateOf(LoadingState.Loading)
+
+    //出金历史(欧非走势)
+    var wishHistory by mutableStateOf<List<GachaWishHistory.PoolHistory>?>(null)
+    var historyLoadingState by mutableStateOf(LoadingState.Loading)
 
     //复刻倒计时
     var countdownGroups by mutableStateOf<Map<String, List<GachaPityCalculator.CountdownEntry>>?>(null)
@@ -161,6 +166,42 @@ class GachaRecordScreenViewModel : ViewModel() {
         }
     }
 
+    /*
+    * 出金历史(欧非走势)
+    *
+    * 与 loadPity 使用同一套数据源与事件,但单独缓存:
+    * 用户可能只看分析页而不看保底页,各自按需加载。
+    * */
+    private fun loadWishHistory() {
+        if (wishHistory != null) {
+            return
+        }
+
+        viewModelScope.launch {
+            historyLoadingState = LoadingState.Loading
+
+            val uid = gachaRecordService.currentUid()
+
+            val events = loadGachaEvents()
+
+            if (events == null) {
+                historyLoadingState = LoadingState.Empty
+                "缺少卡池元数据,请在设置中同步元数据后重试".warnNotify()
+                return@launch
+            }
+
+            val records = withContext(Dispatchers.IO) {
+                gachaRecordService.getGachaItemsByUid(uid)
+            }
+
+            val result = GachaWishHistory.build(records, events)
+
+            wishHistory = result
+            historyLoadingState =
+                if (uid.isEmpty() || result.isEmpty()) LoadingState.Empty else LoadingState.Success
+        }
+    }
+
     private fun loadCountdown() {
         if (countdownGroups != null) {
             return
@@ -261,6 +302,7 @@ class GachaRecordScreenViewModel : ViewModel() {
             1 -> loadPity()
             2 -> loadCountdown()
             5 -> loadBeyondGacha()
+            6 -> loadWishHistory()
         }
     }
 

@@ -30,6 +30,7 @@ import com.lianyi.paimonsnotebook.ui.screen.gacha.components.page.GachaCountdown
 import com.lianyi.paimonsnotebook.ui.screen.gacha.components.page.GachaItemsPage
 import com.lianyi.paimonsnotebook.ui.screen.gacha.components.page.GachaPityPage
 import com.lianyi.paimonsnotebook.ui.screen.gacha.components.page.GachaRecordOverviewPage
+import com.lianyi.paimonsnotebook.ui.screen.gacha.components.page.GachaWishAnalysisPage
 import com.lianyi.paimonsnotebook.ui.screen.gacha.viewmodel.GachaRecordScreenViewModel
 import com.lianyi.paimonsnotebook.ui.theme.PaimonsNotebookTheme
 
@@ -126,6 +127,13 @@ class GachaRecordScreen : ComponentActivity() {
                             loadingState = viewModel.beyondLoadingState,
                             successContent = {
                                 BeyondGachaPage(groups = viewModel.beyondGroups ?: emptyList())
+                            }
+                        )
+
+                        6 -> ContentLoadingLayout(
+                            loadingState = viewModel.historyLoadingState,
+                            successContent = {
+                                GachaWishAnalysisPage(pools = viewModel.wishHistory)
                             }
                         )
 
