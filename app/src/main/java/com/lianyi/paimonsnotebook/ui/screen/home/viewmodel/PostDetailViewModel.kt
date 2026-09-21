@@ -14,6 +14,7 @@ import com.lianyi.paimonsnotebook.common.view.HoyolabWebActivity
 import com.lianyi.paimonsnotebook.common.view.VideoPlayScreen
 import com.lianyi.paimonsnotebook.common.web.WebHomeClient
 import com.lianyi.paimonsnotebook.common.web.hoyolab.bbs.post.PostFullData
+import com.lianyi.paimonsnotebook.common.web.hoyolab.bbs.post.PostStructuredContentData
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
 import com.lianyi.paimonsnotebook.ui.screen.home.util.PostHelper
 import com.lianyi.paimonsnotebook.ui.screen.home.view.PostDetailScreen
@@ -97,5 +98,17 @@ class PostDetailViewModel : ViewModel() {
             setComponentName(TopicScreen::class.java)
             putExtra(PostHelper.PARAM_TOPIC_ID, topic.id.toLong())
         }
+    }
+
+    /*
+    * 点击投票卡片 -> 用 WebView 打开原帖页面
+    *
+    * 结构化内容里只有投票的 id 与 uid,PN 侧拿不到选项与标题,
+    * 因此不在应用内渲染投票表单,而是跳到原帖的米游社网页版
+    * (投票控件在网页版里可用)。
+    * */
+    fun onClickVote(vote: PostStructuredContentData.Insert.Vote) {
+        val articleId = postFullData?.post?.post?.post_id ?: return
+        hyperlinkNavigate("https://www.miyoushe.com/dys/?post_id=$articleId")
     }
 }

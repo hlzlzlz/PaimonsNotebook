@@ -37,6 +37,7 @@ import com.lianyi.paimonsnotebook.common.components.widget.RoundedTag
 import com.lianyi.paimonsnotebook.common.util.html.RichTextParser
 import com.lianyi.paimonsnotebook.common.util.time.TimeHelper
 import com.lianyi.paimonsnotebook.common.web.hoyolab.bbs.post.PostFullData
+import com.lianyi.paimonsnotebook.common.web.hoyolab.bbs.post.PostStructuredContentData
 import com.lianyi.paimonsnotebook.ui.theme.Info
 
 /*
@@ -52,7 +53,8 @@ internal fun PostStructureContentList(
     onClickLinkCard: (String) -> Unit,
     onClickImage: (String) -> Unit,
     onClickVideo: (PostFullData.Post.Vod) -> Unit,
-    onClickTag: (PostFullData.Post.Topic) -> Unit
+    onClickTag: (PostFullData.Post.Topic) -> Unit,
+    onClickVote: (PostStructuredContentData.Insert.Vote) -> Unit = {}
 ) {
     //处理结构内容,将文字与链接整合到一起
     val structuredContent = remember(postFull.post.post.post_id) {
@@ -90,7 +92,8 @@ internal fun PostStructureContentList(
                 onClickLink = onClickLink,
                 onClickLinkCard = onClickLinkCard,
                 onClickImage = onClickImage,
-                onClickVideo = onClickVideo
+                onClickVideo = onClickVideo,
+                onClickVote = onClickVote
             )
         }
 

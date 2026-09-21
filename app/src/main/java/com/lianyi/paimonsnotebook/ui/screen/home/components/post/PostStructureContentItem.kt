@@ -1,6 +1,7 @@
 package com.lianyi.paimonsnotebook.ui.screen.home.components.post
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import com.lianyi.paimonsnotebook.R
 import com.lianyi.paimonsnotebook.common.components.layout.FoldTextContent
@@ -40,6 +42,7 @@ import com.lianyi.paimonsnotebook.common.components.placeholder.VideoPlayerPlace
 import com.lianyi.paimonsnotebook.common.database.disk_cache.entity.DiskCache
 import com.lianyi.paimonsnotebook.common.web.hoyolab.bbs.post.PostFullData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.bbs.post.PostStructuredContent
+import com.lianyi.paimonsnotebook.common.web.hoyolab.bbs.post.PostStructuredContentData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.bbs.post.StructuredContentType
 import com.lianyi.paimonsnotebook.ui.theme.Black
 import com.lianyi.paimonsnotebook.ui.theme.Black_10
@@ -58,7 +61,8 @@ fun PostStructureContentItem(
     onClickLink: (String) -> Unit,
     onClickLinkCard: (String) -> Unit,
     onClickImage: (String) -> Unit,
-    onClickVideo: (PostFullData.Post.Vod) -> Unit
+    onClickVideo: (PostFullData.Post.Vod) -> Unit,
+    onClickVote: (PostStructuredContentData.Insert.Vote) -> Unit = {}
 ) {
     when (item.first) {
         StructuredContentType.BackupText -> {
@@ -191,7 +195,8 @@ fun PostStructureContentItem(
                                 onClickLink = onClickLink,
                                 onClickLinkCard = onClickLinkCard,
                                 onClickImage = onClickImage,
-                                onClickVideo = onClickVideo
+                                onClickVideo = onClickVideo,
+                                onClickVote = onClickVote
                             )
                         }
                     } else {
@@ -202,7 +207,57 @@ fun PostStructureContentItem(
             }
         }
 
+        StructuredContentType.Vote -> {
+            val vote = item.second.first().insert.vote
+
+            if (vote != null) {
+                PostVoteCard(
+                    vote = vote,
+                    onClickVote = onClickVote
+                )
+            }
+        }
+
         else -> {}
+    }
+}
+
+/*
+* 投票卡片
+*
+* 背景:此前含投票的帖子整块不可见 —— Insert.vote 虽被解析,但
+* StructuredContentType 没有 Vote 成员、RichTextParser 也不处理该 key,
+* 于是被标成 Error,而渲染层 Error 落到 `else -> {}`,直接消失。
+*
+* ⚠️ 结构化内容里只有 id 与 uid,没有标题与选项,因此这里**不**臆造投票正文
+*    (服务端真实字段未经实测,凭命名猜测正是 1.8.9 公告事故的成因)。
+*    卡片只做两件事:明确告知此处有投票 + 提供跳转原帖查看。
+* */
+@Composable
+private fun PostVoteCard(
+    vote: PostStructuredContentData.Insert.Vote,
+    onClickVote: (PostStructuredContentData.Insert.Vote) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .clickable { onClickVote.invoke(vote) }
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = "此帖包含投票",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Text(
+            text = "点击前往原帖参与投票",
+            fontSize = 12.sp,
+            color = Color(0xFF888888)
+        )
     }
 }
 

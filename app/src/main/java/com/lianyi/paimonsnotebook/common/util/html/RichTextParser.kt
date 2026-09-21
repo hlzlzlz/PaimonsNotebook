@@ -171,7 +171,11 @@ object RichTextParser {
                 //遍历结构内容
                 repeat(arrays.length()) { index ->
                     //获取插入对象整体
-                    val obj = JSONObject(arrays.getString(index))
+                    //⚠️ 不能用 arrays.getString(index):Android 的 org.json 会把
+                    //   JSONObject 强转字符串,而 JVM 的 org.json 直接抛
+                    //   "JSONArray[0] is not a String" —— 单测与真机行为不一致。
+                    //   get(index).toString() 在两边行为完全一致。
+                    val obj = JSONObject(arrays.get(index).toString())
 
                     val objMap = mutableMapOf<String, Any>()
 
@@ -242,6 +246,18 @@ object RichTextParser {
                                     PostStructuredContent.Item(
                                         vod = data
                                     ) to StructuredContentType.Vod
+                                }
+
+                                vote -> {
+                                    /*
+                                    * 投票块。此前未处理该 key ⇒ 落 else 被标成 Error,
+                                    * 而 Error 在渲染层是 `else -> {}` ⇒ 整块消失。
+                                    * 这里解析出 vote 对象,交给渲染层显示占位卡片。
+                                    * */
+                                    val data = getObject<PostStructuredContentData.Insert.Vote>(insert, key)
+                                    PostStructuredContent.Item(
+                                        vote = data
+                                    ) to StructuredContentType.Vote
                                 }
 
                                 else -> {
@@ -334,7 +350,10 @@ object RichTextParser {
             if (key.isBlank()) {
                 JSON.parse<T>(obj.toString())
             } else {
-                JSON.parse<T>(obj.getString(key))
+                //⚠️ 不能用 obj.getString(key):值是 JSONObject 时 Android 会强转
+                //   字符串,而 JVM 的 org.json 抛 "is not a string"。
+                //   get(key).toString() 两边行为一致。
+                JSON.parse<T>(obj.get(key).toString())
             }
         }
 

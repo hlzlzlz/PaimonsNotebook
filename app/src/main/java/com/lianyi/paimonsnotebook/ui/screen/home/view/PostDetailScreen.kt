@@ -62,7 +62,8 @@ class PostDetailScreen : BaseActivity() {
                 onClickLink = viewModel::hyperlinkNavigate,
                 onClickLinkCard = viewModel::hyperlinkNavigate,
                 onClickVideo = viewModel::onClickVideo,
-                onClickTag = viewModel::onClickTag
+                onClickTag = viewModel::onClickTag,
+                onClickVote = viewModel::onClickVote
             )
         }
 
