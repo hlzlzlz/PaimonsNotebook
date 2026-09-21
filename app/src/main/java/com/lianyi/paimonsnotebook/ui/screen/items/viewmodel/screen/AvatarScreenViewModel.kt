@@ -21,6 +21,7 @@ import com.lianyi.paimonsnotebook.ui.screen.items.util.ItemContentFilterHelper
 import com.lianyi.paimonsnotebook.ui.screen.items.util.ItemFilterType
 import com.lianyi.paimonsnotebook.ui.screen.items.util.ItemHelper
 import com.lianyi.paimonsnotebook.ui.screen.items.util.ItemSearchOptionHelper
+import com.lianyi.paimonsnotebook.ui.screen.items.util.ItemScreenStateResolver
 import com.lianyi.paimonsnotebook.ui.screen.items.viewmodel.base.ItemBaseViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -66,9 +67,16 @@ class AvatarScreenViewModel : ItemBaseViewModel<AvatarData>() {
                 onClickItem(avatar)
             }
 
-            if (loadingState == LoadingState.Loading) {
-                loadingState = LoadingState.Success
-            }
+            /*
+            * ⚠️ 必须判 currentItem:角色列表为空时 onClickItem 从未被调用,
+            * currentItem 仍为 null,若无条件置 Success,成功分支里
+            * `currentItem!!`(本页共 16 处)会直接 NPE。
+            * 与 WeaponScreenViewModel.init 同一处缺陷,一并修正。
+            * */
+            loadingState = ItemScreenStateResolver.resolve(
+                current = loadingState,
+                hasItem = currentItem != null
+            )
         }
     }
 

@@ -19,6 +19,7 @@ import com.lianyi.paimonsnotebook.ui.screen.items.data.cultivate.CultivateConfig
 import com.lianyi.paimonsnotebook.ui.screen.items.util.ItemContentFilterHelper
 import com.lianyi.paimonsnotebook.ui.screen.items.util.ItemFilterType
 import com.lianyi.paimonsnotebook.ui.screen.items.util.ItemHelper
+import com.lianyi.paimonsnotebook.ui.screen.items.util.ItemScreenStateResolver
 import com.lianyi.paimonsnotebook.ui.screen.items.util.ItemSearchOptionHelper
 import com.lianyi.paimonsnotebook.ui.screen.items.viewmodel.base.ItemBaseViewModel
 import kotlinx.coroutines.Dispatchers
@@ -64,9 +65,18 @@ class WeaponScreenViewModel : ItemBaseViewModel<WeaponData>() {
                 onClickItem(weapon)
             }
 
-            if (loadingState == LoadingState.Loading) {
-                loadingState = LoadingState.Success
-            }
+            /*
+            * ⚠️ 必须判 currentItem,不能只判 loadingState。
+            *
+            * 原实现无条件置 Success,但武器列表为空时 onClickItem 从未被调用,
+            * currentItem 仍是 null ⇒ 成功分支被渲染 ⇒ 页面里 23 处
+            * `currentItem!!` 直接 NPE 崩溃。
+            * (该状态可复现:元数据存在但武器列表为空/条目被过滤掉时。)
+            * */
+            loadingState = ItemScreenStateResolver.resolve(
+                current = loadingState,
+                hasItem = currentItem != null
+            )
         }
     }
 
