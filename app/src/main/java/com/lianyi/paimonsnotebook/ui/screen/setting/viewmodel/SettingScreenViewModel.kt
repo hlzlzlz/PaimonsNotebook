@@ -44,6 +44,7 @@ import com.lianyi.paimonsnotebook.common.service.sign_in.AutoSignInScheduler
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
 import com.lianyi.paimonsnotebook.common.util.enums.DownloadState
 import com.lianyi.paimonsnotebook.common.util.image.PaimonsNotebookImageLoader
+import com.lianyi.paimonsnotebook.common.util.log.CrashLogger
 import com.lianyi.paimonsnotebook.common.util.system_service.SystemService
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.util.MetadataHelper
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
@@ -192,6 +193,23 @@ class SettingScreenViewModel : ViewModel() {
             description = "此操作会立即清除所有无法显示的图片;当图片加载异常时,进行此操作后重新载入图片可能会得到改善",
             onClick = {
                 clearBrokenImage()
+            },
+            slot = {
+            }
+        ),
+        OptionListData(
+            name = "崩溃日志",
+            description = "若应用曾异常退出,这里会记录崩溃堆栈(最多保留最近 256KB)。点击复制到剪贴板,便于反馈问题",
+            onClick = {
+                viewModelScope.launchIO {
+                    if (!CrashLogger.hasPendingCrash()) {
+                        "暂无崩溃记录".notify()
+                        return@launchIO
+                    }
+
+                    SystemService.setClipBoardText(CrashLogger.readLog())
+                    "崩溃日志已复制到剪贴板".notify()
+                }
             },
             slot = {
             }

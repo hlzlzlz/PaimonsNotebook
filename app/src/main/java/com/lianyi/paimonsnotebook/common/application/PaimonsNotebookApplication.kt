@@ -29,6 +29,7 @@ import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
 import com.lianyi.paimonsnotebook.common.util.data_store.dataStoreValuesFirstLambda
 import com.lianyi.paimonsnotebook.common.util.file.FileHelper
 import com.lianyi.paimonsnotebook.common.util.image.PaimonsNotebookImageLoader
+import com.lianyi.paimonsnotebook.common.util.log.CrashLogger
 import com.lianyi.paimonsnotebook.common.util.request.applicationOkHttpClient
 import com.lianyi.paimonsnotebook.common.view.CrashScreen
 import com.lianyi.paimonsnotebook.ui.screen.splash.view.SplashScreen
@@ -122,9 +123,17 @@ class PaimonsNotebookApplication : Application(), ImageLoaderFactory {
             .errorActivity(CrashScreen::class.java)
             .apply()
 
+        //崩溃留痕
+        //⚠️ 必须在 CaocConfig.apply() 之后:CAOC 在 apply() 里装自己的处理器,
+        //   先装会被它覆盖。装在其后,才能链式委托给它(见 CrashLogger.install)。
+        CrashLogger.install()
+
         //release环境
         if (!BuildConfig.DEBUG) {
             //启用AppCenter
+            //⚠️ APPCENTER_SECRET 来自 local.properties 的 appcenter.secret,
+            //   当前值是占位符(全 0 GUID),即该上报链路实际不生效。
+            //   崩溃可见性由 CrashLogger(本地 files/crash.log)兜底。
             AppCenter.start(
                 this,
                 BuildConfig.APPCENTER_SECRET,
