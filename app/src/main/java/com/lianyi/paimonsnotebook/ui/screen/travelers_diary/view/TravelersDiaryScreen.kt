@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Icon
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import com.lianyi.paimonsnotebook.R
 import com.lianyi.paimonsnotebook.common.components.charts.pie_charts.data.PieChartData
+import com.lianyi.paimonsnotebook.common.util.metadata.genshin.ledger.LedgerHistoryFormatter
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.ledger.LedgerData
 import com.lianyi.paimonsnotebook.common.components.charts.pie_charts.view.PieChart
 import com.lianyi.paimonsnotebook.common.components.dialog.ConfirmDialog
@@ -68,6 +70,20 @@ class TravelersDiaryScreen : BaseActivity() {
 
                             Spacer(modifier = Modifier.weight(1f))
 
+                            /*
+                            * 历史入口
+                            * 用 RoundedTag 风格的轻量文案按钮,与页面既有点击区域一致
+                            * */
+                            PrimaryText(
+                                text = if (viewModel.showHistory) "收起历史" else "历史",
+                                textSize = 14.sp,
+                                color = if (viewModel.showHistory) PrimaryColor else Black,
+                                modifier = Modifier
+                                    .radius(2.dp)
+                                    .clickable { viewModel.toggleHistory() }
+                                    .padding(8.dp, 6.dp)
+                            )
+
                             Row(
                                 modifier = Modifier
                                     .radius(2.dp)
@@ -103,6 +119,12 @@ class TravelersDiaryScreen : BaseActivity() {
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(BackGroundLight)
+                                    /*
+                                    * ⚠️ 必须可纵向滚动:展开历史后内容会超过一屏,
+                                    *    原先没有滚动修饰符,超出部分会被直接裁掉。
+                                    *    (LazyRow 是横向的,不受影响。)
+                                    * */
+                                    .verticalScroll(rememberScrollState())
                             ) {
                                 //月份切换
                                 LazyRow(
@@ -217,6 +239,14 @@ class TravelersDiaryScreen : BaseActivity() {
                                         }
                                     }
                                 }
+
+                                //历史快照(仅在展开时渲染)
+                                if (viewModel.showHistory) {
+                                    HistorySection(
+                                        rows = viewModel.historyRows,
+                                        hasData = viewModel.historySnapshots.isNotEmpty()
+                                    )
+                                }
                             }
                         }
                     )
@@ -315,6 +345,85 @@ class TravelersDiaryScreen : BaseActivity() {
             }
 
             InfoText(text = "上月$lastValue", fontSize = 13.sp)
+        }
+    }
+
+    /*
+    * 历史快照区
+    *
+    * 数据来自本地 ledger_month_snapshots 表(每次打开首页/札记页时自动存档),
+    * 因此**越早开始用,历史越长** —— 空数据时要明确说明来源,
+    * 否则用户会以为是功能坏了。
+    * */
+    @Composable
+    private fun HistorySection(
+        rows: List<LedgerHistoryFormatter.HistoryRow>,
+        hasData: Boolean
+    ) {
+        StatCard {
+            PrimaryText(
+                text = "历史记录",
+                textSize = 16.sp
+            )
+
+            when {
+                !hasData -> {
+                    InfoText(
+                        text = "暂无历史数据。本机从首次打开本页或首页开始逐月记录," +
+                                "服务端只保留近期月份,过期即无法补录。",
+                        fontSize = 13.sp
+                    )
+                }
+
+                else -> {
+                    rows.forEach { row ->
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                PrimaryText(
+                                    text = row.label,
+                                    textSize = 15.sp
+                                )
+
+                                Spacer(modifier = Modifier.weight(1f))
+
+                                InfoText(
+                                    text = "原石 ${row.primogems}",
+                                    fontSize = 13.sp
+                                )
+                            }
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                InfoText(
+                                    text = "摩拉 ${row.mora}",
+                                    fontSize = 13.sp
+                                )
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                /*
+                                * 环比文案为空表示"上一月无记录"(月份不连续),
+                                * 此时不显示任何数字 —— 详见 LedgerHistoryFormatter
+                                * */
+                                val deltaText = LedgerHistoryFormatter.deltaText(row.primogemsDelta)
+                                if (deltaText.isNotEmpty()) {
+                                    Text(
+                                        text = deltaText,
+                                        fontSize = 12.sp,
+                                        color = when {
+                                            (row.primogemsDelta ?: 0) > 0 -> Color(0xFF34C759)
+                                            (row.primogemsDelta ?: 0) < 0 -> Color(0xFFFF2D55)
+                                            else -> Black_60
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
