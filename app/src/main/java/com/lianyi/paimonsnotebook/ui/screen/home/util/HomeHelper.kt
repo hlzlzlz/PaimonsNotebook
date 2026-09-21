@@ -17,6 +17,7 @@ import com.lianyi.paimonsnotebook.ui.screen.achievement.view.AchievementScreen
 import com.lianyi.paimonsnotebook.ui.screen.app_widget.view.AppWidgetScreen
 import com.lianyi.paimonsnotebook.ui.screen.cultivate_project.view.CultivateProjectScreen
 import com.lianyi.paimonsnotebook.ui.screen.daily_note.view.DailyNoteScreen
+import com.lianyi.paimonsnotebook.ui.screen.furniture.view.FurnitureScreen
 import com.lianyi.paimonsnotebook.ui.screen.gacha.view.GachaRecordScreen
 import com.lianyi.paimonsnotebook.ui.screen.home.data.HomeCustomDrawerData
 import com.lianyi.paimonsnotebook.ui.screen.home.data.ModalItemData
@@ -146,6 +147,12 @@ object HomeHelper {
             icon = R.drawable.ic_genshin_game_ggc_book,
             target = AnnouncementScreen::class.java,
             sortIndex = 96
+        ),
+        ModalItemData(
+            name = "洞天摹本",
+            icon = R.drawable.ic_genshin_game_ggc_book,
+            target = FurnitureScreen::class.java,
+            sortIndex = 97
         ),
     )
 
