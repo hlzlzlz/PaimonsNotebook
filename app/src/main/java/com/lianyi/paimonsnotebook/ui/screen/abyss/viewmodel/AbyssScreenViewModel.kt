@@ -9,7 +9,10 @@ import androidx.lifecycle.viewModelScope
 import com.lianyi.paimonsnotebook.common.data.hoyolab.PlayerUid
 import com.lianyi.paimonsnotebook.common.data.hoyolab.user.User
 import com.lianyi.paimonsnotebook.common.data.hoyolab.user.UserAndUid
+import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
 import com.lianyi.paimonsnotebook.common.database.user.util.AccountHelper
+import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
+import com.lianyi.paimonsnotebook.common.util.metadata.genshin.abyss.AbyssSnapshotMapper
 import com.lianyi.paimonsnotebook.common.extension.intent.setComponentName
 import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
 import com.lianyi.paimonsnotebook.common.service.geetest.CardVerificationService
@@ -428,6 +431,9 @@ class AbyssScreenViewModel : ViewModel() {
                         LoadingState.Success
                     }
 
+                    //落库本期成绩快照(服务端只提供本期/上期,过期即永久丢失)
+                    archiveSnapshot(data)
+
                     when (pageIndex) {
                         0 -> {
                             currentAbyssRecord = data
@@ -464,6 +470,9 @@ class AbyssScreenViewModel : ViewModel() {
 
                                 finalState = if (data.floors.isEmpty()) LoadingState.Empty else LoadingState.Success
 
+                                //重试(风控验证)成功后同样存档
+                                archiveSnapshot(data)
+
                                 when (pageIndex) {
                                     0 -> currentAbyssRecord = data
                                     1 -> previousAbyssRecord = data
@@ -497,8 +506,29 @@ class AbyssScreenViewModel : ViewModel() {
     }
 
     fun getAvatarFromMetadata(avatarId: Int) = avatarMap[avatarId]
+    /*
+    * 存档本期成绩
+    *
+    * 服务端只提供本期(schedule_type=1)与上期(2),更早的期数取不回来 ——
+    * 用户某期没打开深渊页,那期成绩就永久丢失。故每次成功拉取即落库。
+    *
+    * 失败静默:存档是附带价值,不能影响深渊页本身的展示。
+    * */
+    private fun archiveSnapshot(data: SpiralAbyssData) {
+        val uid = currentGameRole?.game_uid ?: return
 
-    fun getWeaponFromMetadata(weaponId: Int) = weaponMap[weaponId]
+        launchSafeIO {
+            runCatching {
+                PaimonsNotebookDatabase.database.abyssSeasonSnapshotDao.upsert(
+                    AbyssSnapshotMapper.toSnapshot(
+                        data = data,
+                        uid = uid,
+                        savedAt = System.currentTimeMillis()
+                    )
+                )
+            }
+        }
+    }    fun getWeaponFromMetadata(weaponId: Int) = weaponMap[weaponId]
 
     fun getMonsterFromMetadata(monsterName:String) = monsterMap[monsterName]
 

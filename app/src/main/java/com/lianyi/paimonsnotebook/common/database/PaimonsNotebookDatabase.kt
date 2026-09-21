@@ -5,6 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
+import com.lianyi.paimonsnotebook.common.database.abyss.dao.AbyssSeasonSnapshotDao
+import com.lianyi.paimonsnotebook.common.database.abyss.entity.AbyssSeasonSnapshot
 import com.lianyi.paimonsnotebook.common.database.achievement.dao.AchievementUserDao
 import com.lianyi.paimonsnotebook.common.database.achievement.dao.AchievementsDao
 import com.lianyi.paimonsnotebook.common.database.achievement.entity.AchievementUser
@@ -49,7 +51,8 @@ import com.lianyi.paimonsnotebook.common.database.user.entity.User
         CultivateItems::class,
         CultivateItemMaterials::class,
         BeyondGachaItems::class,
-        LedgerMonthSnapshot::class
+        LedgerMonthSnapshot::class,
+        AbyssSeasonSnapshot::class
     ],
     autoMigrations = [
         AutoMigration(1, 2),
@@ -76,9 +79,14 @@ import com.lianyi.paimonsnotebook.common.database.user.entity.User
         * 6 -> 7:新增 ledger_month_snapshots 表(旅行者札记月度收支快照)。
         * 同 5->6,新建表无需 defaultValue。
         * */
-        AutoMigration(6, 7)
+        AutoMigration(6, 7),
+        /*
+        * 7 -> 8:新增 abyss_season_snapshots 表(深境螺旋每期成绩快照)。
+        * 同样只新建表,无需 defaultValue。
+        * */
+        AutoMigration(7, 8)
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 abstract class PaimonsNotebookDatabase : RoomDatabase() {
@@ -91,6 +99,9 @@ abstract class PaimonsNotebookDatabase : RoomDatabase() {
 
     //旅行者札记月度快照
     abstract val ledgerMonthSnapshotDao: LedgerMonthSnapshotDao
+
+    //深境螺旋每期成绩快照
+    abstract val abyssSeasonSnapshotDao: AbyssSeasonSnapshotDao
 
     //硬盘缓存
     abstract val diskCacheDao: DiskCacheDao
