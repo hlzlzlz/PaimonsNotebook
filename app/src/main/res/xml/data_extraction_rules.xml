@@ -2,13 +2,16 @@
    数据提取规则(API 31+ 使用本文件)
    见 https://developer.android.com/about/versions/12/backup-restore#xml-changes
 
-   重要:users表以明文存储 cookie_token / ltoken / stoken(CookieConverter 未加密),
-   且 DataStore 内含 device_fp,因此必须排除数据库与 DataStore,
-   否则活体凭证会随云备份/换机迁移被系统托管。
+    users 表的 cookie_token / ltoken / stoken 现由 CookieConverter 加密存储
+    (AES-GCM,密钥在 AndroidKeyStore 且**不参与备份**),但 DataStore 内含
+    device_fp,故仍必须排除数据库与 DataStore:
+      - 数据库:除 token 外仍含其它账号信息
+      - DataStore:device_fp / device_id 是设备身份,不应跨设备迁移
+    注意:密钥不入备份,所以"备份里带密文"本身也不构成可用凭证。
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- 排除数据库(paimonsnotebook_database.db 的 users 表含明文 token) -->
+        <!-- 排除数据库(users 表 token 已加密,但仍含其它账号信息) -->
         <exclude domain="database" path="." />
 
         <!-- 排除 DataStore(含 device_fp / device_id 等设备身份) -->
