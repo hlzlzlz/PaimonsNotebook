@@ -18,6 +18,7 @@ import com.lianyi.paimonsnotebook.common.data.hoyolab.user.User
 import com.lianyi.paimonsnotebook.common.data.hoyolab.user.UserAndUid
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.GameRecordClient
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.act_calendar.ActCalendarData
+import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.act_calendar.ActCalendarHelper
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.event.miyolive.MiyoliveCodeData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.ledger.LedgerData
 import com.lianyi.paimonsnotebook.common.database.daily_note.util.DailyNoteHelper
@@ -72,6 +73,10 @@ class HomeScreenViewModel : ViewModel() {
 
     //当期卡池(活动日历页已删除,卡池改在首页展示)
     val cardPools = mutableStateListOf<ActCalendarData.CardPool>()
+
+    //活动日历(act_calendar 的 act_list/fixed_act_list/selected_act_list,
+    //此前只解析不使用,现补上展示)
+    val calendarActs = mutableStateListOf<ActCalendarData.Act>()
 
     //前瞻直播兑换码(miyolive接口,非直播时段为空)
     val miyoliveCodes = mutableStateListOf<MiyoliveCodeData.CodeWrapper>()
@@ -548,6 +553,10 @@ class HomeScreenViewModel : ViewModel() {
                             result.data.selected_mixed_card_pool_list +
                             result.data.weapon_card_pool_list
                 )
+
+                //活动日历:同一份响应里已经带了活动列表,无需额外请求
+                calendarActs.clear()
+                calendarActs.addAll(ActCalendarHelper.mergeActs(result.data))
             }
         }
     }

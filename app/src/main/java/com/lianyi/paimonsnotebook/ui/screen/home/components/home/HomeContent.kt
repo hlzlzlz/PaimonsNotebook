@@ -29,6 +29,7 @@ import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.act_cale
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.event.miyolive.MiyoliveCodeData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.ledger.LedgerData
 import com.lianyi.paimonsnotebook.ui.screen.home.components.card.card_pool.CardPoolCard
+import com.lianyi.paimonsnotebook.ui.screen.home.components.card.activity.ActivityCalendarCard
 import com.lianyi.paimonsnotebook.ui.screen.home.components.card.miyolive.MiyoliveCodeCard
 import com.lianyi.paimonsnotebook.ui.screen.home.components.card.travelers_diary.TravelersDiaryCard
 import com.lianyi.paimonsnotebook.ui.screen.travelers_diary.view.TravelersDiaryScreen
@@ -47,6 +48,7 @@ internal fun HomeContent(
     noticeList: List<OfficialRecommendedPostsData.OfficialRecommendedPost>,
     travelersDiaryData: LedgerData?,
     cardPools: List<ActCalendarData.CardPool>,
+    calendarActs: List<ActCalendarData.Act>,
     miyoliveCodes: List<MiyoliveCodeData.CodeWrapper>,
     goPostDetail: (String, PostType) -> Unit,
 ) {
@@ -107,6 +109,11 @@ internal fun HomeContent(
             //当期卡池
             item {
                 CardPoolCard(pools = cardPools)
+            }
+
+            //活动日历(同一份 act_calendar 响应里的活动列表)
+            item {
+                ActivityCalendarCard(acts = calendarActs)
             }
 
             //前瞻直播兑换码
