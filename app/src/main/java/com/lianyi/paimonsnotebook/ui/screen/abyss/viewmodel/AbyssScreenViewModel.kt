@@ -10,6 +10,7 @@ import com.lianyi.paimonsnotebook.common.data.hoyolab.PlayerUid
 import com.lianyi.paimonsnotebook.common.data.hoyolab.user.User
 import com.lianyi.paimonsnotebook.common.data.hoyolab.user.UserAndUid
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
+import com.lianyi.paimonsnotebook.common.database.abyss.entity.AbyssSeasonSnapshot
 import com.lianyi.paimonsnotebook.common.database.user.util.AccountHelper
 import com.lianyi.paimonsnotebook.common.extension.scope.launchSafeIO
 import com.lianyi.paimonsnotebook.common.util.metadata.genshin.abyss.AbyssSnapshotMapper
@@ -37,17 +38,38 @@ import com.lianyi.paimonsnotebook.common.web.hutao.genshin.monster.MonsterData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.weapon.WeaponData
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class AbyssScreenViewModel : ViewModel() {
 
-    //0本期 1上期 2总览 3出场率 4使用率 5配队 6持有率 7角色配装 8武器装备
+    companion object {
+        /*
+        * "历史"标签页的索引
+        * 与 tabs 数组末位保持一致;抽成常量避免各处魔法数字 9 写错
+        * */
+        const val HISTORY_PAGE_INDEX = 9
+    }
+
+    //0本期 1上期 2总览 3出场率 4使用率 5配队 6持有率 7角色配装 8武器装备 9历史
     var currentPageIndex by mutableIntStateOf(0)
 
     val tabs = arrayOf(
-        "本期", "上期", "全服总览", "出场率", "使用率", "配队", "持有率", "角色配装", "武器装备"
+        "本期", "上期", "全服总览", "出场率", "使用率", "配队", "持有率", "角色配装", "武器装备", "历史"
     )
+
+    /*
+    * 历史成绩快照
+    *
+    * ⚠️ "历史"刻意**追加在末尾**(index 9)而不是插在"上期"后面:
+    *    tab 的 index 与 load(page) 的分支、以及各处 when(pageIndex) 硬绑定,
+    *    插在中间会让所有既有分支的编号整体位移,极易漏改一处而静默串页。
+    * */
+    var abyssHistory by mutableStateOf<List<AbyssSeasonSnapshot>>(listOf())
+        private set
+    var historyLoadingState by mutableStateOf(LoadingState.Loading)
+        private set
 
     //本期与上期深渊记录
     var currentAbyssRecord by mutableStateOf<SpiralAbyssData?>(null)
@@ -189,6 +211,12 @@ class AbyssScreenViewModel : ViewModel() {
                 0 -> if (currentAbyssRecord == null) setAbyssRecord(page)
                 1 -> if (previousAbyssRecord == null) setAbyssRecord(page)
             }
+            return
+        }
+
+        //历史页:纯本地数据,不依赖元数据与网络
+        if (page == HISTORY_PAGE_INDEX) {
+            loadHistory()
             return
         }
 
@@ -502,6 +530,36 @@ class AbyssScreenViewModel : ViewModel() {
                 setLoadingState(pageIndex, LoadingState.Error)
                 "获取深渊数据时出现异常:${e.message ?: "未知错误"}".errorNotify()
             }
+        }
+    }
+
+    /*
+    * 加载历史快照
+    * 纯本地读取,不依赖元数据/网络,故不走 1034 风控路径
+    * */
+    private fun loadHistory() {
+        val uid = currentGameRole?.game_uid
+
+        if (uid.isNullOrBlank()) {
+            abyssHistory = emptyList()
+            historyLoadingState = LoadingState.Empty
+            return
+        }
+
+        viewModelScope.launch {
+            historyLoadingState = LoadingState.Loading
+
+            val snapshots = withContext(Dispatchers.IO) {
+                runCatching {
+                    PaimonsNotebookDatabase.database.abyssSeasonSnapshotDao
+                        .getSnapshotsByUid(uid)
+                        .first()
+                }.getOrDefault(emptyList())
+            }
+
+            abyssHistory = snapshots
+            historyLoadingState =
+                if (snapshots.isEmpty()) LoadingState.Empty else LoadingState.Success
         }
     }
 

@@ -27,6 +27,7 @@ import com.lianyi.paimonsnotebook.common.components.layout.column.TabBarColumnLa
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.common.components.loading.ContentLoadingLayout
+import com.lianyi.paimonsnotebook.ui.screen.abyss.components.page.AbyssHistoryPage
 import com.lianyi.paimonsnotebook.ui.screen.abyss.components.page.AbyssRecordPage
 import com.lianyi.paimonsnotebook.ui.screen.abyss.components.page.HutaoAvatarCollocationPage
 import com.lianyi.paimonsnotebook.ui.screen.abyss.components.page.HutaoAvatarRatePage
@@ -202,6 +203,15 @@ class AbyssScreen : BaseActivity() {
                                             getAvatar = viewModel::getAvatarFromMetadata,
                                             getWeapon = viewModel::getWeaponFromMetadata
                                         )
+                                    }
+                                )
+                            }
+
+                            9 -> {
+                                ContentLoadingLayout(
+                                    loadingState = viewModel.historyLoadingState,
+                                    successContent = {
+                                        AbyssHistoryPage(snapshots = viewModel.abyssHistory)
                                     }
                                 )
                             }
