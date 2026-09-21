@@ -170,9 +170,12 @@ class UpdateService {
             if (res.first && res.second != null) {
                 FileHelper.saveFile(saveFile, res.second!!) {}
 
-                //校验下载结果确实是安装包:HTTP层已过滤非2xx,
-                //此处再排除"返回了错误页HTML"这类200响应,避免把垃圾文件当APK
-                if (!isValidPackageFile(saveFile)) {
+                //校验下载结果确实是安装包:
+                //HTTP层已过滤非2xx,这里再排除"返回了错误页HTML"与**被截断的下载**。
+                //优先用 release 资产自带的 sha256 摘要做完整性校验;
+                //老 release 没有该字段时回退到 PK + 体积检查(见 UpdatePackageVerifier)。
+                val expectedDigest = currentAsset()?.digest
+                if (!UpdatePackageVerifier.verify(saveFile, expectedDigest, MIN_PACKAGE_SIZE)) {
                     saveFile.delete()
                     onFail.invoke()
                     return
@@ -189,31 +192,22 @@ class UpdateService {
         }
     }
 
-    //判断下载结果是否为合法的APK(ZIP以"PK"开头,长度不能过小)
-    private fun isValidPackageFile(file: File): Boolean {
-        if (!file.exists() || file.length() < MIN_PACKAGE_SIZE) {
-            return false
+    /*
+    * 取当前 release 的安装包资产
+    *
+    * 本仓库 release 上传的资产名是 PaimonsNotebook-<版本>-release.apk,
+    * 而不再是上游的 app-release.apk;两者都接受以兼容历史 release。
+    * */
+    private fun currentAsset(): GithubLatestData.Asset? =
+        _githubLatestDataCache?.assets?.takeFirstIf {
+            it.name == "app-release.apk" ||
+                    (it.name.startsWith("PaimonsNotebook-") && it.name.endsWith(".apk"))
         }
-
-        return try {
-            file.inputStream().use { input ->
-                val header = ByteArray(2)
-                input.read(header) == 2 && header[0] == 'P'.code.toByte() && header[1] == 'K'.code.toByte()
-            }
-        } catch (_: Exception) {
-            false
-        }
-    }
 
     private fun getRequestUrlByEndpointName(
         name: String
     ): String {
-        //本仓库release上传的资产名是PaimonsNotebook-<版本>-release.apk,
-        //而不再是上游的app-release.apk;两者都接受以兼容历史release
-        val asset = _githubLatestDataCache?.assets?.takeFirstIf {
-            it.name == "app-release.apk" ||
-                    (it.name.startsWith("PaimonsNotebook-") && it.name.endsWith(".apk"))
-        }
+        val asset = currentAsset()
 
         return when (name) {
             "github" -> {

@@ -33,7 +33,14 @@ data class GithubLatestData(
         val state: String,
         val updated_at: String,
         val uploader: Uploader,
-        val url: String
+        val url: String,
+        /*
+        * 资产摘要,形如 "sha256:95d132cb…"
+        *
+        * ⚠️ 该字段是 GitHub 较新加入的,**老 release 的响应里没有**,
+        * 因此必须可空且缺失时不能判失败(见 UpdatePackageVerifier)。
+        * */
+        val digest: String? = null
     )
 
     data class Author(
