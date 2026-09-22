@@ -28,6 +28,7 @@ import com.lianyi.paimonsnotebook.ui.screen.items.view.WeaponScreen
 import com.lianyi.paimonsnotebook.ui.screen.weekly.view.WeeklyCalendarScreen
 import com.lianyi.paimonsnotebook.ui.screen.sign_in_status.view.SignInStatusScreen
 import com.lianyi.paimonsnotebook.ui.screen.player_character.view.PlayerCharacterScreen
+import com.lianyi.paimonsnotebook.ui.screen.dps.view.DpsCalculatorScreen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -153,6 +154,13 @@ object HomeHelper {
             icon = R.drawable.ic_genshin_game_ggc_book,
             target = FurnitureScreen::class.java,
             sortIndex = 97
+        ),
+        ModalItemData(
+            name = "队伍DPS",
+            icon = R.drawable.ic_star_cup,
+            target = DpsCalculatorScreen::class.java,
+            sortIndex = 98,
+            requireMetadata = true
         ),
     )
 

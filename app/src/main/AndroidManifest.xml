@@ -174,6 +174,9 @@
             android:name=".ui.screen.furniture.view.FurnitureScreen"
             android:theme="@style/Theme.PaimonsNotebook" />
         <activity
+            android:name=".ui.screen.dps.view.DpsCalculatorScreen"
+            android:theme="@style/Theme.PaimonsNotebook" />
+        <activity
             android:name=".common.view.VideoPlayScreen"
             android:configChanges="orientation|screenSize"
             android:theme="@style/Theme.PaimonsNotebookNoTranslucent"
