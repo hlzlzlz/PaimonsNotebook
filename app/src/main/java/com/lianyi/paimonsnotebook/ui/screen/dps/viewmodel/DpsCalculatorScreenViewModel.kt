@@ -11,6 +11,8 @@ import com.lianyi.paimonsnotebook.common.data.hoyolab.user.UserAndUid
 import com.lianyi.paimonsnotebook.common.database.user.util.AccountHelper
 import com.lianyi.paimonsnotebook.common.extension.scope.launchIO
 import com.lianyi.paimonsnotebook.common.extension.scope.launchMain
+import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
+import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
 import com.lianyi.paimonsnotebook.common.util.damage.AvatarPanel
 import com.lianyi.paimonsnotebook.common.util.damage.MemberAction
 import com.lianyi.paimonsnotebook.common.util.damage.PanelAdapter
@@ -68,13 +70,16 @@ class DpsCalculatorScreenViewModel : ViewModel() {
     var rotationSeconds by mutableStateOf(0.0)
         private set
 
-    /** 计算过程中的错误提示(如"请先选择角色") */
-    var message by mutableStateOf<String?>(null)
-        private set
-
     /**
-     * ⚠️ 恒为 false:面板字符串格式未经真机验证(见 dps-calculator.md)。
-     * UI 必须据此展示风险提示 —— 这是**诚实边界**,不是待办开关。
+     * 错误/提示反馈。
+     *
+     * ⚠️ 这里**不自造 message 状态**,而是直接用项目既有的通知机制
+     * (`String.errorNotify()` / `warnNotify()`,全项目 ViewModel 中已有 105 处同样用法;
+     *  其内部走 `launchSafeIO`,线程安全,且 `NotifyGroup` 由 `PaimonsNotebookTheme` 自动包裹)。
+     *
+     * 教训:我最初写了一个 `message` 状态 + `consumeMessage()`,但 **UI 从未消费它**
+     * ⇒ "队伍最多 4 人""请先选择角色"等提示会**静默消失**,用户不知道为什么点了没反应。
+     * 这正是本项目记录过的失败模式("功能静默消失且一直未被发现")。
      */
     val panelFormatVerified: Boolean = false
 
@@ -111,7 +116,7 @@ class DpsCalculatorScreenViewModel : ViewModel() {
             val data = res.data
             if (data == null) {
                 loadingState = LoadingState.Error
-                message = res.message
+                (res.message.ifBlank { "角色列表获取失败" }).errorNotify()
                 return
             }
             characterList.clear()
@@ -120,7 +125,7 @@ class DpsCalculatorScreenViewModel : ViewModel() {
         } catch (e: Exception) {
             // ⚠️ 必须捕获:本项目协程未捕获异常会静默杀进程
             loadingState = LoadingState.Error
-            message = e.message ?: "角色列表获取失败"
+            (e.message ?: "角色列表获取失败").errorNotify()
         }
     }
 
@@ -137,7 +142,7 @@ class DpsCalculatorScreenViewModel : ViewModel() {
             return
         }
         if (teamCharacterIds.size >= MAX_TEAM_SIZE) {
-            message = "队伍最多 $MAX_TEAM_SIZE 人"
+            "队伍最多 $MAX_TEAM_SIZE 人".warnNotify()
             return
         }
         teamCharacterIds.add(characterId)
@@ -147,11 +152,6 @@ class DpsCalculatorScreenViewModel : ViewModel() {
     fun clearTeam() {
         teamCharacterIds.clear()
         result = null
-        message = null
-    }
-
-    fun consumeMessage() {
-        message = null
     }
 
     /**
@@ -164,26 +164,37 @@ class DpsCalculatorScreenViewModel : ViewModel() {
     fun calculate() {
         viewModelScope.launchMain {
             if (teamCharacterIds.isEmpty()) {
-                message = "请先选择至少 1 名角色"
+                "请先选择至少 1 名角色".warnNotify()
                 return@launchMain
             }
 
             val user = currentUser
             val role = currentGameRole
             if (user == null || role == null) {
-                message = "请先登录并选择游戏角色"
+                "请先登录并选择游戏角色".errorNotify()
                 return@launchMain
             }
             val userAndUid = UserAndUid(user.userEntity, role.getPlayerUid())
 
             // 拉取缺失的详情
+            // ⚠️ 这里**必须显式判空**:`ResultData.data` 声明为**非空** `val data: T`,
+            //    但 `getAsJsonNative` 在解析异常时**返回 null**(见 requests.kt),
+            //    Gson 走 Unsafe 分配、不执行 Kotlin 非空校验
+            //    ⇒ 编译期判空会得到 "always false" 警告,但**运行时确有必要**
+            //    (项目既有处置:`AbyssScreenViewModel.kt:252` 同样显式判空)。
+            //    照编译器把判空删掉 = 真机偶发 NPE。
             val missing = teamCharacterIds.filter { !detailCache.containsKey(it) }
             if (missing.isNotEmpty()) {
                 try {
                     val res = gameRecordClient.getCharacterDetail(userAndUid, missing)
-                    res.data?.list?.forEach { detailCache[it.base.id] = it }
+                    val data = res.data
+                    if (data == null) {
+                        "角色详情返回为空,无法计算".errorNotify()
+                    } else {
+                        data.list.forEach { detailCache[it.base.id] = it }
+                    }
                 } catch (e: Exception) {
-                    message = "角色详情获取失败:${e.message ?: "未知错误"}"
+                    "角色详情获取失败:${e.message ?: "未知错误"}".errorNotify()
                 }
             }
 

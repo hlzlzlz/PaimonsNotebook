@@ -101,64 +101,74 @@ class DpsCalculatorScreen : BaseActivity() {
 
     @Composable
     private fun DpsCalculatorContent() {
-        Column(
+        /*
+        * ⚠️ 结构上刻意**不用** `Column(verticalScroll)` 包 `LazyColumn`。
+        *
+        * 原因:那是 Compose 的已知反模式 —— 外层给无限高约束,
+        * 内层 LazyColumn 无法测量,会抛
+        * "Vertically scrollable component was measured with an infinity
+        *  maximum height constraints"。
+        * 项目内唯一一处 `verticalScroll` + `LazyColumn` 共存的历史写法
+        * (MonsterScreen 的详情 Dialog)并不嵌套,不构成先例。
+        *
+        * 正确做法:**整页用单个 LazyColumn**,把风险提示/选择区/结果都当 item。
+        * */
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 12.dp)
         ) {
-            RiskNotice()
+            item { RiskNotice() }
 
-            // ---- 选择角色 ----
-            SectionTitle("选择队伍成员(最多 ${DpsCalculatorScreenViewModel.MAX_TEAM_SIZE} 人)")
-            InfoText(
-                text = "已选 ${viewModel.teamCharacterIds.size} 人。" +
-                        "⚠️ 游戏不提供队伍编成接口,此队伍由你手动选择。"
-            )
+            item { SectionTitle("选择队伍成员(最多 ${DpsCalculatorScreenViewModel.MAX_TEAM_SIZE} 人)") }
+            item {
+                InfoText(
+                    text = "已选 ${viewModel.teamCharacterIds.size} 人。" +
+                            "⚠️ 游戏不提供队伍编成接口,此队伍由你手动选择。"
+                )
+            }
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .padding(top = 6.dp)
-            ) {
-                items(viewModel.characterList, key = { it.id }) { character ->
-                    val selected = viewModel.teamCharacterIds.contains(character.id)
-                    CharacterRow(
-                        name = character.name,
-                        level = character.level,
-                        element = character.element,
-                        selected = selected,
-                        onClick = { viewModel.toggleMember(character.id) }
-                    )
+            // 角色列表:直接作为 item 铺开(不再嵌套 LazyColumn)
+            items(viewModel.characterList, key = { it.id }) { character ->
+                val selected = viewModel.teamCharacterIds.contains(character.id)
+                CharacterRow(
+                    name = character.name,
+                    level = character.level,
+                    element = character.element,
+                    selected = selected,
+                    onClick = { viewModel.toggleMember(character.id) }
+                )
+            }
+
+            item {
+                // ---- 循环耗时(可选) ----
+                SectionTitle("循环耗时(可选)")
+                InfoText(
+                    text = "本机元数据没有攻击速度/动画帧数据,无法自动换算 DPS。" +
+                            "填入一轮循环的秒数后才会显示每秒伤害;耗时由你提供,非游戏真实值。"
+                )
+                QuickSecondsRow()
+
+                // ---- 计算按钮 ----
+                Row(
+                    modifier = Modifier
+                        .padding(vertical = 12.dp)
+                        .radius(6.dp)
+                        .background(CardBackGroundColor)
+                        .clickable { viewModel.calculate() }
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    PrimaryText(text = "开始计算")
                 }
             }
 
-            // ---- 循环耗时(可选) ----
-            SectionTitle("循环耗时(可选)")
-            InfoText(
-                text = "本机元数据没有攻击速度/动画帧数据,无法自动换算 DPS。" +
-                        "填入一轮循环的秒数后才会显示每秒伤害;耗时由你提供,非游戏真实值。"
-            )
-            QuickSecondsRow()
-
-            // ---- 计算按钮 ----
-            Row(
-                modifier = Modifier
-                    .padding(vertical = 12.dp)
-                    .radius(6.dp)
-                    .background(CardBackGroundColor)
-                    .clickable { viewModel.calculate() }
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                PrimaryText(text = "开始计算")
+            // ---- 结果 ----
+            viewModel.result?.let { r ->
+                item { ResultSection(r) }
             }
 
-            // ---- 结果 ----
-            viewModel.result?.let { ResultSection(it) }
-
             // 底部留白,避免被导航栏遮住
-            Column(modifier = Modifier.height(24.dp)) {}
+            item { Column(modifier = Modifier.height(24.dp)) {} }
         }
     }
 
