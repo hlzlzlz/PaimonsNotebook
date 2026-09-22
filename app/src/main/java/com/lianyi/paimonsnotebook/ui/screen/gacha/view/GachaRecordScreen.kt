@@ -81,9 +81,13 @@ class GachaRecordScreen : ComponentActivity() {
             TabBarColumnLayout(
                 onTabBarSelect = viewModel::setSelectedPageIndex,
                 tabs = viewModel.tabs,
+                /*
+                * tab 有 7 个会横向溢出,TabBar 自身可滚动;
+                * 右侧还有固定的导航图标,故让 TabBar 只吃剩余宽度,
+                * 否则可滚动的 TabBar 会占满整行把图标挤成 0 宽。
+                * */
+                tabBarWeighted = true,
                 topSlot = {
-                    Spacer(modifier = Modifier.weight(1f))
-
                     Icon(
                         painter = painterResource(id = R.drawable.ic_navigation),
                         contentDescription = null,

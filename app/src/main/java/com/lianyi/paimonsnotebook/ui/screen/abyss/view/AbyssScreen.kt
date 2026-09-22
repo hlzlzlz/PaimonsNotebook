@@ -51,7 +51,8 @@ class AbyssScreen : BaseActivity() {
                 TabBarColumnLayout(
                     tabs = viewModel.tabs,
                     onTabBarSelect = viewModel::onPageIndexChange,
-                    tabBarPaddingHorizontal = 12.dp
+                    tabBarPaddingHorizontal = 12.dp,
+                    tabBarWeighted = true
                 ) {
                     //标签栏下方独立一行:角色选择 + 全服数据的本期/上期切换
                     Row(
