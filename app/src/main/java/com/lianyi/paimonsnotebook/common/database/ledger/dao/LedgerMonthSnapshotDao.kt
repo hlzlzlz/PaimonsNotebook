@@ -10,7 +10,13 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface LedgerMonthSnapshotDao {
 
-    //按首次成功保留:同 (uid, year, month) 已有记录则跳过
+    /*
+    * 按首次成功保留(IGNORE)
+    *
+    * ⚠️ 主键是 (uid, year, month) —— **year 必须参与去重**,
+    *    否则去年 12 月与今年 12 月会被当成同一条,今年的数据被静默丢弃。
+    *    (1.8.18 前主键漏了 year,已由 8->9 迁移修正。)
+    * */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIfAbsent(snapshot: LedgerMonthSnapshot)
 

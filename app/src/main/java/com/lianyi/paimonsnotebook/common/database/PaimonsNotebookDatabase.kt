@@ -4,6 +4,8 @@ import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
 import com.lianyi.paimonsnotebook.common.database.abyss.dao.AbyssSeasonSnapshotDao
 import com.lianyi.paimonsnotebook.common.database.abyss.entity.AbyssSeasonSnapshot
@@ -86,7 +88,7 @@ import com.lianyi.paimonsnotebook.common.database.user.entity.User
         * */
         AutoMigration(7, 8)
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 abstract class PaimonsNotebookDatabase : RoomDatabase() {
@@ -140,11 +142,54 @@ abstract class PaimonsNotebookDatabase : RoomDatabase() {
     companion object {
         private const val DB_NAME = "paimonsnotebook_database.db"
 
-//        private val migration_3_4 = object : Migration(3, 4) {
-//            override fun migrate(db: SupportSQLiteDatabase) {
-//
-//            }
-//        }
+        /*
+        * 8 -> 9:修正 ledger_month_snapshots 的主键,把 year 纳入。
+        *
+        * ⚠️ **改主键不能用 AutoMigration**,必须手写(新建表 → 拷数据 → 删旧表 → 改名)。
+        * 原主键是 (uid, month),而接口的 month 只有 1~12 不带年份 ⇒
+        * "去年 12 月"与"今年 12 月"算同一条,配合 IGNORE 策略会让
+        * **第二年起每个月的快照全部存不进去**。
+        *
+        * 旧表已有数据:按 (uid, year, month) 拷贝;旧表本来就按 (uid, month)
+        * 唯一,加上 year 后只会更宽松,故**不会丢行**,也无需去重。
+        * */
+        private val migration_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `ledger_month_snapshots_new` (
+                        `uid` TEXT NOT NULL,
+                        `month` INTEGER NOT NULL,
+                        `year` INTEGER NOT NULL,
+                        `nickname` TEXT NOT NULL,
+                        `region` TEXT NOT NULL,
+                        `current_primogems` INTEGER NOT NULL,
+                        `current_mora` INTEGER NOT NULL,
+                        `last_primogems` INTEGER NOT NULL,
+                        `last_mora` INTEGER NOT NULL,
+                        `group_by` TEXT NOT NULL,
+                        `saved_at` INTEGER NOT NULL,
+                        PRIMARY KEY(`uid`, `year`, `month`)
+                    )
+                    """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+                    INSERT INTO `ledger_month_snapshots_new`
+                    SELECT `uid`, `month`, `year`, `nickname`, `region`,
+                           `current_primogems`, `current_mora`,
+                           `last_primogems`, `last_mora`, `group_by`, `saved_at`
+                    FROM `ledger_month_snapshots`
+                    """.trimIndent()
+                )
+
+                db.execSQL("DROP TABLE `ledger_month_snapshots`")
+                db.execSQL(
+                    "ALTER TABLE `ledger_month_snapshots_new` RENAME TO `ledger_month_snapshots`"
+                )
+            }
+        }
 
         val database by lazy {
             synchronized(this) {
@@ -153,7 +198,7 @@ abstract class PaimonsNotebookDatabase : RoomDatabase() {
                     PaimonsNotebookDatabase::class.java,
                     DB_NAME
                 )
-//                    .addMigrations(this.migration_3_4)
+                    .addMigrations(migration_8_9)
                     .build()
             }
         }

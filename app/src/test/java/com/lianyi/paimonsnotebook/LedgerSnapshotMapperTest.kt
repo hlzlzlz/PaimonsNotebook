@@ -53,8 +53,18 @@ class LedgerSnapshotMapperTest {
     }
 
     @Test
-    fun 跨年月份不会撞主键() {
-        //去年 12 月与今年 12 月是两条不同的记录
+    fun 跨年同月必须落在不同主键上() {
+        /*
+        * ⚠️ 这条用例是 2026-09-22 重写的。
+        *
+        * 原版只断言 `lastYear.year != thisYear.year`,即**只查了字段值**,
+        * 完全没验证主键 —— 而当时的 @Entity 主键其实是 (uid, month),
+        * **不含 year**。于是测试全绿,真机上却是"去年 12 月与今年 12 月
+        * 算同一条,今年数据被 IGNORE 静默丢弃"。
+        *
+        * 这正是本工作区反复踩的那类坑:**测试断言了别的东西,给出假信心**。
+        * 现在改为断言**真正决定冲突判定的主键三元组**。
+        * */
         val lastYear = LedgerSnapshotMapper.toSnapshot(
             ledger(month = 12, date = "2024-12-01 00:00:00"), 1L
         )
@@ -62,10 +72,29 @@ class LedgerSnapshotMapperTest {
             ledger(month = 12, date = "2025-12-01 00:00:00"), 2L
         )
 
+        //Room 判定主键冲突用的是这三元组,必须逐项比较
+        val keyA = Triple(lastYear.uid, lastYear.year, lastYear.month)
+        val keyB = Triple(thisYear.uid, thisYear.year, thisYear.month)
+
         assertTrue(
-            "(year, month) 必须不同,否则按月覆盖会丢历史",
-            lastYear.year != thisYear.year
+            "去年12月与今年12月的主键必须不同,否则今年的快照会被 IGNORE 丢弃",
+            keyA != keyB
         )
+    }
+
+    @Test
+    fun 同月跨年时字段本身也要能区分() {
+        //补齐原用例的意图:确认 year 字段确实承载了年份信息(而非恒为 0)
+        val lastYear = LedgerSnapshotMapper.toSnapshot(
+            ledger(month = 12, date = "2024-12-01 00:00:00"), 1L
+        )
+        val thisYear = LedgerSnapshotMapper.toSnapshot(
+            ledger(month = 12, date = "2025-12-01 00:00:00"), 2L
+        )
+
+        assertEquals(2024, lastYear.year)
+        assertEquals(2025, thisYear.year)
+        assertEquals(lastYear.month, thisYear.month)
     }
 
     @Test
