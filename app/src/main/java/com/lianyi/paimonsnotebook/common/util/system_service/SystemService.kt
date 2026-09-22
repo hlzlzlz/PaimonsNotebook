@@ -64,6 +64,49 @@ object SystemService {
     fun getClipBoardText(): String? =
         clipboardManager.primaryClip?.getItemAt(0)?.text?.toString()
 
+    /*
+    * 分享文件(系统分享面板)
+    *
+    * 用于把本地生成的文件交给其它应用(微信/邮件等),便于用户反馈问题。
+    *
+    * ⚠️ 必须用 FileProvider 生成 content:// uri 并加 FLAG_GRANT_READ_URI_PERMISSION:
+    *    file:// uri 从 targetSdk 24 起会抛 FileUriExposedException;
+    *    而 content:// 若不带授权标志,接收方读不到文件(静默失败)。
+    * 这两条都已踩过坑,见 AGENTS.md「FileProvider 路径的硬性约束」。
+    *
+    * 返回是否成功唤起分享面板。
+    * */
+    fun shareFile(file: File, mimeType: String = "*/*", chooserTitle: String = "分享文件"): Boolean {
+        if (!file.exists()) {
+            "文件不存在,无法分享".errorNotify()
+            return false
+        }
+
+        return try {
+            val uri = FileProvider.getUriForFile(context, FileHelper.provider, file)
+
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = mimeType
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            //用 chooser 包一层:FLAG_ACTIVITY_NEW_TASK 需加在 chooser 上,
+            //而从非 Activity 上下文启动又必须有该标志(否则抛 AndroidRuntimeException)
+            context.startActivity(
+                Intent.createChooser(send, chooserTitle).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    //授权标志要同时给 chooser,否则部分 ROM 上接收方拿不到读权限
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            )
+            true
+        } catch (e: Exception) {
+            "无法分享文件:${e.message ?: "未知错误"}".errorNotify()
+            false
+        }
+    }
+
     //安装程序
     //返回是否成功唤起安装界面
     fun installAndroidApplication(file: File): Boolean {

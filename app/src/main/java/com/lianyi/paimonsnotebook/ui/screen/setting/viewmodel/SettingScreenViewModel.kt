@@ -213,6 +213,35 @@ class SettingScreenViewModel : ViewModel() {
             },
             slot = {
             }
+        ),
+        /*
+        * 分享崩溃日志
+        *
+        * 与上面"复制到剪贴板"分开成两个入口:
+        *   手机上传日志的常见路径是"复制 → 切到聊天应用 → 粘贴",
+        *   步骤多且容易在切换过程中被系统清掉剪贴板;
+        *   直接走系统分享面板可一步发到微信/邮件,长日志也不会被截断。
+        * 复制入口保留,不改变原有行为。
+        * */
+        OptionListData(
+            name = "分享崩溃日志",
+            description = "把崩溃日志文件通过系统分享面板发送(微信/邮件等),适合日志较长或需要附带完整文件时使用",
+            onClick = {
+                viewModelScope.launchIO {
+                    if (!CrashLogger.hasPendingCrash()) {
+                        "暂无崩溃记录".notify()
+                        return@launchIO
+                    }
+
+                    SystemService.shareFile(
+                        file = CrashLogger.logFile(),
+                        mimeType = "text/plain",
+                        chooserTitle = "分享崩溃日志"
+                    )
+                }
+            },
+            slot = {
+            }
         )
     )
 

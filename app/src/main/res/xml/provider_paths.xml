@@ -14,8 +14,9 @@
   getUriForFile 找不到匹配路径而抛 IllegalArgumentException,
   导致导出分享与APK安装失效。
 
-  FileProvider 的调用点只有两处:FileHelper.getContentUriForFile 与
-  SystemService.installAndroidApplication。
+  FileProvider 的调用点:FileHelper.getContentUriForFile、
+  SystemService.installAndroidApplication、SystemService.shareFile(用于分享崩溃日志)。
+  崩溃日志文件在 context.filesDir 下,故依赖下面的 files-path。
 
   原先 5 条全是 path=".",其中 external-path 映射的是整个共享外部存储根
   (/storage/emulated/0/,含 DCIM/Download 及其他应用的公共文件),属过宽授权,
