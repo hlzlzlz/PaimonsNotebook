@@ -1,6 +1,7 @@
 package com.lianyi.paimonsnotebook.ui.screen.abyss.components.page
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -149,7 +151,17 @@ private fun SeasonCard(snapshot: AbyssSeasonSnapshot) {
         //逐层星数
         val floors = AbyssSnapshotMapper.deserializeFloors(snapshot.floor_stars)
         if (floors.isNotEmpty()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            /*
+            * ⚠️ 必须可横向滚动
+            *
+            * 深渊有 12 层,每层形如 "12层 3/3",横向排布在 360dp 有效宽度下
+            * (见 Theme 的 density = widthPixels / 360f)必然溢出、右侧楼层被裁掉。
+            * 与 TabBar 溢出是同一类问题。
+            * */
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 floors.forEachIndexed { index, floor ->
                     if (index > 0) {
                         Spacer(modifier = Modifier.width(10.dp))

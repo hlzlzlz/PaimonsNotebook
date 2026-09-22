@@ -391,14 +391,22 @@ class TravelersDiaryScreen : BaseActivity() {
 
                                 InfoText(
                                     text = "原石 ${row.primogems}",
-                                    fontSize = 13.sp
+                                    fontSize = 13.sp,
+                                    maxLines = 1
                                 )
                             }
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 InfoText(
                                     text = "摩拉 ${row.mora}",
-                                    fontSize = 13.sp
+                                    fontSize = 13.sp,
+                                    /*
+                                    * 摩拉数值可达 8 位以上,与环比文案同排时可能挤爆
+                                    * (本应用有效宽度恒为 360dp,见 Theme 的 density 计算)。
+                                    * 让摩拉文本可压缩并按需省略,保住右侧的环比信息。
+                                    * */
+                                    modifier = Modifier.weight(1f, fill = false),
+                                    maxLines = 1
                                 )
 
                                 Spacer(modifier = Modifier.width(8.dp))

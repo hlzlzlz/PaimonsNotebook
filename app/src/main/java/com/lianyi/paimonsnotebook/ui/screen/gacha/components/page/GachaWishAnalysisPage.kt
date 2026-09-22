@@ -1,6 +1,7 @@
 package com.lianyi.paimonsnotebook.ui.screen.gacha.components.page
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -81,7 +83,18 @@ private fun PoolAnalysisCard(pool: GachaWishHistory.PoolHistory) {
         }
 
         //汇总:平均 / 最欧 / 最非
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        /*
+        * ⚠️ 必须可横向滚动
+        *
+        * 本应用 Theme 里 density = widthPixels / 360f,即**有效宽度恒为 360dp**
+        * (与物理分辨率无关)。三段文字("平均 XX.X 抽"/"最欧 XX 抽"/"最非 XX 抽")
+        * 在 360dp 下会挤爆,尾部被裁掉。
+        * 与 TabBar 溢出是同一类问题 —— 见 AGENTS.md「标签栏的硬性约束」。
+        * */
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             InfoText(
                 text = "平均 ${"%.1f".format(pool.averagePulls)} 抽",
                 fontSize = 13.sp
@@ -126,12 +139,22 @@ private fun PoolAnalysisCard(pool: GachaWishHistory.PoolHistory) {
 
                 Spacer(modifier = Modifier.width(8.dp))
 
+                /*
+                * ⚠️ 名称必须可压缩
+                *
+                * 本行最多有 5 段内容(序号/名称/欧非分档/抽数/大保底),
+                * 在 360dp 有效宽度下(见 Theme 的 density 计算)必然挤爆。
+                * 用 weight(1f) 让**名称**吃掉剩余空间并按需省略,
+                * 而不是让固定宽度的分档/抽数被挤出屏幕。
+                * */
                 InfoText(
                     text = entry.name,
-                    fontSize = 13.sp
+                    fontSize = 13.sp,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1
                 )
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.width(8.dp))
 
                 //欧非分档
                 Text(
