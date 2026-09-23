@@ -25,6 +25,9 @@ package com.lianyi.paimonsnotebook.common.util.damage
  * @param avatarId    角色 id(用于查元数据取名字/图标)
  * @param name        角色名(便于 UI 与调试;计算本身不需要)
  * @param element     角色元素(用 ElementType 常量;用于推默认增幅反应)
+ * @param level       角色等级(用于防御区)。**取接口真实等级**;
+ *                    0 表示未知,此时回退到 [TeamDamageCalculator.calculate] 的
+ *                    `attackerLevel`
  * @param panel       面板快照(来自 [PanelAdapter])
  * @param actions     该成员这一轮的所有出伤动作
  */
@@ -33,7 +36,8 @@ data class TeamMember(
     val name: String,
     val element: Int,
     val panel: AvatarPanel,
-    val actions: List<MemberAction>
+    val actions: List<MemberAction>,
+    val level: Int = 0
 )
 
 /**
@@ -129,8 +133,6 @@ object TeamDamageCalculator {
         resistance: Double = 0.1,
         defenseReduction: Double = 0.0
     ): TeamDamageResult {
-        val defenseFactor = DamageFormula.defenseFactor(attackerLevel, defenderLevel, defenseReduction)
-
         val skippedMembers = mutableListOf<String>()
         val skippedReactions = mutableListOf<SkippedReaction>()
         val memberResults = mutableListOf<MemberDamageResult>()
@@ -142,6 +144,13 @@ object TeamDamageCalculator {
                 skippedMembers += member.name
                 return@forEach
             }
+
+            // ⚠️ 防御区**按成员各自等级**算。
+            // 实测接口返回的 `base.level` 是真值且因人而异(如菲谢尔 29 / 琴 20),
+            // 用全队统一等级会让等级低的成员伤害虚高 —— 属实质性错误。
+            // [TeamMember.level] 为 0 时回退到调用方给的 [attackerLevel]。
+            val lv = if (member.level > 0) member.level else attackerLevel
+            val defenseFactor = DamageFormula.defenseFactor(lv, defenderLevel, defenseReduction)
 
             val attack = member.panel.attack!!
             val critRate = member.panel.critRate!!

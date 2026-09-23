@@ -5,9 +5,11 @@ import com.lianyi.paimonsnotebook.common.util.damage.AvatarPanel
 import com.lianyi.paimonsnotebook.common.util.damage.MemberAction
 import com.lianyi.paimonsnotebook.common.util.damage.PanelAdapter
 import com.lianyi.paimonsnotebook.common.util.damage.ReactionType
+import com.lianyi.paimonsnotebook.common.util.damage.SkillScalingParser
 import com.lianyi.paimonsnotebook.common.util.damage.TeamDamageCalculator
 import com.lianyi.paimonsnotebook.common.util.damage.TeamMember
 import com.lianyi.paimonsnotebook.common.util.json.JSON
+import com.lianyi.paimonsnotebook.common.util.parameter.getParameterizedType
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.character.CharacterDetailData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.avatar.AvatarData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.FightProperty
@@ -24,13 +26,17 @@ import java.io.File
 *
 * ⚠️ 数据策略(遵守 AGENTS.md「字段类型必须实测」):
 *   - 技能倍率部分:喂**真实元数据**(绫华/刻晴夹具,与 M2 同一份)
-*   - 面板部分:`character/detail` 需要真实凭证,本机**无法实测**该接口的
-*     字符串格式。故此处**明确标注**哪些断言是"按服务端已知格式构造的样例",
-*     而不是假装它是真实响应。这些样例的格式依据是:
-*       ① 现有 UI `PlayerCharacterPropertyItem.kt:63` 直接 `Text(data.final)`,
-*          说明 final 是**已格式化字符串**;
-*       ② `FormatMethod.kt` 明确哪些属性是 Percent(带 %)、哪些是 Integer。
-*     ⇒ 真实格式仍待真机/真实凭证确认,已在 UI 与记忆中标为未验证事项。
+*   - 面板部分:**2026-09-23 起已用真实响应驱动**。
+*     此前本文件顶部写着"接口需真实凭证、本机无法实测",并因此用**自造样例**断言 ——
+*     结果 1.8.20 发布后**所有成员都被判为未参与计算**:真实 `selected_properties`
+*     只有 2000 系列(当前生命/当前攻击/当前防御),而我查的是 `FIGHT_PROP_ATTACK`(5),
+*     取不到 ⇒ 攻击力 null ⇒ `isUsable` false ⇒ 全员跳过。
+*     这正是本项目记载过的事故模式:"自造数据对字段类型写错零检出力"。
+*
+*   ⇒ 现改为喂**真实响应字节** `CharacterDetail_{10000003,10000031,10000148}.json`
+*     (由真实凭证从 `character/detail` 拉取后原样落盘)。
+*     下面的 `prop(...)` 自造样例**仅保留用于边界用例**(空串、千分位等),
+*     凡涉及"真实字段类型/真实语义"的断言一律用真实夹具。
 * */
 class TeamDamageCalculatorTest {
 
@@ -466,5 +472,177 @@ class TeamDamageCalculatorTest {
         assertEquals("L", d.label)
         assertEquals(1.5, d.multiplier, 1e-9)
         assertEquals(3, d.count)
+    }
+
+    // =========================================================
+    // 四、真实响应驱动(**1.8.20 全员被跳过的回归钉**)
+    //
+    // 这些用例**必须**喂真实 `character/detail` 响应字节。
+    // 自造数据对本节要防的 bug 零检出力(详见文件头注释)。
+    // =========================================================
+
+    /** 解析真实响应(走真实调用链:ResultData 信封 + 泛型参数化类型) */
+    private fun loadRealDetail(fileName: String): CharacterDetailData.DetailItem {
+        val raw = fixture(fileName).readText()
+        // ⚠️ 必须走参数化类型:直接 JSON.parse<CharacterDetailData>(raw) 会把
+        //    整体当 T 解析(得到默认值),而 parse<ResultData<...>> 会因泛型擦除
+        //    把 data 解析成 LinkedTreeMap ⇒ 两种错法都"看起来在跑"却零检出力。
+        val type = getParameterizedType(
+            com.lianyi.paimonsnotebook.common.data.ResultData::class.java,
+            CharacterDetailData::class.java
+        )
+        val envelope: com.lianyi.paimonsnotebook.common.data.ResultData<CharacterDetailData> =
+            JSON.parse(raw, type)
+        return envelope.data.list.first()
+    }
+
+    /*
+    * 🔴🔴 本用例直接钉住 1.8.20 的线上缺陷:
+    * 真实 `selected_properties` 用 **2001**(当前攻击力)而非 5。
+    * 若 PanelAdapter 只查 5,攻击力会是 null、`isUsable` 为 false,
+    * **所有成员被静默跳过**(用户实测:"我不管选谁都是未参与计算")。
+    * */
+    @Test
+    fun `real response attack uses current-attack property type`() {
+        val detail = loadRealDetail("CharacterDetail_10000003.json")
+
+        // 先确认夹具本身确实是"2001 口径"——否则这个用例会失去意义
+        val types = detail.selected_properties.map { it.property_type }.toSet()
+        assertTrue("真实响应应含当前攻击力 2001(夹具失效?)", types.contains(FightProperty.FIGHT_PROP_CUR_ATTACK))
+        assertFalse("真实响应不应含基础攻击力 5(夹具失效?)", types.contains(FightProperty.FIGHT_PROP_ATTACK))
+
+        val panel = PanelAdapter.adapt(detail.selected_properties)
+        assertNotNull("攻击力必须能取到 —— 否则全员被跳过", panel.attack)
+        assertEquals("琴 Lv.20 的当前攻击力", 88.0, panel.attack!!, 1e-9)
+        assertTrue("面板必须判定为可用", panel.isUsable)
+    }
+
+    /*
+    * 🔴 真实面板必须能算出非零伤害(这是"未参与计算"最直接的护栏)
+    * */
+    @Test
+    fun `real panel produces non-zero damage`() {
+        val detail = loadRealDetail("CharacterDetail_10000031.json") // 菲谢尔
+        val panel = PanelAdapter.adapt(
+            properties = detail.selected_properties,
+            bonusPropertyTypes = setOf(FightProperty.FIGHT_PROP_ELEC_ADD_HURT)
+        )
+        assertTrue("真实面板应可用", panel.isUsable)
+        assertEquals("菲谢尔当前攻击力", 182.0, panel.attack!!, 1e-9)
+        assertEquals("菲谢尔暴击率", 0.17, panel.critRate!!, 1e-9)
+        assertEquals("菲谢尔暴击伤害", 0.556, panel.critDamage!!, 1e-9)
+
+        val member = TeamMember(
+            avatarId = detail.base.id, name = detail.base.name, element = 4,
+            panel = panel, actions = listOf(MemberAction("测试", 1.0)), level = detail.base.level
+        )
+        val r = TeamDamageCalculator.calculate(listOf(member))
+        assertEquals("不应有成员被跳过", 0, r.skippedMembers.size)
+        assertTrue("伤害必须 > 0", r.teamExpected > 0)
+    }
+
+    /*
+    * 🔴 三个真实角色的面板都必须可用(防止"只对某个角色有效"的假修复)
+    * */
+    @Test
+    fun `all real characters have usable panels`() {
+        listOf(
+            "CharacterDetail_10000003.json",
+            "CharacterDetail_10000031.json",
+            "CharacterDetail_10000148.json"
+        ).forEach { f ->
+            val detail = loadRealDetail(f)
+            val panel = PanelAdapter.adapt(detail.selected_properties)
+            assertTrue("${detail.base.name} 的面板应可用", panel.isUsable)
+            assertNotNull("${detail.base.name} 的攻击力不应为 null", panel.attack)
+            assertNotNull("${detail.base.name} 的暴击率不应为 null", panel.critRate)
+        }
+    }
+
+    /*
+    * 🔴 技能等级必须能按 **skill_id ↔ 元数据 Id** 匹配上。
+    *
+    * 我原先按 skill_type 猜(1=普攻/2=战技/3=爆发),实测被推翻:
+    * skill_type==1 同时含普攻/战技/爆发,==2 是被动天赋。
+    * 本用例钉住"用 skill_id 匹配 Id"(照搬胡桃 SummaryAvatarFactory 的做法)。
+    * */
+    @Test
+    fun `skill levels match metadata by skill id`() {
+        // 琴:API skill_id 10031/10033/10034 ↔ 元数据 Skills[].Id 与 EnergySkill.Id
+        val detail = loadRealDetail("CharacterDetail_10000003.json")
+        // ⚠️ 用**夹具副本**而不是 D:/0000/Snap.Metadata/... 绝对路径 ——
+        //    本项目曾因 `ExampleUnitTest` 硬编码作者机器路径导致测试恒红、
+        //    并掩盖了全部新测试。夹具已复制为 AvatarMeta_10000003.json。
+        val meta = JSON.parse<AvatarData>(fixture("AvatarMeta_10000003.json").readText())
+        val levelBySkillId = detail.skills.associate { it.skill_id to it.level }
+        val depot = meta.skillDepot
+
+        val normal = depot.Skills[0]
+        val skill = depot.Skills[1]
+        val burst = depot.EnergySkill
+
+        assertNotNull("普攻等级应能按 Id 取到(${normal.Name} id=${normal.Id})", levelBySkillId[normal.Id])
+        assertNotNull("战技等级应能按 Id 取到(${skill.Name} id=${skill.Id})", levelBySkillId[skill.Id])
+        assertNotNull("爆发等级应能按 Id 取到(${burst.Name} id=${burst.Id})", levelBySkillId[burst.Id])
+
+        // 三个技能都能取到倍率 ⇒ buildActions 才可能产出动作
+        assertNotNull(SkillScalingParser.multiplierAt(normal.Proud, levelBySkillId[normal.Id]!!, 0))
+        assertNotNull(SkillScalingParser.multiplierAt(skill.Proud, levelBySkillId[skill.Id]!!, 0))
+        assertNotNull(SkillScalingParser.multiplierAt(burst.Proud, levelBySkillId[burst.Id]!!, 0))
+    }
+
+    /*
+    * ⚠️ 反向钉:GroupId **不能**用来匹配(实测 skill_id ∩ GroupId 恒为空集)。
+    * 若后人"顺手"改成 GroupId,本用例会失败并解释原因。
+    * */
+    @Test
+    fun `skill id does not match group id`() {
+        val detail = loadRealDetail("CharacterDetail_10000003.json")
+        val meta = JSON.parse<AvatarData>(fixture("AvatarMeta_10000003.json").readText())
+        val apiIds = detail.skills.map { it.skill_id }.toSet()
+        val groupIds = (meta.skillDepot.Skills.map { it.GroupId } + meta.skillDepot.EnergySkill.GroupId).toSet()
+        assertTrue(
+            "实测 API skill_id 与元数据 GroupId 无交集(应改用 Id):交集=${apiIds intersect groupIds}",
+            (apiIds intersect groupIds).isEmpty()
+        )
+    }
+
+    /*
+    * 🔴 防御区必须按**成员各自等级**算:真实等级因人而异(菲谢尔 29 / 琴 20)。
+    * 统一用一个等级会让低等级成员伤害虚高。
+    * */
+    @Test
+    fun `defense factor uses per-member real level`() {
+        val mk = { lv: Int ->
+            TeamMember(
+                avatarId = 1, name = "x", element = 4,
+                panel = AvatarPanel(
+                    attack = 1000.0, critRate = 0.0, critDamage = 0.0,
+                    elementMastery = 0.0, bonusByPropertyType = emptyMap()
+                ),
+                actions = listOf(MemberAction("a", 1.0)),
+                level = lv
+            )
+        }
+        val low = TeamDamageCalculator.calculate(listOf(mk(20))).teamNonCrit
+        val high = TeamDamageCalculator.calculate(listOf(mk(90))).teamNonCrit
+        assertTrue("等级高的成员伤害应更高(说明用了成员自身等级)", high > low)
+
+        // level=0 时才回退到 attackerLevel
+        val fallback = TeamDamageCalculator.calculate(
+            listOf(mk(0)), attackerLevel = 20
+        ).teamNonCrit
+        assertEquals("level=0 应回退到 attackerLevel", low, fallback, 1e-9)
+    }
+
+    /*
+    * 真实角色等级应被读出(实测有值,不再是"一律假定 90")
+    * */
+    @Test
+    fun `real character levels are read from response`() {
+        val qin = loadRealDetail("CharacterDetail_10000003.json")
+        assertEquals("琴的等级(真实响应)", 20, qin.base.level)
+        val fischl = loadRealDetail("CharacterDetail_10000031.json")
+        assertEquals("菲谢尔的等级(真实响应)", 29, fischl.base.level)
     }
 }

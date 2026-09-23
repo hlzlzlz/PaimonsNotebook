@@ -67,7 +67,22 @@ object PanelAdapter {
     /**
      * 把接口的 Property 列表适配成 [AvatarPanel]。
      *
-     * @param properties `selected_properties`(或 `base_properties`,取含最终值的那份)
+     * ⚠️⚠️ **2026-09-23 用真实响应修正(此前全部成员被跳过)**:
+     *
+     * `character/detail` 的 `selected_properties` 实测**只有 10 条**,其类型是
+     * **2000 系列("当前值"口径)** 而**不是** 5/20/22 那套基础类型:
+     *
+     * ```
+     * 菲谢尔(真实响应): type=2000(当前生命) 20(暴击率) 2001(当前攻击) 22(暴击伤害)
+     *                   2002(当前防御) 26(治疗加成) 28(元素精通) 27(受治疗)
+     *                   41(雷元素增伤) 23(元素充能)
+     * ```
+     *
+     * ⇒ **攻击力必须取 [CUR_ATTACK] (2001)**,取 [FIGHT_PROP_ATTACK] (5) 会恒为 null。
+     * 这曾导致 `isUsable` 恒 false、**所有成员被静默跳过**(用户实测"选谁都是未参与计算")。
+     * 代码里保留 5 作为**回退**以兼容其它口径(schema 未承诺只用 2000 系列)。
+     *
+     * @param properties `selected_properties`(含最终值的那份)
      * @param bonusPropertyTypes 需要收集的增伤类型(如该角色的元素增伤 + 物理增伤)
      */
     fun adapt(
@@ -76,7 +91,9 @@ object PanelAdapter {
     ): AvatarPanel {
         val byType = properties.associateBy { it.property_type }
 
-        val attackValue = byType[FightProperty.FIGHT_PROP_ATTACK]?.let { parseProperty(it) }
+        // ⚠️ 优先取"当前值"口径(2001),回退到基础口径(5) —— 见上方注释
+        val attackValue = (byType[FightProperty.FIGHT_PROP_CUR_ATTACK]
+            ?: byType[FightProperty.FIGHT_PROP_ATTACK])?.let { parseProperty(it) }
         val critRateValue = byType[FightProperty.FIGHT_PROP_CRITICAL]?.let { parseProperty(it) }
         val critDamageValue = byType[FightProperty.FIGHT_PROP_CRITICAL_HURT]?.let { parseProperty(it) }
         val masteryValue = byType[FightProperty.FIGHT_PROP_ELEMENT_MASTERY]?.let { parseProperty(it) }

@@ -41,8 +41,9 @@ import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.FightProper
 * 3. **不做时序模拟**:只算"一轮循环伤害";DPS 需要用户输入循环耗时,
 *    本 VM 提供 [rotationSeconds] 但**不给默认值**,由 UI 提示用户填写。
 * 4. **剧变反应与不可用成员记名跳过**:结果原样暴露给 UI 展示。
-* 5. **不臆测面板格式**:[panelFormatVerified] 恒为 false,
-*    UI 据此显示"面板数据格式未经真机验证"的风险提示(诚实边界)。
+* 5. **面板口径已用真实响应验证**(2026-09-23):属性取 `selected_properties` 的
+*    **2000 系列**(当前生命/攻击/防御),技能等级用 `skill_id ↔ 元数据 Id` 匹配。
+*    ⚠️ 这两处原先都猜错了,导致 1.8.20 **全员被判为未参与计算**(见 PanelAdapter 注释)。
 * */
 class DpsCalculatorScreenViewModel : ViewModel() {
 
@@ -70,18 +71,19 @@ class DpsCalculatorScreenViewModel : ViewModel() {
     var rotationSeconds by mutableStateOf(0.0)
         private set
 
-    /**
-     * 错误/提示反馈。
-     *
-     * ⚠️ 这里**不自造 message 状态**,而是直接用项目既有的通知机制
-     * (`String.errorNotify()` / `warnNotify()`,全项目 ViewModel 中已有 105 处同样用法;
-     *  其内部走 `launchSafeIO`,线程安全,且 `NotifyGroup` 由 `PaimonsNotebookTheme` 自动包裹)。
+    /*
+     * 提示反馈一律用项目既有的 `String.errorNotify()` / `warnNotify()`
+     * (ViewModel 中已有 105 处同样用法;内部走 `launchSafeIO` 线程安全,
+     *  `NotifyGroup` 由 `PaimonsNotebookTheme` 自动包裹)。
      *
      * 教训:我最初写了一个 `message` 状态 + `consumeMessage()`,但 **UI 从未消费它**
      * ⇒ "队伍最多 4 人""请先选择角色"等提示会**静默消失**,用户不知道为什么点了没反应。
      * 这正是本项目记录过的失败模式("功能静默消失且一直未被发现")。
+     *
+     * ⚠️ 2026-09-23:原先还有一个 `panelFormatVerified = false` 标志用于控制
+     * "面板格式未验证"的风险提示。现面板口径**已用真实响应验证**(见 PanelAdapter 注释),
+     * 该标志已失去意义并删除 —— 留着会误导后人以为仍未验证。
      */
-    val panelFormatVerified: Boolean = false
 
     init {
         // 与既有页面(PlayerCharacterScreenViewModel)同一套模式:
@@ -201,7 +203,8 @@ class DpsCalculatorScreenViewModel : ViewModel() {
             val members = buildMembers()
             result = TeamDamageCalculator.calculate(
                 members = members,
-                attackerLevel = AVATAR_LEVEL,
+                // 回退值:仅当某成员取不到真实等级时才会用到(见 TeamMember.level)
+                attackerLevel = FALLBACK_AVATAR_LEVEL,
                 defenderLevel = DEFENDER_LEVEL,
                 resistance = DEFAULT_RESISTANCE
             )
@@ -239,15 +242,29 @@ class DpsCalculatorScreenViewModel : ViewModel() {
             name = character.name,
             element = element,
             panel = panel,
-            actions = actions
+            actions = actions,
+            // ⚠️ 用接口返回的**真实等级**(实测有值且因人而异),不再一律假定 90
+            level = detail.base.level
         )
     }
 
     /**
      * 依据**真实**技能等级构造出伤动作。
      *
-     * ⚠️ 技能等级来自 `detail.skills`(按 skill_type 区分普攻/战技/爆发),
-     * 取不到就返回空 —— **不猜等级**(猜等于编造)。
+     * ⚠️⚠️ **2026-09-23 用真实响应修正(原来的实现根本取不到等级)**:
+     *
+     * 我原先假设 `skill_type` 是 `1=普攻 / 2=战技 / 3=爆发`。**实测三个角色全部推翻**:
+     * - `skill_type == 1` **同时包含普攻、战技、爆发三条**(如琴:西风剑术/风压剑/蒲公英之风)
+     * - `skill_type == 2` 是**固有天赋(被动)**,不参与伤害(如琴:顺风而行/听凭风引/引领之风)
+     * - `skill_type == 3` 只在部分角色出现(菲谢尔 3151),琴/阿罗夏甚至没有
+     * ⇒ 按 type 猜必然错。
+     *
+     * **正确做法(照搬胡桃 `SummaryAvatarFactory.cs`)**:
+     * 用 `skills[].skill_id` 与元数据的 **`Id`** 字段匹配(实测 3/3 角色 100% 命中:
+     * 如琴 `10031/10033/10034` ↔ 元数据 `Skills[].Id` 与 `EnergySkill.Id`)。
+     * ⚠️ 匹配的是 **`Id` 而非 `GroupId`** —— 实测 `skill_id ∩ GroupId` 恒为空集。
+     *
+     * 取不到等级就**跳过该动作**,不猜(猜等于编造)。
      */
     private fun buildActions(
         avatar: AvatarData?,
@@ -258,36 +275,36 @@ class DpsCalculatorScreenViewModel : ViewModel() {
         val depot = avatar.skillDepot
         val result = mutableListOf<MemberAction>()
 
-        // skill_type: 1=普攻 2=战技(元素战技) 3=爆发(按米游社口径)
-        val normalLevel = detail.skills.firstOrNull { it.skill_type == SKILL_TYPE_NORMAL }?.level
-        val skillLevel = detail.skills.firstOrNull { it.skill_type == SKILL_TYPE_SKILL }?.level
-        val burstLevel = detail.skills.firstOrNull { it.skill_type == SKILL_TYPE_BURST }?.level
+        // skill_id → level(接口口径),用于按元数据 Id 取真实等级
+        val levelBySkillId: Map<Int, Int> = detail.skills.associate { it.skill_id to it.level }
 
-        // 普攻:取第 1 项倍率(一段伤害)
-        normalLevel?.let { lv ->
-            val na = depot.Skills.firstOrNull()
-            if (na != null) {
-                SkillScalingParser.multiplierAt(na.Proud, lv, 0)?.let { m ->
-                    result += MemberAction(label = "${na.Name} · 一段伤害", multiplier = m, count = 1)
+        // 元数据侧:普攻/战技在 Skills 里,爆发是 EnergySkill
+        // ⚠️ 用 Id 匹配(不是 GroupId)
+        val normalSkill = depot.Skills.getOrNull(0)
+        val elementalSkill = depot.Skills.getOrNull(1)
+        val burstSkill = depot.EnergySkill
+
+        normalSkill?.let { sk ->
+            levelBySkillId[sk.Id]?.let { lv ->
+                SkillScalingParser.multiplierAt(sk.Proud, lv, 0)?.let { m ->
+                    result += MemberAction(label = "${sk.Name} · 一段伤害", multiplier = m, count = 1)
                 }
             }
         }
 
-        // 元素战技:通常是 Skills 里的第 2 项
-        skillLevel?.let { lv ->
-            val skill = depot.Skills.getOrNull(1)
-            if (skill != null) {
-                SkillScalingParser.multiplierAt(skill.Proud, lv, 0)?.let { m ->
-                    result += MemberAction(label = "${skill.Name} · 技能伤害", multiplier = m, count = 1)
+        elementalSkill?.let { sk ->
+            levelBySkillId[sk.Id]?.let { lv ->
+                SkillScalingParser.multiplierAt(sk.Proud, lv, 0)?.let { m ->
+                    result += MemberAction(label = "${sk.Name} · 技能伤害", multiplier = m, count = 1)
                 }
             }
         }
 
-        // 元素爆发
-        burstLevel?.let { lv ->
-            val burst = depot.EnergySkill
-            SkillScalingParser.multiplierAt(burst.Proud, lv, 0)?.let { m ->
-                result += MemberAction(label = "${burst.Name} · 技能伤害", multiplier = m, count = 1)
+        burstSkill.let { sk ->
+            levelBySkillId[sk.Id]?.let { lv ->
+                SkillScalingParser.multiplierAt(sk.Proud, lv, 0)?.let { m ->
+                    result += MemberAction(label = "${sk.Name} · 技能伤害", multiplier = m, count = 1)
+                }
             }
         }
 
@@ -309,18 +326,18 @@ class DpsCalculatorScreenViewModel : ViewModel() {
     companion object {
         const val MAX_TEAM_SIZE = 4
 
-        /** 角色等级:面板里没有该字段,按满级 90 假定(⚠️ 属假定,已在 UI 标注) */
-        const val AVATAR_LEVEL = 90
+        /**
+         * 角色等级回退值。
+         *
+         * ⚠️ 仅在**取不到**接口真实等级时才用。实测 `base.level` 是**有值的**
+         * (菲谢尔 29、琴 20、阿罗夏 20) ⇒ 正常路径都走真实等级,不再"一律假定 90"。
+         */
+        const val FALLBACK_AVATAR_LEVEL = 90
 
-        /** 目标等级假定 90 */
+        /** 目标等级:接口不提供,只能假定 90(已在 UI 标注) */
         const val DEFENDER_LEVEL = 90
 
-        /** 目标抗性假定 10%(常见值) */
+        /** 目标抗性假定 10%(常见值,已在 UI 标注) */
         const val DEFAULT_RESISTANCE = 0.1
-
-        /** 米游社 skill_type 口径 */
-        private const val SKILL_TYPE_NORMAL = 1
-        private const val SKILL_TYPE_SKILL = 2
-        private const val SKILL_TYPE_BURST = 3
     }
 }

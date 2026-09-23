@@ -44,8 +44,9 @@ import com.lianyi.paimonsnotebook.ui.theme.PaimonsNotebookTheme
 *
 * ⚠️ 三条必须保留的"诚实边界"(不是待办,是设计要求):
 *
-* 1. **风险提示必须显示**:面板字符串格式未经真机验证(`panelFormatVerified == false`),
-*    用户必须能看到这一点,而不是拿到一个看起来很确定的错数。
+* 1. **风险提示必须显示**:列出所有"估算/假定/不支持"项(目标等级、抗性、
+*    不含附着与 ICD、剧变反应不支持)。⚠️ 面板属性口径已于 2026-09-23
+*    用真实响应验证,故文案不再声称"面板格式未验证"。
 * 2. **不显示"每秒伤害"除非用户填了循环耗时**:本机元数据没有攻速/帧数,
 *    自动换算等于编造。未填时只显示"每循环伤害"。
 * 3. **被跳过的剧变反应与不可用成员必须列出**:否则用户会以为这些伤害被算进去了。
@@ -174,29 +175,31 @@ class DpsCalculatorScreen : BaseActivity() {
 
     /*
     * ⚠️ 风险提示 —— 用户已确认要显示。
-    * 这不是"待办",而是本功能的**诚实边界**:
-    * character/detail 的面板字符串格式未在真机验证过。
+    * 这不是"待办",而是本功能的**诚实边界**。
+    *
+    * ⚠️ 2026-09-23 更新文案:面板属性口径**已用真实响应验证**(`type=2001` 当前攻击力等),
+    *    故不再声称"面板格式未验证";角色等级也改为取接口**真实等级**(不再一律 90)。
+    *    仍属估算的部分(目标等级/抗性假定、不含附着/ICD 等)照旧如实列出。
     * */
     @Composable
     private fun RiskNotice() {
-        if (!viewModel.panelFormatVerified) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp)
-                    .radius(6.dp)
-                    .background(CardBackGroundColor)
-                    .padding(10.dp)
-            ) {
-                PrimaryText(text = "⚠️ 结果为估算值,请阅读以下说明", textSize = 14.sp)
-                InfoText(
-                    modifier = Modifier.padding(top = 4.dp),
-                    text = "1. 面板数据取自米游社接口,其字符串格式尚未经真机验证;\n" +
-                            "2. 角色等级按 90、目标等级 90、抗性 10% 假定;\n" +
-                            "3. 不含元素附着、ICD、减抗、无视防御;\n" +
-                            "4. 剧变反应(超载/感电/绽放/激化等)不支持,会在结果中列出而未计入;"
-                )
-            }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp)
+                .radius(6.dp)
+                .background(CardBackGroundColor)
+                .padding(10.dp)
+        ) {
+            PrimaryText(text = "⚠️ 结果为估算值,请阅读以下说明", textSize = 14.sp)
+            InfoText(
+                modifier = Modifier.padding(top = 4.dp),
+                text = "1. 攻击力/暴击率等取自米游社接口(角色等级用其真实等级);\n" +
+                        "2. 目标等级按 90、抗性按 10% 假定,不可调整;\n" +
+                        "3. 不含元素附着、ICD、减抗、无视防御;\n" +
+                        "4. 剧变反应(超载/感电/绽放/激化等)不支持,会在结果中列出而未计入;\n" +
+                        "5. 出伤动作只取各技能第 1 项倍率各 1 次,不代表最优手法;"
+            )
         }
     }
 
