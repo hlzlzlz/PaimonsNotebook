@@ -16,7 +16,7 @@ import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
 import com.lianyi.paimonsnotebook.common.util.damage.AvatarPanel
 import com.lianyi.paimonsnotebook.common.util.damage.MemberAction
 import com.lianyi.paimonsnotebook.common.util.damage.PanelAdapter
-import com.lianyi.paimonsnotebook.common.util.damage.SkillScalingParser
+import com.lianyi.paimonsnotebook.common.util.damage.SkillSlotResolver
 import com.lianyi.paimonsnotebook.common.util.damage.TeamDamageCalculator
 import com.lianyi.paimonsnotebook.common.util.damage.TeamDamageResult
 import com.lianyi.paimonsnotebook.common.util.damage.TeamMember
@@ -200,6 +200,9 @@ class DpsCalculatorScreenViewModel : ViewModel() {
                 }
             }
 
+            // ⚠️ 每次计算前清空上一次的"未能参与计算"记录,避免残留误导用户
+            lastSkippedSkills = emptyList()
+
             val members = buildMembers()
             result = TeamDamageCalculator.calculate(
                 members = members,
@@ -217,9 +220,7 @@ class DpsCalculatorScreenViewModel : ViewModel() {
      * ⚠️ 这里体现了几处**刻意的克制**:
      *   - 技能等级取 `character/detail` 返回的 `skills[].level`(**真实数据**),
      *     不猜、不给默认值;取不到时该动作不参与计算。
-     *   - 每个成员的出伤动作取"元素战技 + 元素爆发"的**第 1 项倍率**各 1 次,
-     *     这是最保守的"最低限度循环",**不代表最优手法**。
-     *     用户可调技能次数是后续增强项,当前版本先不做(避免编造手法)。
+     *   - 出伤动作的槽位判别与倍率项选择**交给 [SkillSlotResolver]**(纯逻辑层,可单测)。
      *   - 增伤取该角色元素对应的 ADD_HURT,取不到按 0(由 PanelAdapter 记录缺失)。
      */
     private fun buildMembers(): List<TeamMember> = teamCharacterIds.mapNotNull { id ->
@@ -234,7 +235,6 @@ class DpsCalculatorScreenViewModel : ViewModel() {
             bonusPropertyTypes = setOfNotNull(elementAddHurtProperty(element))
         )
 
-        // 取普攻/战技/爆发三组里**有倍率的前两项**,各 1 次
         val actions = buildActions(avatar, detail)
 
         TeamMember(
@@ -251,20 +251,29 @@ class DpsCalculatorScreenViewModel : ViewModel() {
     /**
      * 依据**真实**技能等级构造出伤动作。
      *
-     * ⚠️⚠️ **2026-09-23 用真实响应修正(原来的实现根本取不到等级)**:
+     * ⚠️⚠️ **2026-09-23 第二次修正(第一次只修了等级映射,槽位仍是错的)**:
      *
-     * 我原先假设 `skill_type` 是 `1=普攻 / 2=战技 / 3=爆发`。**实测三个角色全部推翻**:
-     * - `skill_type == 1` **同时包含普攻、战技、爆发三条**(如琴:西风剑术/风压剑/蒲公英之风)
-     * - `skill_type == 2` 是**固有天赋(被动)**,不参与伤害(如琴:顺风而行/听凭风引/引领之风)
-     * - `skill_type == 3` 只在部分角色出现(菲谢尔 3151),琴/阿罗夏甚至没有
-     * ⇒ 按 type 猜必然错。
+     * 本函数原先把"槽位判别 + 倍率取值"写死在两行里,有两处**静默算错**
+     * (详见 `memory/dps-calculator.md` §12 与 `SkillSlotResolver` 文件头):
      *
-     * **正确做法(照搬胡桃 `SummaryAvatarFactory.cs`)**:
-     * 用 `skills[].skill_id` 与元数据的 **`Id`** 字段匹配(实测 3/3 角色 100% 命中:
-     * 如琴 `10031/10033/10034` ↔ 元数据 `Skills[].Id` 与 `EnergySkill.Id`)。
-     * ⚠️ 匹配的是 **`Id` 而非 `GroupId`** —— 实测 `skill_id ∩ GroupId` 恒为空集。
+     * 1. **槽位靠下标猜**:假定 `Skills[0]`=普攻、`Skills[1]`=战技。实测**不成立** ——
+     *    欧洛伦/茜特菈莉的 `Skills[0]` 是参数全空的伪技能「特殊跳跃」,
+     *    导致**普攻静默丢失、战技取成普攻、真战技从未被读**(26/118 角色受影响)。
+     *    ⇒ 现改为 `SkillSlotResolver.calculableSkills()`(胡桃同款:滤掉
+     *      `Proud.Parameters.size <= 1`,实测 118/118 过滤后恰好 2 个)。
      *
-     * 取不到等级就**跳过该动作**,不猜(猜等于编造)。
+     * 2. **倍率硬取参数下标 0**:`Descriptions` 里混着治疗量/护盾/持续时间/元素能量
+     *    等非伤害项,且 `{paramN}` 是 1-based 不连续 ⇒ 下标 0 ≠ param1。
+     *    实测米卡 Q 取到 `施放治疗量`=1172.0355、凝光 E 取到 `继承生命`=**-0.499**。
+     *    ⇒ 现改为 `SkillSlotResolver.resolve()`,按 `{paramN}` 正确取值并保守筛选。
+     *
+     * 3. **筛不出伤害项的技能记名跳过**(如芭芭拉/魈/荒泷一斗等 8 个只有治疗或增益的爆发),
+     *    而不是退回 index 0 编出一个数 —— 也不静默消失。
+     *
+     * 原先按 `skill_type` 猜等级的错法也已修正(实测 `skill_type==1` 同时含普攻/战技/爆发,
+     * `==2` 是被动)。正确做法照搬胡桃 `SummaryAvatarFactory.cs`:
+     * 用 `skills[].skill_id` 匹配元数据的 **`Id`** 字段 —— ⚠️ 是 `Id` 不是 `GroupId`
+     * (实测 `skill_id ∩ GroupId` 恒为空集)。
      */
     private fun buildActions(
         avatar: AvatarData?,
@@ -272,44 +281,41 @@ class DpsCalculatorScreenViewModel : ViewModel() {
     ): List<MemberAction> {
         if (avatar == null) return emptyList()
 
-        val depot = avatar.skillDepot
-        val result = mutableListOf<MemberAction>()
-
         // skill_id → level(接口口径),用于按元数据 Id 取真实等级
         val levelBySkillId: Map<Int, Int> = detail.skills.associate { it.skill_id to it.level }
 
-        // 元数据侧:普攻/战技在 Skills 里,爆发是 EnergySkill
-        // ⚠️ 用 Id 匹配(不是 GroupId)
-        val normalSkill = depot.Skills.getOrNull(0)
-        val elementalSkill = depot.Skills.getOrNull(1)
-        val burstSkill = depot.EnergySkill
+        val resolution = SkillSlotResolver.resolve(
+            depot = avatar.skillDepot,
+            levelBySkillId = levelBySkillId
+        )
 
-        normalSkill?.let { sk ->
-            levelBySkillId[sk.Id]?.let { lv ->
-                SkillScalingParser.multiplierAt(sk.Proud, lv, 0)?.let { m ->
-                    result += MemberAction(label = "${sk.Name} · 一段伤害", multiplier = m, count = 1)
-                }
+        // ⚠️ 把"哪些技能没能参与计算"如实记录到 UI(不静默丢弃)。
+        //    与 skippedMembers / skippedReactions 同一原则。
+        if (resolution.skipped.isNotEmpty()) {
+            lastSkippedSkills = resolution.skipped.map {
+                "${it.slot.displayName}「${it.skillName}」:${it.reason}"
             }
         }
 
-        elementalSkill?.let { sk ->
-            levelBySkillId[sk.Id]?.let { lv ->
-                SkillScalingParser.multiplierAt(sk.Proud, lv, 0)?.let { m ->
-                    result += MemberAction(label = "${sk.Name} · 技能伤害", multiplier = m, count = 1)
-                }
-            }
+        // ⚠️ 标签用**元数据原文**(picked.label),不再自造 "· 技能伤害" ——
+        //    自造标签会让"取错项"在 UI 上完全看不出来(这是原实现的缺陷之一)。
+        return resolution.actions.map { a ->
+            // ⚠️ 用 skillName + label 组成可读标签;槽位前缀便于用户对照
+            MemberAction(
+                label = "${a.slot.displayName}「${a.skillName}」${a.label}",
+                multiplier = a.multiplier,
+                count = 1
+            )
         }
-
-        burstSkill.let { sk ->
-            levelBySkillId[sk.Id]?.let { lv ->
-                SkillScalingParser.multiplierAt(sk.Proud, lv, 0)?.let { m ->
-                    result += MemberAction(label = "${sk.Name} · 技能伤害", multiplier = m, count = 1)
-                }
-            }
-        }
-
-        return result
     }
+
+    /**
+     * 最近一次计算里"没能参与计算"的技能(供 UI 诚实标注)。
+     *
+     * ⚠️ 每次 [calculate] 前会被清空,避免上一次的残留误导用户。
+     */
+    var lastSkippedSkills by mutableStateOf<List<String>>(emptyList())
+        private set
 
     /** 元素 → 对应增伤属性类型 */
     private fun elementAddHurtProperty(element: Int): Int? = when (element) {

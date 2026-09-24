@@ -196,9 +196,10 @@ class DpsCalculatorScreen : BaseActivity() {
                 modifier = Modifier.padding(top = 4.dp),
                 text = "1. 攻击力/暴击率等取自米游社接口(角色等级用其真实等级);\n" +
                         "2. 目标等级按 90、抗性按 10% 假定,不可调整;\n" +
-                        "3. 不含元素附着、ICD、减抗、无视防御;\n" +
+                        "3. 不含元素附着、ICD、减抗、无视防御,增幅反应按 1.0 计;\n" +
                         "4. 剧变反应(超载/感电/绽放/激化等)不支持,会在结果中列出而未计入;\n" +
-                        "5. 出伤动作只取各技能第 1 项倍率各 1 次,不代表最优手法;"
+                        "5. 出伤动作取普攻/战技/爆发各 1 次(技能名与倍率项名称均按元数据原文列出),\n" +
+                        "   多段技能只算 1 段,故数值偏保守,不代表最优手法;"
             )
         }
     }
@@ -308,6 +309,27 @@ class DpsCalculatorScreen : BaseActivity() {
             ResultCard {
                 InfoText(text = "以下成员因面板数据缺失(缺攻击力或暴击率)未参与计算:")
                 result.skippedMembers.forEach {
+                    InfoText(modifier = Modifier.padding(top = 3.dp), text = "· $it")
+                }
+            }
+        }
+
+        /*
+        * ⚠️ 未能参与计算的**技能**必须列出(2026-09-23 新增)。
+        *
+        * 原先这类技能是**静默消失**的 —— 例如欧洛伦/茜特菈莉的普攻
+        * (元数据里 Skills[0] 是参数全空的伪技能「特殊跳跃」)会被直接丢掉,
+        * 用户看到"算了 2 个技能"却以为是 3 个,却不知道为什么。
+        * 这与既有的 skippedMembers / skippedReactions 同一原则:**不静默丢弃**。
+        * */
+        if (viewModel.lastSkippedSkills.isNotEmpty()) {
+            SectionTitle("未参与计算的技能")
+            ResultCard {
+                InfoText(
+                    text = "以下技能未能算入(原因逐条列出)。" +
+                            "本工具不猜数据,取不到就如实跳过而不是编一个数:"
+                )
+                viewModel.lastSkippedSkills.forEach {
                     InfoText(modifier = Modifier.padding(top = 3.dp), text = "· $it")
                 }
             }
