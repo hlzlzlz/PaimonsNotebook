@@ -97,6 +97,26 @@ internal fun CultivateProjectPanel(
                         }
                     }
 
+                    /*
+                    * 从米游社同步角色等级与天赋(移植胡桃 b994258da)
+                    *
+                    * ⚠️ 只用图标、不配文字:本行已有 2 个操作图标,360dp 下
+                    *    加文字会溢出(见「屏幕宽度的硬性约束」)。用与账号页
+                    *    "刷新 Cookie" 同一个 ic_arrow_sync_circle,语义一致。
+                    * */
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_arrow_sync_circle),
+                        contentDescription = "从米游社同步角色等级与天赋",
+                        modifier = Modifier
+                            .padding(2.dp)
+                            .radius(3.dp)
+                            .size(32.dp)
+                            .clickable(enabled = !viewModel.isSyncing) {
+                                viewModel.syncAvatarLevelsFromHoyolab()
+                            }
+                            .padding(4.dp)
+                    )
+
                     Icon(
                         painter = painterResource(id = R.drawable.ic_navigation),
                         contentDescription = null,

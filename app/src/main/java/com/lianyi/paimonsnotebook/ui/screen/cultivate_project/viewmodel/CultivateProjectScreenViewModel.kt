@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.util.fastMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lianyi.paimonsnotebook.common.data.hoyolab.user.UserAndUid
 import com.lianyi.paimonsnotebook.common.data.popup.IconTitleInformationPopupWindowData
 import com.lianyi.paimonsnotebook.common.data.popup.PopupWindowPositionProvider
 import com.lianyi.paimonsnotebook.common.database.PaimonsNotebookDatabase
@@ -15,13 +16,21 @@ import com.lianyi.paimonsnotebook.common.database.cultivate.data.CultivateEntity
 import com.lianyi.paimonsnotebook.common.database.cultivate.entity.CultivateEntity
 import com.lianyi.paimonsnotebook.common.database.cultivate.entity.CultivateItemMaterials
 import com.lianyi.paimonsnotebook.common.database.cultivate.entity.CultivateItems
+import com.lianyi.paimonsnotebook.common.database.user.util.AccountHelper
 import com.lianyi.paimonsnotebook.common.extension.scope.launchIO
+import com.lianyi.paimonsnotebook.common.util.cultivation.CultivateMaterialWriter
+import com.lianyi.paimonsnotebook.common.util.cultivation.CultivateSyncPlanner
 import com.lianyi.paimonsnotebook.common.util.cultivation.ResinStatisticsCalculator
 import com.lianyi.paimonsnotebook.common.extension.scope.withContextMain
+import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
+import com.lianyi.paimonsnotebook.common.extension.string.notify
 import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
 import com.lianyi.paimonsnotebook.common.util.data_store.PreferenceKeys
 import com.lianyi.paimonsnotebook.common.util.data_store.dataStoreValues
 import com.lianyi.paimonsnotebook.common.util.enums.LoadingState
+import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.event.calculate.BatchCalculatePromotionDetail
+import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.event.calculate.CalculateClient
+import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.GameRecordClient
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.avatar.AvatarData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.AvatarService
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.MaterialService
@@ -78,6 +87,11 @@ class CultivateProjectScreenViewModel : ViewModel() {
     private val cultivateItemsDao = PaimonsNotebookDatabase.database.cultivateItemsDao
     private val cultivateItemMaterialsDao =
         PaimonsNotebookDatabase.database.cultivateItemMaterialsDao
+
+    //同步功能用:角色详情/列表 + batch_compute + 写入器
+    private val gameRecordClient by lazy { GameRecordClient() }
+    private val calculateClient by lazy { CalculateClient() }
+    private val cultivateMaterialWriter by lazy { CultivateMaterialWriter() }
 
     /*
     * 材料总览分组
@@ -245,6 +259,219 @@ class CultivateProjectScreenViewModel : ViewModel() {
 
     fun onSelectTabBar(index: Int) {
         currentPageIndex = index
+    }
+
+    /*
+    * ══════════════════════════════════════════════════════════════
+    * 从米游社同步角色等级与天赋(移植胡桃 b994258da)
+    * ══════════════════════════════════════════════════════════════
+    *
+    * 语义:**只更新"当前等级"这一半,不动用户设定的目标等级**。
+    *   - 目标等级 = 计划里已设的 toLevel
+    *   - 当前等级 = 接口真实等级
+    *   - 重算材料 = 用(新当前, 旧目标)重走 batch_compute 并落库
+    *
+    * ⚠️ 三处"不静默"的处置(与项目既有 skippedMembers 同一原则):
+    *   1. 未登录 / 未选角色 -> 明确提示并中止
+    *   2. 单个角色同步失败 -> 记名进 skipped,继续处理其它角色
+    *   3. 全部失败 -> 明确告知,不留"什么都没发生"的假象
+    * */
+    var isSyncing by mutableStateOf(false)
+        private set
+
+    fun syncAvatarLevelsFromHoyolab() {
+        if (isSyncing) return
+
+        val projectId = currentSelectedProjectId
+        if (projectId == -1) {
+            "你还没有设置选中的养成计划".warnNotify()
+            return
+        }
+
+        viewModelScope.launchIO {
+            withContextMain { isSyncing = true }
+
+            try {
+                doSync(projectId)
+            } catch (e: Exception) {
+                // ⚠️ 必须捕获:本项目协程未捕获异常会静默杀进程
+                "同步失败:${e.message ?: "未知错误"}".errorNotify()
+            } finally {
+                withContextMain { isSyncing = false }
+            }
+        }
+    }
+
+    private suspend fun doSync(projectId: Int) {
+        val user = AccountHelper.selectedUserFlow.value
+        if (user == null) {
+            "请先登录米游社账号".warnNotify()
+            return
+        }
+
+        val role = user.getSelectedGameRole()
+        if (role == null) {
+            "请先选择游戏角色".warnNotify()
+            return
+        }
+
+        val userAndUid = UserAndUid(user.userEntity, role.getPlayerUid())
+
+        //当前计划里已配置的角色实体(只有这些才需要同步)
+        val entityItems = cultivateEntityMapList.toMap()
+        if (entityItems.isEmpty()) {
+            "当前养成计划里还没有养成项".warnNotify()
+            return
+        }
+
+        /*
+        * 先拉角色列表 -> 取全部角色 id。
+        * 这里刻意拉"全部自有角色"而不是只拉计划里的:接口按 id 列表查询,
+        * 一次拿全比逐个查省请求;且计划里的角色必然在自有角色里。
+        * */
+        val listRes = gameRecordClient.getCharacterList(userAndUid)
+        val characterList = listRes.data?.list
+        if (characterList.isNullOrEmpty()) {
+            "未能获取角色列表,无法同步".errorNotify()
+            return
+        }
+
+        //只同步"计划里的角色",避免多余请求
+        val plannedIds = entityItems.keys
+            .filter { it.type == CultivateEntityType.Avatar }
+            .map { it.itemId }
+            .toSet()
+
+        val idsToFetch = characterList.map { it.id }.filter { it in plannedIds }
+        if (idsToFetch.isEmpty()) {
+            "当前计划里的角色均未在游戏角色列表中找到".warnNotify()
+            return
+        }
+
+        /*
+        * 拉详情。⚠️ 显式判空:`ResultData.data` 声明非空但运行时可为 null
+        * (解析异常时 getAsJsonNative 返回 null,Gson 用 Unsafe 分配不执行
+        *  Kotlin 非空校验)。
+        * */
+        val detailRes = gameRecordClient.getCharacterDetail(userAndUid, idsToFetch)
+        val details = detailRes.data?.list
+        if (details.isNullOrEmpty()) {
+            "未能获取角色详情(可能触发了风控,请稍后重试)".errorNotify()
+            return
+        }
+
+        val detailsByAvatarId = details.associateBy { it.base.id }
+
+        val planResult = CultivateSyncPlanner.plan(
+            entityItems = entityItems,
+            avatarList = avatarList,
+            detailsByAvatarId = detailsByAvatarId
+        )
+
+        if (planResult.candidates.isEmpty()) {
+            //把第一个跳过原因带给用户,否则"什么都没发生"无法排查
+            val reason = planResult.skipped.firstOrNull()?.reason
+            if (reason.isNullOrBlank()) {
+                "没有可同步的角色".warnNotify()
+            } else {
+                "没有可同步的角色:$reason".warnNotify()
+            }
+            return
+        }
+
+        var updated = 0
+        val failed = mutableListOf<String>()
+
+        for (candidate in planResult.candidates) {
+            try {
+                recomputeAndWrite(candidate, projectId)
+                updated++
+            } catch (e: Exception) {
+                //单个角色失败不影响其它角色
+                failed += (candidate.avatar.name)
+            }
+        }
+
+        val skippedCount = planResult.skipped.size + failed.size
+
+        if (updated == 0) {
+            //把"为什么一个都没成功"的具体原因带给用户,否则无法排查
+            val detail = failed.firstOrNull()?.let { "$it 材料计算失败" }
+                ?: planResult.skipped.firstOrNull()?.reason
+                ?: "没有可用的角色"
+
+            "同步失败:$detail".errorNotify()
+            return
+        }
+
+        val message = buildString {
+            append("已更新 $updated 个角色")
+            if (skippedCount > 0) append(",跳过 $skippedCount 个")
+        }
+        message.notify()
+
+        //刷新界面数据
+        withMutexLockUpdateData()
+    }
+
+    /*
+    * 用"新的当前等级 + 原有的目标等级"重走一次 batch_compute,再落库
+    *
+    * ⚠️ 必须重走服务端计算:PN 本地没有胡桃那套 OfflineCalculator,
+    *    材料数量只能由 batch_compute 给出。
+    * */
+    private suspend fun recomputeAndWrite(
+        candidate: CultivateSyncPlanner.SyncCandidate,
+        projectId: Int
+    ) {
+        val info = candidate.syncInfo
+
+        val user = AccountHelper.selectedUserFlow.value ?: return
+        //上面 doSync 已确认 role 非空,这里再取一次(值可能被用户切走)
+        val role = user.getSelectedGameRole() ?: return
+
+        val promotionDetail = BatchCalculatePromotionDetail(
+            items = listOf(
+                BatchCalculatePromotionDetail.Item(
+                    avatar_id = info.avatarId,
+                    avatar_level_current = info.avatarLevelCurrent,
+                    avatar_level_target = info.avatarLevelTarget,
+                    element_attr_id = candidate.avatar.fetterInfo.elementType,
+                    skill_list = info.skills.map {
+                        BatchCalculatePromotionDetail.Skill(
+                            //⚠️ 必须是养成计划口径的 GroupId(由 CultivateSyncResolver 换算)
+                            id = it.groupId,
+                            level_current = it.levelCurrent,
+                            level_target = it.levelTarget
+                        )
+                    }
+                )
+            ),
+            region = role.region,
+            uid = role.game_uid
+        )
+
+        val res = calculateClient.getCalculateBatchCompute(user, promotionDetail)
+        if (!res.success) {
+            error(res.message.ifBlank { "计算接口返回失败" })
+        }
+
+        /*
+        * ⚠️ `res.data` 声明为非空,但**运行时可为 null**:解析异常时
+        *    `getAsJsonNative` 返回 null,而 Gson 用 Unsafe 分配实例、
+        *    不执行 Kotlin 非空校验(项目既有处置见 DpsCalculatorScreenViewModel:186)。
+        *
+        *    这里不直接传 `res.data` —— 否则在真机偶发解析失败时会走到
+        *    CultivateMaterialWriter 里对 `result.items` 的解引用而 NPE。
+        *    `throwIfNull` 只做一次判断,保持"单个角色失败不影响其它角色"的语义。
+        * */
+        val data = res.data ?: error("计算接口返回数据为空")
+
+        cultivateMaterialWriter.writeAvatar(
+            result = data,
+            promotionDetail = promotionDetail,
+            projectId = projectId
+        ) ?: error("写入数据失败")
     }
 
     fun goOptionScreen() {
