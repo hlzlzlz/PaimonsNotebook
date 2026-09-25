@@ -58,7 +58,7 @@ internal fun ItemInformationContentLayout(
             )
         }
 
-        if (enabledItemShadow) {
+        if (enabledItemShadow && imgUrl.isNotBlank()) {
             NetworkImageForMetadata(
                 url = imgUrl,
                 modifier = Modifier
@@ -71,14 +71,25 @@ internal fun ItemInformationContentLayout(
             )
         }
 
-        NetworkImageForMetadata(
-            url = imgUrl,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(imageHeight)
-                .zIndex(0f),
-            contentScale = itemImageContentScale,
-        )
+        /*
+        * ⚠️ imgUrl 为空时必须**跳过**加载,不能直接交给 Coil。
+        *
+        * 怪物与圣遗物元数据里没有背景立绘(只有图标),合并后的资料库会传空串。
+        * 若照旧调用,AsyncImage 会失败并走到 NetworkImage 的 onError,
+        * 而 ImageErrorLogger 会在本次运行首次失败时弹一个"图片加载失败"通知
+        * (见 ImageErrorLogger.log)—— 那会让用户每次打开怪物/圣遗物标签都收到
+        * 一个与自己无关的错误提示。空串代表"本来就没有这张图",不是错误。
+        * */
+        if (imgUrl.isNotBlank()) {
+            NetworkImageForMetadata(
+                url = imgUrl,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(imageHeight)
+                    .zIndex(0f),
+                contentScale = itemImageContentScale,
+            )
+        }
 
         content.invoke(this)
     }

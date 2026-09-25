@@ -26,7 +26,11 @@ class MonsterScreen : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             PaimonsNotebookTheme(this, lightStatusBar = false) {
-                ItemScreenLoadingState(loadingState = viewModel.loadingState) {
+                ItemScreenLoadingState(
+                    loadingState = viewModel.loadingState,
+                    errorText = viewModel.errorMessage.ifBlank { "缺少怪物元数据" },
+                    emptyText = "没有可显示的怪物资料"
+                ) {
                     MonsterWikiContent(viewModel = viewModel)
                 }
             }

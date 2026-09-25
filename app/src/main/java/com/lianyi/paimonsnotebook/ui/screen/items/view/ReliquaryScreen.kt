@@ -26,7 +26,11 @@ class ReliquaryScreen : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             PaimonsNotebookTheme(this, lightStatusBar = false) {
-                ItemScreenLoadingState(loadingState = viewModel.loadingState) {
+                ItemScreenLoadingState(
+                    loadingState = viewModel.loadingState,
+                    errorText = viewModel.errorMessage.ifBlank { "缺少圣遗物元数据" },
+                    emptyText = "没有可显示的圣遗物资料"
+                ) {
                     ReliquaryWikiContent(viewModel = viewModel)
                 }
             }

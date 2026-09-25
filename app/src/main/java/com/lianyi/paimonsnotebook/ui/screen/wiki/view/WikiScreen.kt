@@ -26,6 +26,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.lianyi.paimonsnotebook.common.components.spacer.StatusBarPaddingSpacer
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
+import com.lianyi.paimonsnotebook.ui.screen.items.components.state.ItemScreenLoadingState
 import com.lianyi.paimonsnotebook.ui.screen.items.viewmodel.MonsterScreenViewModel
 import com.lianyi.paimonsnotebook.ui.screen.items.viewmodel.screen.AvatarScreenViewModel
 import com.lianyi.paimonsnotebook.ui.screen.items.viewmodel.screen.ReliquaryScreenViewModel
@@ -108,26 +109,51 @@ class WikiScreen : BaseActivity() {
                         onSelect = { currentSection = it }
                     )
 
+                    /*
+                    * ⚠️ 每个类别都要各自包一层 ItemScreenLoadingState。
+                    *
+                    * 四个内容组件内部都有 `currentItem ?: return`,若元数据缺失
+                    * (loadingState = Error)或列表为空,它会**什么都不画** ——
+                    * 那正是 1.8.23 修过的"失败/空态变成纯白屏"同类问题。
+                    * 各 ViewModel 的 loadingState 是独立的,所以状态也必须按
+                    * 类别分别处理,不能在外层统一包一个。
+                    * */
                     when (currentSection) {
-                        0 -> AvatarWikiContent(
-                            viewModel = avatarViewModel,
-                            statusBarPaddingEnabled = false
-                        )
+                        0 -> ItemScreenLoadingState(loadingState = avatarViewModel.loadingState) {
+                            AvatarWikiContent(
+                                viewModel = avatarViewModel,
+                                statusBarPaddingEnabled = false
+                            )
+                        }
 
-                        1 -> WeaponWikiContent(
-                            viewModel = weaponViewModel,
-                            statusBarPaddingEnabled = false
-                        )
+                        1 -> ItemScreenLoadingState(loadingState = weaponViewModel.loadingState) {
+                            WeaponWikiContent(
+                                viewModel = weaponViewModel,
+                                statusBarPaddingEnabled = false
+                            )
+                        }
 
-                        2 -> MonsterWikiContent(
-                            viewModel = monsterViewModel,
-                            statusBarPaddingEnabled = false
-                        )
+                        2 -> ItemScreenLoadingState(
+                            loadingState = monsterViewModel.loadingState,
+                            errorText = monsterViewModel.errorMessage.ifBlank { "缺少怪物元数据" },
+                            emptyText = "没有可显示的怪物资料"
+                        ) {
+                            MonsterWikiContent(
+                                viewModel = monsterViewModel,
+                                statusBarPaddingEnabled = false
+                            )
+                        }
 
-                        else -> ReliquaryWikiContent(
-                            viewModel = reliquaryViewModel,
-                            statusBarPaddingEnabled = false
-                        )
+                        else -> ItemScreenLoadingState(
+                            loadingState = reliquaryViewModel.loadingState,
+                            errorText = reliquaryViewModel.errorMessage.ifBlank { "缺少圣遗物元数据" },
+                            emptyText = "没有可显示的圣遗物资料"
+                        ) {
+                            ReliquaryWikiContent(
+                                viewModel = reliquaryViewModel,
+                                statusBarPaddingEnabled = false
+                            )
+                        }
                     }
                 }
             }
