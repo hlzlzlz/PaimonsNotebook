@@ -11,11 +11,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lianyi.paimonsnotebook.R
+import com.lianyi.paimonsnotebook.common.components.widget.TextButton
 
-
+/*
+* 错误占位
+*
+* onRetry:传入后会在文案下方渲染"重试"按钮。
+*
+* ⚠️ 这个参数存在的意义:本应用此前**全项目没有任何面向用户的重试入口** ——
+*    加载失败只弹一个3秒toast,页面随即停在错误态,用户除了杀掉App重进
+*    别无他法。凡是有明确"重新拉取"动作的页面都应传入 onRetry。
+* */
 @Composable
 fun ErrorPlaceholder(
     text: String = "出错了...",
+    onRetry: (() -> Unit)? = null,
     content: @Composable () -> Unit = {}
 ) {
     Column(
@@ -37,6 +47,18 @@ fun ErrorPlaceholder(
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold
         )
+
+        if (onRetry != null) {
+            Spacer(modifier = Modifier.height(20.dp))
+
+            TextButton(
+                text = "重试",
+                onClick = onRetry,
+                modifier = Modifier.width(140.dp),
+                textSize = 14.sp,
+                bold = true
+            )
+        }
 
         content.invoke()
     }
