@@ -72,6 +72,9 @@ object SettingsHelper {
                     customDrawerListJson,
                     enableCustomDrawer
                 )
+
+                //侧边栏据此把"需要元数据但当前不可用"的功能置灰而非隐藏
+                HomeHelper.updateMetadataEnabled(configurationData.enableMetadata)
             }
         }
     }

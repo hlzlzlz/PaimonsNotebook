@@ -133,25 +133,25 @@ object HomeHelper {
         ),
         ModalItemData(
             name = "旅行者札记",
-            icon = R.drawable.ic_genshin_game_ggc_book,
+            icon = R.drawable.ic_clipboard_text,
             target = TravelersDiaryScreen::class.java,
             sortIndex = 95
         ),
         ModalItemData(
             name = "战斗记录",
-            icon = R.drawable.ic_genshin_game_spiral_abyss,
+            icon = R.drawable.ic_histogram,
             target = RoleCombatScreen::class.java,
             sortIndex = 92
         ),
         ModalItemData(
             name = "游戏公告",
-            icon = R.drawable.ic_genshin_game_ggc_book,
+            icon = R.drawable.ic_channel,
             target = AnnouncementScreen::class.java,
             sortIndex = 96
         ),
         ModalItemData(
             name = "洞天摹本",
-            icon = R.drawable.ic_genshin_game_ggc_book,
+            icon = R.drawable.ic_page_view,
             target = FurnitureScreen::class.java,
             sortIndex = 97
         ),
@@ -164,9 +164,39 @@ object HomeHelper {
         ),
     )
 
-    //获取显示的侧边栏数据
+    //获取显示的侧边栏数据(按 sortIndex 升序,理由见 getAllModalItemData)
     fun getShowModalItemData(enableMetadata: Boolean) =
         modalItemData.filter { it.requireMetadata == enableMetadata || enableMetadata }
+            .sortedBy { it.sortIndex }
+
+    /*
+    * 某个功能在当前配置下是否可用。
+    *
+    * 需要元数据的功能在未启用元数据时不可用 —— 但**仍然要显示出来**:
+    * 原先侧边栏直接把这类项过滤掉(18 项只剩 7 项),用户既看不到功能、
+    * 也无从知道它们是被"元数据未启用"藏起来的,只会以为应用缺功能。
+    * 现在改为全部展示,不可用的置灰并提示如何启用。
+    * */
+    fun isModalItemEnabled(item: ModalItemData, enableMetadata: Boolean) =
+        !item.requireMetadata || enableMetadata
+
+    /*
+    * 侧边栏要展示的全部功能项(不过滤)。
+    *
+    * 与 getShowModalItemData 的区别:后者会按元数据开关**过滤掉**不可用项,
+    * 目前仍被桌面组件与快捷方式列表使用(那里的语义是"只能挑能用的",
+    * 保持不变);而侧边栏需要完整展示以便用户发现功能。
+    * */
+    /*
+    * 侧边栏要展示的全部功能项(不过滤),按 sortIndex 升序。
+    *
+    * ⚠️ 必须显式排序:此前 sortIndex 声明了却**从未参与排序**,列表直接沿用
+    *    声明顺序,而新功能一律追加在数组末尾 —— 于是"旅行者札记(95)、
+    *    战斗记录(92)、游戏公告(96)、洞天摹本(97)、队伍DPS(98)"这五项
+    *    全部排在"桌面组件(110)"之后,顺序与 sortIndex 所表达的设计意图不符,
+    *    sortIndex 形同死字段。此处统一排序,既修正顺序也让该字段真正生效。
+    * */
+    fun getAllModalItemData() = modalItemData.sortedBy { it.sortIndex }
 
     private val ModalItemsStateFlow = MutableStateFlow<List<ModalItemData>>(listOf())
 
@@ -180,15 +210,33 @@ object HomeHelper {
         enableCustomDrawer: Boolean
     ) {
         if (enableCustomDrawer) {
-            //再次根据元数据启用状态筛选一次列表
+            /*
+            * 自定义侧边栏:按用户配置的显隐与顺序展示,但**不再按元数据过滤**。
+            * 不可用项保留在列表里(置灰展示),否则用户会看到自己配置过的功能
+            * 莫名其妙消失,且无从得知原因。
+            * */
             val list =
                 getCustomDrawerListFromJson(json = customDrawerListJson).filterNot { it.disable }
                     .mapNotNull { modalItemMap[it.targetClass] }
             ModalItemsStateFlow.emit(list)
         } else {
-            val items = getShowModalItemData(enableMetadata)
-            ModalItemsStateFlow.emit(items)
+            ModalItemsStateFlow.emit(getAllModalItemData())
         }
+    }
+
+    /*
+    * 当前元数据是否可用,供侧边栏判断哪些项要置灰。
+    *
+    * 侧边栏渲染需要"完整列表 + 每项是否可用"两份信息,而 modalItemsFlow
+    * 只承载列表,故可用性单独用一个流表达,由 SettingsHelper 在元数据开关
+    * 变化时同步更新。
+    * */
+    private val MetadataEnabledStateFlow = MutableStateFlow(true)
+
+    val metadataEnabledFlow = MetadataEnabledStateFlow.asStateFlow()
+
+    fun updateMetadataEnabled(enableMetadata: Boolean) {
+        MetadataEnabledStateFlow.value = enableMetadata
     }
 
     fun getCustomDrawerListFromJson(json: String) =

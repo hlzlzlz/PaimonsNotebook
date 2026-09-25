@@ -20,10 +20,12 @@ import com.lianyi.paimonsnotebook.R
 import com.lianyi.paimonsnotebook.common.components.spacer.NavigationBarPaddingSpacer
 import com.lianyi.paimonsnotebook.common.data.hoyolab.user.User
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
+import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
 import com.lianyi.paimonsnotebook.ui.screen.account.view.AccountManagerScreen
 import com.lianyi.paimonsnotebook.ui.screen.home.components.card.account.AccountInfoCard
 import com.lianyi.paimonsnotebook.ui.screen.home.components.menu.SideBarMenuList
 import com.lianyi.paimonsnotebook.ui.screen.home.data.ModalItemData
+import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
 import com.lianyi.paimonsnotebook.ui.screen.setting.view.SettingsScreen
 import com.lianyi.paimonsnotebook.ui.theme.Black
 
@@ -31,6 +33,7 @@ import com.lianyi.paimonsnotebook.ui.theme.Black
 fun HomeDrawerContent(
     selectedUser: User?,
     modalItems: List<ModalItemData>,
+    metadataEnabled: Boolean,
     onScanQRCode: () -> Unit,
     goSignWeb: () -> Unit,
     functionNavigate: (Class<out Activity>) -> Unit
@@ -46,8 +49,19 @@ fun HomeDrawerContent(
                 functionNavigate.invoke(AccountManagerScreen::class.java)
             })
 
-            SideBarMenuList(list = modalItems) {
-                functionNavigate.invoke(it.target)
+            SideBarMenuList(
+                list = modalItems,
+                isItemEnabled = { HomeHelper.isModalItemEnabled(it, metadataEnabled) }
+            ) {
+                /*
+                * 需要元数据但未启用时不跳转,而是明确告知原因与恢复方式。
+                * 此前这些功能被直接隐藏,用户无从得知它们的存在。
+                * */
+                if (HomeHelper.isModalItemEnabled(it, metadataEnabled)) {
+                    functionNavigate.invoke(it.target)
+                } else {
+                    "「${it.name}」需要元数据,请在 设置 - 同步元数据 中下载后使用".warnNotify()
+                }
             }
 
             NavigationBarPaddingSpacer()

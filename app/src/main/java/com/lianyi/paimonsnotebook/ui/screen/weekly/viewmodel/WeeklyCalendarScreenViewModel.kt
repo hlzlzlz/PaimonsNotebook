@@ -60,11 +60,17 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
     var errorMessage by mutableStateOf("")
         private set
 
-    //0刷新日历 1养成材料
+    //0素材日历 1养成材料
     var tabIndex by mutableStateOf(0)
         private set
 
-    val tabs = arrayOf("刷新日历", "养成材料")
+    /*
+    * ⚠️ 原为 arrayOf("刷新日历", "养成材料") —— 但 0 号标签页展示的是**一周
+    * 日历内容**(见 WeeklyCalendarScreen 的 when(tabIndex)),"刷新日历"是动作
+    * 描述而非内容名称,容易让用户误以为点它是执行刷新操作。
+    * 按实际内容改为"素材日历"(与侧边栏入口名一致)。
+    * */
+    val tabs = arrayOf("素材日历", "养成材料")
 
     fun onTabIndexChange(index: Int) {
         tabIndex = index

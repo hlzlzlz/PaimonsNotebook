@@ -19,7 +19,6 @@ import com.lianyi.paimonsnotebook.common.util.json.JSON
 import com.lianyi.paimonsnotebook.ui.screen.home.data.HomeCustomDrawerData
 import com.lianyi.paimonsnotebook.ui.screen.home.data.ModalItemData
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
-import com.lianyi.paimonsnotebook.ui.screen.setting.util.SettingsHelper
 
 class HomeDrawerManagerScreenViewModel : ViewModel() {
 
@@ -45,7 +44,13 @@ class HomeDrawerManagerScreenViewModel : ViewModel() {
             }
 
             modalItems.clear()
-            modalItems += HomeHelper.getShowModalItemData(SettingsHelper.configurationFlow.value.enableMetadata)
+            /*
+            * 这里必须用 getAllModalItemData 而非 getShowModalItemData:
+            * 后者会按元数据开关把"需要元数据"的功能过滤掉,导致用户在
+            * 侧边栏管理页里也看不到它们、更无法排序 —— 与侧边栏改为
+            * 置灰展示(而非隐藏)的做法保持一致,这里展示完整列表。
+            * */
+            modalItems += HomeHelper.getAllModalItemData()
         }
     }
 

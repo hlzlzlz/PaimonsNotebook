@@ -96,6 +96,15 @@ class HomeScreenViewModel : ViewModel() {
 
     val modalItems = mutableStateListOf<ModalItemData>()
 
+    /*
+    * 元数据是否已启用。
+    *
+    * 侧边栏据此把"需要元数据但当前不可用"的功能**置灰展示**(而非隐藏),
+    * 点击时提示如何启用。原先这类功能被直接过滤掉,用户会以为应用缺功能。
+    * */
+    var metadataEnabled by mutableStateOf(true)
+        private set
+
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -114,6 +123,13 @@ class HomeScreenViewModel : ViewModel() {
                     withContextMain {
                         modalItems.clear()
                         modalItems += it
+                    }
+                }
+            }
+            launch {
+                HomeHelper.metadataEnabledFlow.collect {
+                    withContextMain {
+                        metadataEnabled = it
                     }
                 }
             }

@@ -72,6 +72,7 @@ class HomeScreen : BaseActivity() {
                         HomeDrawerContent(
                             selectedUser = viewModel.selectedUser,
                             modalItems = viewModel.modalItems,
+                            metadataEnabled = viewModel.metadataEnabled,
                             onScanQRCode = viewModel::onScanQRCode,
                             goSignWeb = viewModel::goSignWeb,
                             functionNavigate = viewModel::functionNavigate

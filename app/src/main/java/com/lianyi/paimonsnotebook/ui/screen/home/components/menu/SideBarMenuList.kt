@@ -10,6 +10,7 @@ import com.lianyi.paimonsnotebook.ui.screen.home.data.ModalItemData
 @Composable
 internal fun SideBarMenuList(
     list: List<ModalItemData>,
+    isItemEnabled: (ModalItemData) -> Boolean = { true },
     block: (ModalItemData) -> Unit,
 ) {
 
@@ -17,7 +18,10 @@ internal fun SideBarMenuList(
         contentPadding = PaddingValues(8.dp),
     ) {
         items(list) { data ->
-            SideBarMenuListItem(data) {
+            SideBarMenuListItem(
+                item = data,
+                enabled = isItemEnabled(data)
+            ) {
                 block.invoke(it)
             }
         }
