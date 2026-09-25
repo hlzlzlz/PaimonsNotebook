@@ -9,10 +9,8 @@ import com.lianyi.paimonsnotebook.R
 import com.lianyi.paimonsnotebook.common.application.PaimonsNotebookApplication
 import com.lianyi.paimonsnotebook.common.util.json.JSON
 import com.lianyi.paimonsnotebook.common.util.parameter.getParameterizedType
-import com.lianyi.paimonsnotebook.ui.screen.abyss.view.AbyssScreen
 import com.lianyi.paimonsnotebook.ui.screen.announcement.view.AnnouncementScreen
-import com.lianyi.paimonsnotebook.ui.screen.role_combat.view.RoleCombatScreen
-import com.lianyi.paimonsnotebook.ui.screen.travelers_diary.view.TravelersDiaryScreen
+import com.lianyi.paimonsnotebook.ui.screen.combat.view.CombatRecordScreen
 import com.lianyi.paimonsnotebook.ui.screen.achievement.view.AchievementScreen
 import com.lianyi.paimonsnotebook.ui.screen.app_widget.view.AppWidgetScreen
 import com.lianyi.paimonsnotebook.ui.screen.cultivate_project.view.CultivateProjectScreen
@@ -112,9 +110,9 @@ object HomeHelper {
             requireMetadata = true
         ),
         ModalItemData(
-            name = "深境螺旋",
-            icon = R.drawable.ic_genshin_game_spiral_abyss,
-            target = AbyssScreen::class.java,
+            name = "战斗记录",
+            icon = R.drawable.ic_histogram,
+            target = CombatRecordScreen::class.java,
             sortIndex = 90,
             requireMetadata = true
         ),
@@ -130,18 +128,6 @@ object HomeHelper {
             icon = R.drawable.ic_appwidget,
             target = AppWidgetScreen::class.java,
             sortIndex = 110
-        ),
-        ModalItemData(
-            name = "旅行者札记",
-            icon = R.drawable.ic_clipboard_text,
-            target = TravelersDiaryScreen::class.java,
-            sortIndex = 95
-        ),
-        ModalItemData(
-            name = "战斗记录",
-            icon = R.drawable.ic_histogram,
-            target = RoleCombatScreen::class.java,
-            sortIndex = 92
         ),
         ModalItemData(
             name = "游戏公告",
