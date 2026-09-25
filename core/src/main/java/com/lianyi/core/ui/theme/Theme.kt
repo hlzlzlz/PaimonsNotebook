@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.Density
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.lianyi.core.ui.components.notify.NotifyGroup
 import com.lianyi.core.ui.components.components.SlideExitBox
 
 private val DarkColorPalette = darkColors(
@@ -99,7 +98,6 @@ fun PaimonsNotebookTheme(
                     fontScale = fontScale
                 )
             ) {
-                NotifyGroup()
                 if (activity != null) {
                     SlideExitBox(activity = activity, content = content)
                 } else {
