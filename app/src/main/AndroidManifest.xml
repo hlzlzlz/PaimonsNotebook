@@ -123,6 +123,9 @@
             android:name=".ui.screen.combat.view.CombatRecordScreen"
             android:theme="@style/Theme.PaimonsNotebook" />
         <activity
+            android:name=".ui.screen.grow.view.GrowScreen"
+            android:theme="@style/Theme.PaimonsNotebook" />
+        <activity
             android:name=".common.view.HoyolabWebActivity"
             android:theme="@style/Theme.PaimonsNotebook" />
         <activity

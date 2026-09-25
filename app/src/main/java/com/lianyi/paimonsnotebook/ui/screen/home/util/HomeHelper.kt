@@ -13,17 +13,16 @@ import com.lianyi.paimonsnotebook.ui.screen.announcement.view.AnnouncementScreen
 import com.lianyi.paimonsnotebook.ui.screen.combat.view.CombatRecordScreen
 import com.lianyi.paimonsnotebook.ui.screen.achievement.view.AchievementScreen
 import com.lianyi.paimonsnotebook.ui.screen.app_widget.view.AppWidgetScreen
-import com.lianyi.paimonsnotebook.ui.screen.cultivate_project.view.CultivateProjectScreen
 import com.lianyi.paimonsnotebook.ui.screen.daily_note.view.DailyNoteScreen
 import com.lianyi.paimonsnotebook.ui.screen.furniture.view.FurnitureScreen
 import com.lianyi.paimonsnotebook.ui.screen.gacha.view.GachaRecordScreen
+import com.lianyi.paimonsnotebook.ui.screen.grow.view.GrowScreen
 import com.lianyi.paimonsnotebook.ui.screen.home.data.HomeCustomDrawerData
 import com.lianyi.paimonsnotebook.ui.screen.home.data.ModalItemData
 import com.lianyi.paimonsnotebook.ui.screen.items.view.AvatarScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.MonsterScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.ReliquaryScreen
 import com.lianyi.paimonsnotebook.ui.screen.items.view.WeaponScreen
-import com.lianyi.paimonsnotebook.ui.screen.weekly.view.WeeklyCalendarScreen
 import com.lianyi.paimonsnotebook.ui.screen.sign_in_status.view.SignInStatusScreen
 import com.lianyi.paimonsnotebook.ui.screen.player_character.view.PlayerCharacterScreen
 import com.lianyi.paimonsnotebook.ui.screen.dps.view.DpsCalculatorScreen
@@ -96,17 +95,10 @@ object HomeHelper {
             requireMetadata = true
         ),
         ModalItemData(
-            name = "养成计划",
-            icon = R.drawable.ic_genshin_game_ggc_book,
-            target = CultivateProjectScreen::class.java,
-            sortIndex = 70,
-            requireMetadata = true
-        ),
-        ModalItemData(
-            name = "素材日历",
+            name = "养成素材",
             icon = R.drawable.ic_genshin_game_material,
-            target = WeeklyCalendarScreen::class.java,
-            sortIndex = 80,
+            target = GrowScreen::class.java,
+            sortIndex = 70,
             requireMetadata = true
         ),
         ModalItemData(
