@@ -181,14 +181,11 @@ object HomeHelper {
         !item.requireMetadata || enableMetadata
 
     /*
-    * 侧边栏要展示的全部功能项(不过滤)。
+    * 侧边栏要展示的全部功能项(不过滤),按 sortIndex 升序。
     *
     * 与 getShowModalItemData 的区别:后者会按元数据开关**过滤掉**不可用项,
     * 目前仍被桌面组件与快捷方式列表使用(那里的语义是"只能挑能用的",
     * 保持不变);而侧边栏需要完整展示以便用户发现功能。
-    * */
-    /*
-    * 侧边栏要展示的全部功能项(不过滤),按 sortIndex 升序。
     *
     * ⚠️ 必须显式排序:此前 sortIndex 声明了却**从未参与排序**,列表直接沿用
     *    声明顺序,而新功能一律追加在数组末尾 —— 于是"旅行者札记(95)、
@@ -203,12 +200,25 @@ object HomeHelper {
     //对外开放的modalItems流
     val modalItemsFlow = ModalItemsStateFlow.asStateFlow()
 
+    /*
+    * 当前元数据是否可用,供侧边栏判断哪些项要置灰。
+    *
+    * 侧边栏渲染需要"完整列表 + 每项是否可用"两份信息,而 modalItemsFlow
+    * 只承载列表,故可用性单独用一个流表达。
+    * */
+    private val MetadataEnabledStateFlow = MutableStateFlow(true)
+
+    val metadataEnabledFlow = MetadataEnabledStateFlow.asStateFlow()
+
     //更新侧边栏流
     suspend fun updateShowModalItemData(
         enableMetadata: Boolean,
         customDrawerListJson: String,
         enableCustomDrawer: Boolean
     ) {
+        //元数据开关与列表在同一处更新,避免两者不同步导致置灰状态错乱
+        MetadataEnabledStateFlow.value = enableMetadata
+
         if (enableCustomDrawer) {
             /*
             * 自定义侧边栏:按用户配置的显隐与顺序展示,但**不再按元数据过滤**。
@@ -222,21 +232,6 @@ object HomeHelper {
         } else {
             ModalItemsStateFlow.emit(getAllModalItemData())
         }
-    }
-
-    /*
-    * 当前元数据是否可用,供侧边栏判断哪些项要置灰。
-    *
-    * 侧边栏渲染需要"完整列表 + 每项是否可用"两份信息,而 modalItemsFlow
-    * 只承载列表,故可用性单独用一个流表达,由 SettingsHelper 在元数据开关
-    * 变化时同步更新。
-    * */
-    private val MetadataEnabledStateFlow = MutableStateFlow(true)
-
-    val metadataEnabledFlow = MetadataEnabledStateFlow.asStateFlow()
-
-    fun updateMetadataEnabled(enableMetadata: Boolean) {
-        MetadataEnabledStateFlow.value = enableMetadata
     }
 
     fun getCustomDrawerListFromJson(json: String) =
