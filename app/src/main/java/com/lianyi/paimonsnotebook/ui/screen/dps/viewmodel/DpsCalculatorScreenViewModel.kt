@@ -74,7 +74,11 @@ class DpsCalculatorScreenViewModel : ViewModel() {
     /*
      * 提示反馈一律用项目既有的 `String.errorNotify()` / `warnNotify()`
      * (ViewModel 中已有 105 处同样用法;内部走 `launchSafeIO` 线程安全,
-     *  `NotifyGroup` 由 `PaimonsNotebookTheme` 自动包裹)。
+     *  由 `PaimonsNotebookTheme` 里的 `PaimonsNotebookNotificationComponents`
+     *  自动包裹渲染)。
+     *
+     * ⚠️ 注意不要与 core 里那套已删除的 `NotifyHelper`/`NotifyGroup` 混淆:
+     *    那是第二套通知系统,零生产者且其宿主主题从未被调用,已于 1.8.23 删除。
      *
      * 教训:我最初写了一个 `message` 状态 + `consumeMessage()`,但 **UI 从未消费它**
      * ⇒ "队伍最多 4 人""请先选择角色"等提示会**静默消失**,用户不知道为什么点了没反应。
