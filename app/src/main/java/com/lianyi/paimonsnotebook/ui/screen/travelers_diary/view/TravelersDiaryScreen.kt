@@ -42,9 +42,14 @@ import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.ui.screen.account.components.dialog.UserGameRolesDialog
 import com.lianyi.paimonsnotebook.ui.screen.travelers_diary.viewmodel.TravelersDiaryScreenViewModel
+import com.lianyi.paimonsnotebook.ui.theme.BackGroundColor
 import com.lianyi.paimonsnotebook.ui.theme.Black
 import com.lianyi.paimonsnotebook.ui.theme.Black_60
+import com.lianyi.paimonsnotebook.ui.theme.CardBackGroundColor
+import com.lianyi.paimonsnotebook.ui.theme.Error
 import com.lianyi.paimonsnotebook.ui.theme.PaimonsNotebookTheme
+import com.lianyi.paimonsnotebook.ui.theme.Primary
+import com.lianyi.paimonsnotebook.ui.theme.Success
 import com.lianyi.paimonsnotebook.ui.theme.White
 import com.lianyi.core.ui.components.text.InfoText
 import com.lianyi.core.ui.components.text.PrimaryText
@@ -78,9 +83,9 @@ class TravelersDiaryScreen : BaseActivity() {
                             PrimaryText(
                                 text = if (viewModel.showHistory) "收起历史" else "历史",
                                 textSize = 14.sp,
-                                color = if (viewModel.showHistory) PrimaryColor else Black,
+                                color = if (viewModel.showHistory) Primary else Black,
                                 modifier = Modifier
-                                    .radius(2.dp)
+                                    .radius(4.dp)
                                     .clickable { viewModel.toggleHistory() }
                                     .padding(8.dp, 6.dp)
                             )
@@ -126,7 +131,7 @@ class TravelersDiaryScreen : BaseActivity() {
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .background(BackGroundLight)
+                                    .background(BackGroundColor)
                                     /*
                                     * ⚠️ 必须可纵向滚动:展开历史后内容会超过一屏,
                                     *    原先没有滚动修饰符,超出部分会被直接裁掉。
@@ -156,8 +161,8 @@ class TravelersDiaryScreen : BaseActivity() {
                                             bold = selected,
                                             color = if (selected) White else Black,
                                             modifier = Modifier
-                                                .radius(2.dp)
-                                                .background(if (selected) PrimaryColor else White)
+                                                .radius(4.dp)
+                                                .background(if (selected) Primary else CardBackGroundColor)
                                                 .clickable {
                                                     viewModel.onMonthChange(month)
                                                 }
@@ -282,34 +287,31 @@ class TravelersDiaryScreen : BaseActivity() {
     }
 
     private fun buildGroupByPieData(groupBy: List<LedgerData.GroupBy>): List<PieChartData> {
-        val colors = listOf(
-            Color(0xFF4C8BF5),
-            Color(0xFF5AC8FA),
-            Color(0xFFFF9500),
-            Color(0xFFFFCC00),
-            Color(0xFF34C759),
-            Color(0xFFAF52DE),
-            Color(0xFFFF2D55),
-            Color(0xFF8E8E93)
-        )
-
         return groupBy.mapIndexed { index, group ->
             PieChartData(
                 label = group.action,
                 value = group.num,
-                color = colors[index % colors.size]
+                color = PieColors[index % PieColors.size]
             )
         }
     }
 
+    /*
+    * 卡片统一样式(与项目其余页面一致)
+    *
+    * 原先本页自造了一套样式:硬编码 `Color(0xFFF5F5F5)` 背景、`radius(2.dp)` 卡片、
+    * `Color(0xFF4C8BF5)` 主色、`Color(0xFF34C759)`/`Color(0xFFFF2D55)` 涨跌色。
+    * 项目约定是 BackGroundColor 页底 + CardBackGroundColor 卡片 + radius(6.dp),
+    * 涨跌用主题的 Success/Error —— 硬编码色在深色主题下不会跟随。
+    * */
     @Composable
     private fun StatCard(content: @Composable () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp, 4.dp)
-                .radius(2.dp)
-                .background(White)
+                .radius(6.dp)
+                .background(CardBackGroundColor)
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
@@ -346,7 +348,7 @@ class TravelersDiaryScreen : BaseActivity() {
                 Text(
                     text = "环比${if (rate >= 0) "+" else ""}${rate}%",
                     fontSize = 13.sp,
-                    color = if (rate >= 0) Color(0xFF34C759) else Color(0xFFFF2D55)
+                    color = if (rate >= 0) Success else Error
                 )
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -429,8 +431,8 @@ class TravelersDiaryScreen : BaseActivity() {
                                         text = deltaText,
                                         fontSize = 12.sp,
                                         color = when {
-                                            (row.primogemsDelta ?: 0) > 0 -> Color(0xFF34C759)
-                                            (row.primogemsDelta ?: 0) < 0 -> Color(0xFFFF2D55)
+                                            (row.primogemsDelta ?: 0) > 0 -> Success
+                                            (row.primogemsDelta ?: 0) < 0 -> Error
                                             else -> Black_60
                                         }
                                     )
@@ -444,7 +446,24 @@ class TravelersDiaryScreen : BaseActivity() {
     }
 
     companion object {
-        val BackGroundLight = Color(0xFFF5F5F5)
-        val PrimaryColor = Color(0xFF4C8BF5)
+        /*
+        * 原先这里自造了两个常量(BackGroundLight = 0xFFF5F5F5、
+        * PrimaryColor = 0xFF4C8BF5),与主题里的 BackGroundColor / Primary
+        * 语义重复且色值不同 —— 已统一改用主题色,不再保留重复定义。
+        *
+        * ⚠️ 饼图的分段配色仍在本文件内联(buildGroupByPieData 的 colors):
+        *    那组颜色是为"相邻扇区可区分"挑的,与主题语义色不是一回事,
+        *    主题里也没有 8 个可区分的分类色,故有意保留。
+        * */
+        private val PieColors = listOf(
+            Color(0xFF4C8BF5),
+            Color(0xFF5AC8FA),
+            Color(0xFFFF9500),
+            Color(0xFFFFCC00),
+            Color(0xFF34C759),
+            Color(0xFFAF52DE),
+            Color(0xFFFF2D55),
+            Color(0xFF8E8E93)
+        )
     }
 }

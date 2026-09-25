@@ -29,16 +29,28 @@ import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.act_cale
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.event.miyolive.MiyoliveCodeData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.ledger.LedgerData
 import com.lianyi.paimonsnotebook.ui.screen.home.components.card.card_pool.CardPoolCard
-import com.lianyi.paimonsnotebook.ui.screen.home.components.card.activity.ActivityCalendarCard
+import com.lianyi.paimonsnotebook.ui.screen.home.components.CollapsibleSection
+import com.lianyi.paimonsnotebook.ui.screen.home.components.card.activity.HomeActivityList
 import com.lianyi.paimonsnotebook.ui.screen.home.components.card.miyolive.MiyoliveCodeCard
 import com.lianyi.paimonsnotebook.ui.screen.home.components.card.travelers_diary.TravelersDiaryCard
 import com.lianyi.paimonsnotebook.ui.screen.travelers_diary.view.TravelersDiaryScreen
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
 import com.lianyi.paimonsnotebook.ui.screen.home.components.BannerItem
-import com.lianyi.paimonsnotebook.ui.screen.home.components.WebHomeNearActivity
 import com.lianyi.paimonsnotebook.ui.screen.home.components.notice.HomeEventNotice
 import com.lianyi.paimonsnotebook.ui.screen.home.util.PostType
 import com.lianyi.paimonsnotebook.ui.theme.White
+
+/*
+* 活动区块的副标题(收起状态下也能看出有没有内容)
+* */
+private fun activitySubtitle(nearCount: Int, calendarCount: Int): String {
+    val parts = buildList {
+        if (nearCount > 0) add("近期 $nearCount")
+        if (calendarCount > 0) add("日历 $calendarCount")
+    }
+
+    return parts.joinToString(" · ")
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -106,48 +118,45 @@ internal fun HomeContent(
                 )
             }
 
-            //当期卡池
-            item {
-                CardPoolCard(pools = cardPools)
+            //当期卡池(可折叠)
+            if (cardPools.isNotEmpty()) {
+                item {
+                    CollapsibleSection(
+                        title = "当期卡池",
+                        subtitle = "${cardPools.size} 个卡池"
+                    ) {
+                        CardPoolCard(pools = cardPools)
+                    }
+                }
             }
 
-            //活动日历(同一份 act_calendar 响应里的活动列表)
-            item {
-                ActivityCalendarCard(acts = calendarActs)
+            /*
+            * 活动(合并原「活动日历」与「近期活动」)
+            *
+            * 两者都是"当前有什么活动",并列展示既重复又占地方。
+            * 数据层不合并(见 HomeActivityList 的注释):
+            * 近期活动在前(有图可点),活动日历在后(无图,用状态色块占位)。
+            * */
+            if (nearActivity.isNotEmpty() || calendarActs.isNotEmpty()) {
+                item {
+                    CollapsibleSection(
+                        title = "活动",
+                        subtitle = activitySubtitle(nearActivity.size, calendarActs.size)
+                    ) {
+                        HomeActivityList(
+                            nearActivities = nearActivity,
+                            calendarActs = calendarActs,
+                            onClickNearActivity = { url ->
+                                goPostDetail(url, PostType.Notice)
+                            }
+                        )
+                    }
+                }
             }
 
             //前瞻直播兑换码
             item {
                 MiyoliveCodeCard(codes = miyoliveCodes)
-            }
-
-            //近期活动
-            if (nearActivity.isNotEmpty()) {
-                item {
-                    com.lianyi.core.ui.components.text.PrimaryText(
-                        text = "近期活动",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(White)
-                            .padding(8.dp)
-                    )
-                }
-
-                items(nearActivity) {
-                    WebHomeNearActivity(
-                        item = it,
-                        diskCache = DiskCache(
-                            url = it.icon,
-                            name = "近期活动图片",
-                            createFrom = "首页",
-                            description = "${it.title},${it.abstract}",
-                            type = DiskCacheDataType.Temp,
-                            lastUseFrom = "首页"
-                        )
-                    ) { url ->
-                        goPostDetail(url, PostType.Notice)
-                    }
-                }
             }
 
             //公告列表
