@@ -102,7 +102,21 @@ class HomeDrawerManagerScreenViewModel : ViewModel() {
                 it.toCustomDrawerData()
             }
         } else {
+            /*
+            * ⚠️ 必须迁移旧类名再展示。
+            *
+            * 1.8.24 合并了侧边栏条目(四个资料页 -> 资料库等),而这里的数据
+            * 来自用户早先保存的配置(以类名持久化)。不迁移的话,
+            * getModelItemByClassName 对旧类名返回 null,列表项会被
+            * `?: return@itemsIndexed` **整行跳过** —— 用户看到管理页少了几行
+            * 却没有任何提示,也无从恢复(他配置过的那几项无法再被排到前面)。
+            *
+            * 迁移后可能出现重复(原来同时启用"角色资料"与"武器资料",
+            * 现在都指向资料库),按类名去重并保留首次出现的位置。
+            * */
             HomeHelper.getCustomDrawerListFromJson(json)
+                .map { it.copy(targetClass = HomeHelper.migrateLegacyDrawerTarget(it.targetClass)) }
+                .distinctBy { it.targetClass }
         }
 
         sortShowModalList()

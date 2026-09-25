@@ -178,15 +178,44 @@ object HomeHelper {
             * 自定义侧边栏:按用户配置的显隐与顺序展示,但**不再按元数据过滤**。
             * 不可用项保留在列表里(置灰展示),否则用户会看到自己配置过的功能
             * 莫名其妙消失,且无从得知原因。
+            *
+            * ⚠️ 必须做旧类名迁移:自定义侧边栏以**类名**持久化用户配置。
+            *    1.8.24 把 6 个功能合并掉了(角色/武器/怪物/圣遗物资料 ->
+            *    资料库;养成计划+素材日历 -> 养成素材;深境螺旋+战斗记录 ->
+            *    战斗记录),老配置里存的还是旧类名。若直接 mapNotNull,
+            *    这些项会被**静默丢弃** —— 用户会发现自定义侧边栏"少了好几个
+            *    功能"却毫无提示,正是本项目反复出现的失效模式。
             * */
-            val list =
-                getCustomDrawerListFromJson(json = customDrawerListJson).filterNot { it.disable }
-                    .mapNotNull { modalItemMap[it.targetClass] }
+            val migrated = getCustomDrawerListFromJson(json = customDrawerListJson)
+                .filterNot { it.disable }
+                .map { it.copy(targetClass = migrateLegacyDrawerTarget(it.targetClass)) }
+
+            /*
+            * 迁移后可能出现重复(用户原来同时启用了"角色资料"和"武器资料",
+            * 现在都指向资料库),去重并按原顺序保留第一次出现的位置。
+            * */
+            val list = migrated
+                .distinctBy { it.targetClass }
+                .mapNotNull { modalItemMap[it.targetClass] }
+
             ModalItemsStateFlow.emit(list)
         } else {
             ModalItemsStateFlow.emit(getAllModalItemData())
         }
     }
+
+    /*
+    * 把 1.8.24 合并前的旧侧边栏类名映射到合并后的入口。
+    *
+    * 实现见 DrawerTargetMigration(抽成纯函数以便单测 —— 这类映射遗漏
+    * 编译期不报错,只能靠用例钉住)。
+    *
+    * 对"侧边栏功能管理"页同样必须调用:那里用 getModelItemByClassName 取
+    * 名称与图标,查不到就 `?: return@itemsIndexed` **整行不渲染** ——
+    * 用户会看到列表里莫名少了几行,却没有任何说明。
+    * */
+    fun migrateLegacyDrawerTarget(className: String): String =
+        DrawerTargetMigration.migrate(className)
 
     fun getCustomDrawerListFromJson(json: String) =
         JSON.parse<List<HomeCustomDrawerData>>(
