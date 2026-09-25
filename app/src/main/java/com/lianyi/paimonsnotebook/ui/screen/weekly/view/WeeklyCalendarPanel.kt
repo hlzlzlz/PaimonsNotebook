@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidthIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
@@ -30,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lianyi.core.ui.components.text.InfoText
@@ -272,11 +274,35 @@ private fun DayCard(day: WeeklyCalendarScreenViewModel.DayInfo) {
 
             Spacer(modifier = Modifier.weight(1f))
 
+            /*
+            * 全开放的两种原因分开展示:
+            *   周日 = 游戏常态;卡池窗口 = 限时。文案不同,否则用户会以为
+            *   "今天怎么突然全开了"。
+            * */
             if (day.isSundayAll) {
                 Text(
                     text = "全部素材本开放",
                     fontSize = 11.sp,
                     color = Color(0xFF2E7D32)
+                )
+            } else if (day.isGachaOpenWindow) {
+                /*
+                * ⚠️ 用 widthIn 限宽而非 weight:同一 Row 里已有一个
+                *    `Spacer(weight(1f))` 在把内容推到右侧,再给这段文字加
+                *    weight 会变成"两者平分剩余空间",标签就贴不到右边缘了。
+                *    限宽 + 单行省略即可保证 360dp 下不溢出。
+                * */
+                Text(
+                    text = if (day.gachaWindowSource.isNullOrBlank()) {
+                        "新品期·全开"
+                    } else {
+                        "新品期·全开(${day.gachaWindowSource})"
+                    },
+                    fontSize = 11.sp,
+                    color = Color(0xFFE65100),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 150.dp)
                 )
             }
         }

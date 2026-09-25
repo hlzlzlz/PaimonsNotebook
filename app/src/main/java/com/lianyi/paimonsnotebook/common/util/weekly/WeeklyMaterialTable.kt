@@ -68,10 +68,20 @@ object WeeklyMaterialTable {
         RotationalGroup(listOf(114081, 114082, 114083, 114084), listOf(Day.WEDNESDAY, Day.SATURDAY)), //终北遗嗣
     )
 
-    //指定服务器星期几对应的分组,周日为全部
-    fun talentGroupsFor(day: Day) =
-        if (day == Day.SUNDAY) talentGroups else talentGroups.filter { day in it.days }
+    /*
+    * 指定服务器星期几对应的分组
+    *
+    * 两种情况下"全部开放":
+    *   1. 周日 —— 游戏本身周日全开
+    *   2. forceAllOpen —— **新角色卡池开启后的 7 天**内游戏解除刷本限制
+    *      (见 GachaMaterialOpenWindow)
+    * 其余情况按星期几过滤。
+    * */
+    fun talentGroupsFor(day: Day, forceAllOpen: Boolean = false) =
+        if (forceAllOpen || day == Day.SUNDAY) talentGroups
+        else talentGroups.filter { day in it.days }
 
-    fun bossGroupsFor(day: Day) =
-        if (day == Day.SUNDAY) bossGroups else bossGroups.filter { day in it.days }
+    fun bossGroupsFor(day: Day, forceAllOpen: Boolean = false) =
+        if (forceAllOpen || day == Day.SUNDAY) bossGroups
+        else bossGroups.filter { day in it.days }
 }

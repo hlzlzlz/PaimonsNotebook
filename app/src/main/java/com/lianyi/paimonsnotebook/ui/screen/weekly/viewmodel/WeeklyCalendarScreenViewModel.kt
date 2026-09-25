@@ -6,17 +6,21 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lianyi.paimonsnotebook.common.util.enums.LoadingState
+import com.lianyi.paimonsnotebook.common.util.weekly.GachaMaterialOpenWindow
 import com.lianyi.paimonsnotebook.common.util.weekly.WeeklyMaterialTable
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.avatar.AvatarData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.AvatarService
+import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.GachaEventService
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.MaterialService
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.WeaponService
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.weapon.WeaponData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 
 /*
 * 素材刷新日历ViewModel
@@ -40,7 +44,14 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
         val isSundayAll: Boolean,
         val talents: List<MaterialGroupInfo>,
         val bosses: List<MaterialGroupInfo>,
-        val birthdays: List<ItemRef>
+        val birthdays: List<ItemRef>,
+        /*
+        * 该日是否因"新角色卡池开启后 7 天"而全素材开放(与周日全开区分开:
+        * 周日是游戏常态,这个是限时窗口,UI 上说明文案不同)。
+        * */
+        val isGachaOpenWindow: Boolean = false,
+        //触发该窗口的卡池名,用于 UI 说明"为何今天全开放";非窗口期为 null
+        val gachaWindowSource: String? = null
     )
 
     var loadingState by mutableStateOf(LoadingState.Loading)
@@ -88,6 +99,17 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
 
     private val materialService by lazy {
         MaterialService { onMetadataMissing() }
+    }
+
+    /*
+    * 卡池排期服务(元数据 GachaEvent.json)
+    *
+    * ⚠️ 它的 onMissingFile **不**置 loadingState=Error —— 这个文件缺失只影响
+    *    "新品期全素材开放"这一项增强,主体日历(按周几)仍然可用。
+    *    若跟着置 Error,会让整个素材日历在缺这个文件时变成错误页,属于**放大故障面**。
+    * */
+    private val gachaEventService by lazy {
+        GachaEventService { }
     }
 
     private fun onMetadataMissing() {
@@ -138,10 +160,16 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
     }
 
     //服务器时区的当前日期
-    private fun serverDate(): LocalDate = LocalDate.now(ZoneId.of("GMT+8"))
+    private fun serverDate(): LocalDate = LocalDate.now(ZoneId.of(SERVER_TIME_ZONE_ID))
 
     //服务器时区判断今天星期几,java.time的DAY_OF_WEEK: 1=周一..7=周日
     private fun serverDayOfWeek(): Int = serverDate().dayOfWeek.value
+
+    companion object {
+        //国服统一东八区。日期与卡池窗口都必须用同一时区,否则跨零点会算出不同"今天"
+        private const val SERVER_TIME_ZONE_ID = "GMT+8"
+        private val SERVER_ZONE_OFFSET: ZoneOffset = ZoneOffset.ofHours(8)
+    }
 
     private fun buildDays(): List<DayInfo> {
         val avatars = avatarService.avatarList
@@ -149,10 +177,43 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
         val now = serverDate()
         val today = now.dayOfWeek.value
 
+        /*
+        * 读卡池排期(元数据 GachaEvent.json),用于判断"新品期全素材开放"。
+        *
+        * ⚠️ 元数据缺失时 events 为空 ⇒ GachaMaterialOpenWindow 返回 false ⇒
+        *    退化成"只按周几"的原有行为。**不能**因为读不到排期就把整周判成全开。
+        * */
+        val events = gachaEventService.eventList
+
         //记录本次构建依据的日期,供refreshToday判断是否需要跨天重建
         builtDate = now.toString()
 
         return WeeklyMaterialTable.Day.entries.mapIndexed { index, day ->
+            /*
+            * 该天对应的**真实日期**(而非"每个星期几")。
+            *
+            * ⚠️ 卡池窗口是按日期算的,必须逐天用真实日期判定 —— 周一到周日
+            *    对应的日期是 now 所在周的周一..周日,不能拿 now 去代表整周。
+            *    ISO 周以周一为首,故周日会归到本周(周一起算的第 7 格)。
+            * */
+            val dateOfCell = now.with(DayOfWeek.MONDAY).plusDays(index.toLong())
+
+            val inGachaWindow = GachaMaterialOpenWindow.isDateInOpenWindow(
+                events = events,
+                date = dateOfCell,
+                zoneOffset = SERVER_ZONE_OFFSET
+            )
+
+            val gachaWindowSource = if (inGachaWindow) {
+                GachaMaterialOpenWindow.findActiveWindowSource(
+                    events = events,
+                    date = dateOfCell,
+                    zoneOffset = SERVER_ZONE_OFFSET
+                )?.Name
+            } else {
+                null
+            }
+
             val groupsToInfo = fun(group: WeeklyMaterialTable.RotationalGroup): MaterialGroupInfo {
                 val material = materialService.getMaterialById(group.topId)
 
@@ -181,9 +242,14 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
                 label = dayNames[index],
                 isToday = today == index + 1,
                 isSundayAll = day == WeeklyMaterialTable.Day.SUNDAY,
-                talents = WeeklyMaterialTable.talentGroupsFor(day).map(groupsToInfo),
-                bosses = WeeklyMaterialTable.bossGroupsFor(day).map(groupsToInfo),
-                birthdays = birthdays
+                //新品期强制全开
+                talents = WeeklyMaterialTable.talentGroupsFor(day, forceAllOpen = inGachaWindow)
+                    .map(groupsToInfo),
+                bosses = WeeklyMaterialTable.bossGroupsFor(day, forceAllOpen = inGachaWindow)
+                    .map(groupsToInfo),
+                birthdays = birthdays,
+                isGachaOpenWindow = inGachaWindow,
+                gachaWindowSource = gachaWindowSource
             )
         }
     }
