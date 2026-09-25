@@ -32,6 +32,7 @@ import com.lianyi.paimonsnotebook.common.web.hoyolab.bbs.NearActivityData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.act_calendar.ActCalendarData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.game_record.act_calendar.ActCalendarHelper
 import com.lianyi.paimonsnotebook.ui.theme.Gray_97
+import com.lianyi.paimonsnotebook.ui.theme.Gray_F5
 import com.lianyi.paimonsnotebook.ui.theme.Primary_4
 import com.lianyi.paimonsnotebook.ui.theme.White
 
@@ -79,10 +80,11 @@ private fun NearActivityRow(
     Box(
         Modifier
             .fillMaxWidth()
+            .background(White)
             .padding(8.dp, 3.dp)
             .radius(4.dp)
             .clickable { onClick(item.url) }
-            .background(White)
+            .background(Gray_F5)
     ) {
         Row(
             modifier = Modifier
@@ -149,15 +151,19 @@ private fun NearActivityRow(
 
 /*
 * 活动日历行(无图,故用状态色块代替图片位,与近期活动行的视觉节奏保持一致)
+*
+* ⚠️ 外层 White + 内层 Gray_F5 的两层背景是照搬原 WebHomeNearActivity 的做法
+*    (白底再叠浅灰卡片),本次保留以维持首页原有的观感,不与合并前产生视觉断层。
 * */
 @Composable
 private fun CalendarActRow(act: ActCalendarData.Act) {
     Box(
         Modifier
             .fillMaxWidth()
+            .background(White)
             .padding(8.dp, 3.dp)
             .radius(4.dp)
-            .background(White)
+            .background(Gray_F5)
     ) {
         Row(
             modifier = Modifier.padding(8.dp),
