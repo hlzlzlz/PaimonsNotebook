@@ -50,6 +50,7 @@ import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.util.MetadataH
 import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
 import com.lianyi.paimonsnotebook.ui.screen.home.view.HomeDrawerManagerScreen
 import com.lianyi.paimonsnotebook.ui.screen.resource_manager.view.ResourceManagerScreen
+import com.lianyi.paimonsnotebook.ui.screen.setting.view.StaticResourceBundleScreen
 import com.lianyi.paimonsnotebook.ui.screen.setting.components.dialog.ApplicationUpdateDialog
 import com.lianyi.paimonsnotebook.ui.screen.setting.components.widgets.SettingsOptionSwitch
 import com.lianyi.paimonsnotebook.ui.screen.setting.data.ConfigurationData
@@ -162,6 +163,21 @@ class SettingScreenViewModel : ViewModel() {
     )
 
     val storageSettings = listOf(
+        OptionListData(
+            name = "离线图标包",
+            description = "当前图片源很不稳定(一张图标常需 20 秒以上)。下载对应图标包后," +
+                "该类图标将完全从本地读取,不再受图床速度影响。按需下载,不必全下",
+            onClick = {
+                HomeHelper.goActivity(StaticResourceBundleScreen::class.java)
+            },
+            slot = {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_chevron_right),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        ),
         OptionListData(
             name = "图片缓存管理",
             description = "管理程序在使用过程中加载的各种网络图片",

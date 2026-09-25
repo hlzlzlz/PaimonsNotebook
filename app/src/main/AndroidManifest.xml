@@ -146,6 +146,9 @@
             android:name=".ui.screen.resource_manager.view.ResourceManagerScreen"
             android:theme="@style/Theme.PaimonsNotebook" />
         <activity
+            android:name=".ui.screen.setting.view.StaticResourceBundleScreen"
+            android:theme="@style/Theme.PaimonsNotebook" />
+        <activity
             android:name=".ui.screen.gacha.view.GachaRecordScreen"
             android:theme="@style/Theme.PaimonsNotebook" />
         <activity
