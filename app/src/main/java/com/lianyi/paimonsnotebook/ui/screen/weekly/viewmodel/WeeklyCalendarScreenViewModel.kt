@@ -49,6 +49,17 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
     var days by mutableStateOf<List<DayInfo>>(listOf())
         private set
 
+    /*
+    * 加载失败原因。
+    *
+    * 本页的 Error 来自三处 AvatarService/WeaponService/MaterialService 的
+    * onMissingFile 回调,以及 buildDays() 结果为空 —— 全部等价于**本地缺少
+    * 元数据**。这三个 service 都是 `by lazy`(实例被缓存),单纯重试不会
+    * 重新读文件,故不提供重试按钮,而是明确告诉用户去哪里恢复。
+    * */
+    var errorMessage by mutableStateOf("")
+        private set
+
     //0刷新日历 1养成材料
     var tabIndex by mutableStateOf(0)
         private set
@@ -62,15 +73,20 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
     private val dayNames = arrayOf("周一", "周二", "周三", "周四", "周五", "周六", "周日")
 
     private val avatarService by lazy {
-        AvatarService { loadingState = LoadingState.Error }
+        AvatarService { onMetadataMissing() }
     }
 
     private val weaponService by lazy {
-        WeaponService { loadingState = LoadingState.Error }
+        WeaponService { onMetadataMissing() }
     }
 
     private val materialService by lazy {
-        MaterialService { loadingState = LoadingState.Error }
+        MaterialService { onMetadataMissing() }
+    }
+
+    private fun onMetadataMissing() {
+        loadingState = LoadingState.Error
+        errorMessage = "缺少养成材料元数据,请在「设置 - 同步元数据」中下载后再回来"
     }
 
     init {
@@ -78,7 +94,14 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
             val dayInfos = withContext(Dispatchers.IO) { buildDays() }
 
             days = dayInfos
-            loadingState = if (dayInfos.isEmpty()) LoadingState.Error else LoadingState.Success
+            if (dayInfos.isEmpty()) {
+                loadingState = LoadingState.Error
+                if (errorMessage.isBlank()) {
+                    errorMessage = "缺少养成材料元数据,请在「设置 - 同步元数据」中下载后再回来"
+                }
+            } else {
+                loadingState = LoadingState.Success
+            }
         }
     }
 

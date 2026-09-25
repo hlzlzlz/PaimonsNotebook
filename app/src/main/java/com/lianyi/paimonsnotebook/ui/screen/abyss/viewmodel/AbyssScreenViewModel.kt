@@ -191,6 +191,17 @@ class AbyssScreenViewModel : ViewModel() {
         load(value)
     }
 
+    /*
+    * 重试当前标签页。
+    *
+    * 供 ContentLoadingLayout 的错误占位按钮调用。load() 内部对每个标签页
+    * 都有"已加载则跳过"的守卫(如 `2 -> if (overview != null) return`),
+    * 而失败时对应字段仍为 null,故重试会真正重新发起请求。
+    * */
+    fun retryCurrentPage() {
+        load(currentPageIndex)
+    }
+
     //切换全服数据的本期与上期,清空已加载的比率数据重新加载
     fun togglePeriod() {
         lastPeriod = !lastPeriod

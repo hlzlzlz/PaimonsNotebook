@@ -126,6 +126,7 @@ class AbyssScreen : BaseActivity() {
                             2 -> {
                                 ContentLoadingLayout(
                                     loadingState = viewModel.overviewLoadingState,
+                                    onRetry = viewModel::retryCurrentPage,
                                     successContent = {
                                         HutaoOverviewPage(overview = viewModel.overview)
                                     }
@@ -135,6 +136,7 @@ class AbyssScreen : BaseActivity() {
                             3 -> {
                                 ContentLoadingLayout(
                                     loadingState = viewModel.appearanceRateLoadingState,
+                                    onRetry = viewModel::retryCurrentPage,
                                     successContent = {
                                         HutaoAvatarRatePage(
                                             rates = viewModel.appearanceRate,
@@ -148,6 +150,7 @@ class AbyssScreen : BaseActivity() {
                             4 -> {
                                 ContentLoadingLayout(
                                     loadingState = viewModel.usageRateLoadingState,
+                                    onRetry = viewModel::retryCurrentPage,
                                     successContent = {
                                         HutaoAvatarRatePage(
                                             rates = viewModel.usageRate,
@@ -161,6 +164,7 @@ class AbyssScreen : BaseActivity() {
                             5 -> {
                                 ContentLoadingLayout(
                                     loadingState = viewModel.teamCombinationLoadingState,
+                                    onRetry = viewModel::retryCurrentPage,
                                     successContent = {
                                         HutaoTeamPage(
                                             teams = viewModel.teamCombination,
@@ -173,6 +177,7 @@ class AbyssScreen : BaseActivity() {
                             6 -> {
                                 ContentLoadingLayout(
                                     loadingState = viewModel.holdingRateLoadingState,
+                                    onRetry = viewModel::retryCurrentPage,
                                     successContent = {
                                         HutaoHoldingRatePage(
                                             entries = viewModel.holdingRate,
@@ -185,6 +190,7 @@ class AbyssScreen : BaseActivity() {
                             7 -> {
                                 ContentLoadingLayout(
                                     loadingState = viewModel.avatarCollocationLoadingState,
+                                    onRetry = viewModel::retryCurrentPage,
                                     successContent = {
                                         HutaoAvatarCollocationPage(
                                             collocations = viewModel.avatarCollocation,
@@ -198,6 +204,7 @@ class AbyssScreen : BaseActivity() {
                             8 -> {
                                 ContentLoadingLayout(
                                     loadingState = viewModel.weaponCollocationLoadingState,
+                                    onRetry = viewModel::retryCurrentPage,
                                     successContent = {
                                         HutaoWeaponCollocationPage(
                                             collocations = viewModel.weaponCollocation,
@@ -211,6 +218,7 @@ class AbyssScreen : BaseActivity() {
                             9 -> {
                                 ContentLoadingLayout(
                                     loadingState = viewModel.historyLoadingState,
+                                    onRetry = viewModel::retryCurrentPage,
                                     successContent = {
                                         AbyssHistoryPage(snapshots = viewModel.abyssHistory)
                                     }

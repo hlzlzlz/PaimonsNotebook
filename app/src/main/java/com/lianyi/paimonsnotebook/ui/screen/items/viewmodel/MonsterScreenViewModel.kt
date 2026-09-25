@@ -29,17 +29,30 @@ class MonsterScreenViewModel : ViewModel() {
 
     var searchKeyword by mutableStateOf("")
 
+    /*
+    * 加载失败时的原因文案。
+    *
+    * 本页 Error 只来自 MonsterService 的 onMissingFile 回调 —— 即**本地缺少
+    * 怪物元数据**,与网络无关。而 monsterService 是 `by lazy`(实例被缓存),
+    * 单纯"重试"不会重新读取文件,故此处**不提供重试按钮**,改为明确指出
+    * 该怎么恢复(去设置里同步元数据),避免给用户一个点了没用的按钮。
+    * */
+    var errorMessage by mutableStateOf("")
+        private set
+
     //详情弹窗当前展示的怪物
     var currentMonster by mutableStateOf<MonsterData?>(null)
 
     private val monsterService by lazy {
         MonsterService {
             loadingState = LoadingState.Error
+            errorMessage = "缺少怪物元数据,请在「设置 - 同步元数据」中下载后再回来"
         }
     }
 
     private val materialService by lazy {
         MaterialService {
+            errorMessage = "缺少材料元数据,怪物掉落信息可能不完整"
         }
     }
 

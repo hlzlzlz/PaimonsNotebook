@@ -41,6 +41,7 @@ import com.lianyi.paimonsnotebook.common.components.lazy.ContentSpacerLazyVertic
 import com.lianyi.paimonsnotebook.common.components.layout.column.TabBarColumnLayout
 import com.lianyi.paimonsnotebook.common.components.loading.ContentLoadingLayout
 import com.lianyi.paimonsnotebook.common.components.media.NetworkImage
+import com.lianyi.paimonsnotebook.common.components.placeholder.ErrorPlaceholder
 import com.lianyi.paimonsnotebook.common.components.popup.IconTitleInformationPopupWindow
 import com.lianyi.paimonsnotebook.common.components.widget.RoundedTag
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
@@ -105,7 +106,14 @@ class WeeklyCalendarScreen : BaseActivity() {
 
     @Composable
     private fun WeeklyCalendarContent() {
-        ContentLoadingLayout(loadingState = viewModel.loadingState) {
+        ContentLoadingLayout(
+            loadingState = viewModel.loadingState,
+            errorContent = {
+                ErrorPlaceholder(
+                    text = viewModel.errorMessage.ifBlank { "素材日历加载失败" }
+                )
+            }
+        ) {
             ContentSpacerLazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -122,7 +130,14 @@ class WeeklyCalendarScreen : BaseActivity() {
 
     @Composable
     private fun CultivationMaterialContent() {
-        ContentLoadingLayout(loadingState = materialViewModel.loadingState) {
+        ContentLoadingLayout(
+            loadingState = materialViewModel.loadingState,
+            errorContent = {
+                ErrorPlaceholder(
+                    text = materialViewModel.errorMessage.ifBlank { "养成材料加载失败" }
+                )
+            }
+        ) {
             Crossfade(targetState = materialViewModel.currentPageIndex, label = "") {
                 ContentSpacerLazyVerticalGrid(
                     columns = GridCells.Adaptive(60.dp),

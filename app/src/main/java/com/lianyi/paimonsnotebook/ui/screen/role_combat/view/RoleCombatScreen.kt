@@ -89,6 +89,7 @@ class RoleCombatScreen : BaseActivity() {
                             0 -> {
                                 ContentLoadingLayout(
                                     loadingState = viewModel.roleCombatLoadingState,
+                                    onRetry = viewModel::retryCurrentPage,
                                     successContent = {
                                         RoleCombatPage()
                                     }
@@ -98,6 +99,7 @@ class RoleCombatScreen : BaseActivity() {
                             1 -> {
                                 ContentLoadingLayout(
                                     loadingState = viewModel.hardChallengeLoadingState,
+                                    onRetry = viewModel::retryCurrentPage,
                                     successContent = {
                                         HardChallengePage()
                                     }
@@ -107,6 +109,7 @@ class RoleCombatScreen : BaseActivity() {
                             2 -> {
                                 ContentLoadingLayout(
                                     loadingState = viewModel.statisticsLoadingState,
+                                    onRetry = viewModel::retryCurrentPage,
                                     successContent = {
                                         StatisticsPage()
                                     }

@@ -36,6 +36,7 @@ import com.lianyi.core.ui.components.text.PrimaryText
 import com.lianyi.paimonsnotebook.common.components.lazy.ContentSpacerLazyColumn
 import com.lianyi.paimonsnotebook.common.components.loading.ContentLoadingLayout
 import com.lianyi.paimonsnotebook.common.components.media.NetworkImage
+import com.lianyi.paimonsnotebook.common.components.placeholder.ErrorPlaceholder
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
 import com.lianyi.paimonsnotebook.common.components.widget.InputTextFiled
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
@@ -57,7 +58,14 @@ class MonsterScreen : BaseActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             PaimonsNotebookTheme(this) {
-                ContentLoadingLayout(loadingState = viewModel.loadingState) {
+                ContentLoadingLayout(
+                    loadingState = viewModel.loadingState,
+                    errorContent = {
+                        ErrorPlaceholder(
+                            text = viewModel.errorMessage.ifBlank { "怪物资料加载失败" }
+                        )
+                    }
+                ) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()

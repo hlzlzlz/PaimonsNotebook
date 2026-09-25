@@ -33,6 +33,7 @@ import com.lianyi.paimonsnotebook.common.components.lazy.ContentSpacerLazyColumn
 import com.lianyi.paimonsnotebook.common.components.layout.column.TopSlotColumnLayout
 import com.lianyi.paimonsnotebook.common.components.loading.ContentLoadingLayout
 import com.lianyi.paimonsnotebook.common.components.media.NetworkImage
+import com.lianyi.paimonsnotebook.common.components.placeholder.ErrorPlaceholder
 import com.lianyi.paimonsnotebook.common.components.widget.RoundedTag
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
@@ -59,7 +60,16 @@ class SignInStatusScreen : BaseActivity() {
         setContent {
             PaimonsNotebookTheme(this) {
                 TopSlotColumnLayout {
-                    ContentLoadingLayout(loadingState = viewModel.loadingState) {
+                    ContentLoadingLayout(
+                        loadingState = viewModel.loadingState,
+                        onRetry = viewModel::retry.takeIf { viewModel.errorRetryable },
+                        errorContent = {
+                            ErrorPlaceholder(
+                                text = viewModel.errorMessage.ifBlank { "签到数据获取失败" },
+                                onRetry = viewModel::retry.takeIf { viewModel.errorRetryable }
+                            )
+                        }
+                    ) {
                         ContentSpacerLazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(12.dp, 6.dp),

@@ -108,6 +108,7 @@ class GachaRecordScreen : ComponentActivity() {
                     when (it) {
                         1 -> ContentLoadingLayout(
                             loadingState = viewModel.pityLoadingState,
+                            onRetry = viewModel::retryCurrentPage,
                             successContent = {
                                 GachaPityPage(pities = viewModel.pityList)
                             }
@@ -115,6 +116,7 @@ class GachaRecordScreen : ComponentActivity() {
 
                         2 -> ContentLoadingLayout(
                             loadingState = viewModel.countdownLoadingState,
+                            onRetry = viewModel::retryCurrentPage,
                             successContent = {
                                 GachaCountdownPage(
                                     groups = viewModel.countdownGroups,
@@ -129,6 +131,7 @@ class GachaRecordScreen : ComponentActivity() {
 
                         5 -> ContentLoadingLayout(
                             loadingState = viewModel.beyondLoadingState,
+                            onRetry = viewModel::retryCurrentPage,
                             successContent = {
                                 BeyondGachaPage(groups = viewModel.beyondGroups ?: emptyList())
                             }
@@ -136,6 +139,7 @@ class GachaRecordScreen : ComponentActivity() {
 
                         6 -> ContentLoadingLayout(
                             loadingState = viewModel.historyLoadingState,
+                            onRetry = viewModel::retryCurrentPage,
                             successContent = {
                                 GachaWishAnalysisPage(pools = viewModel.wishHistory)
                             }

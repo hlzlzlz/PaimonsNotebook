@@ -35,6 +35,20 @@ class CultivationMaterialScreenViewModel : ViewModel() {
     var loadingState by mutableStateOf(LoadingState.Loading)
         private set
 
+    /*
+    * 加载失败原因。
+    *
+    * 本页 Error 只源于本地元数据缺失(三个 service 的 onMissingFile),
+    * 而这些 service 是 `by lazy` 缓存的,重试读不到新文件 ⇒ 不提供重试按钮,
+    * 只给出可操作的恢复路径。
+    *
+    * ⚠️ 必须声明在 init{} **之前**:init 中的 setWeekData 会触及这些 service,
+    *    若本属性在其后初始化,onMissingFile 写入的文案会被随后的
+    *    mutableStateOf("") 覆盖掉。
+    * */
+    var errorMessage by mutableStateOf("")
+        private set
+
     private val materialService by lazy {
         MaterialService {
             onMissingFile()
@@ -59,6 +73,7 @@ class CultivationMaterialScreenViewModel : ViewModel() {
 
     private fun onMissingFile() {
         loadingState = LoadingState.Error
+        errorMessage = "缺少养成材料元数据,请在「设置 - 同步元数据」中下载后再回来"
     }
 
     var avatarList by mutableStateOf<List<Pair<List<Material>, List<AvatarData>>>>(listOf())

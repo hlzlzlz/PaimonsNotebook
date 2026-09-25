@@ -36,6 +36,17 @@ class TravelersDiaryScreenViewModel : ViewModel() {
     var currentMonth by mutableIntStateOf(0)
         private set
 
+    /*
+    * 加载失败原因与"重试是否有意义"。
+    * 札记是真实网络请求,网络异常/接口失败重试有意义;
+    * 未登录或需要风控验证时不给重试按钮(前者点了没用,后者由确认弹窗接手)。
+    * */
+    var errorMessage by mutableStateOf("")
+        private set
+
+    var errorRetryable by mutableStateOf(false)
+        private set
+
     private val gameRecordClient = GameRecordClient()
 
     private var currentUser by mutableStateOf<User?>(null)
@@ -134,9 +145,23 @@ class TravelersDiaryScreenViewModel : ViewModel() {
         loadLedger(month)
     }
 
+    /*
+    * 重试当前月份,供 ContentLoadingLayout 的错误占位按钮调用。
+    *
+    * 本页是真实网络请求(札记接口),失败后重试有意义。
+    * 注意不能走 onMonthChange:它带 `month == currentMonth && ledgerData != null`
+    * 的短路,而失败时 ledgerData 为 null 虽能通过,但语义上重试应当无条件重发,
+    * 故直接调用 loadLedger。
+    * */
+    fun retry() {
+        loadLedger(currentMonth)
+    }
+
     private fun loadLedger(month: Int) {
         if (currentUser == null || currentGameRole == null) {
             loadingState = LoadingState.Error
+            errorMessage = "未登录或未选择游戏角色"
+            errorRetryable = false
             return
         }
 
@@ -155,6 +180,8 @@ class TravelersDiaryScreenViewModel : ViewModel() {
             if (result.success) {
                 ledgerData = result.data
                 loadingState = LoadingState.Success
+                errorMessage = ""
+                errorRetryable = false
 
                 //落库快照:服务端只保留近期月份,过期即永久丢失;
                 //每次成功拉取都存一份(首次成功保留,重复拉取跳过)
@@ -173,6 +200,13 @@ class TravelersDiaryScreenViewModel : ViewModel() {
             } else {
                 loadingState = LoadingState.Error
                 showConfirmDialog = result.validate
+                //需要滑块验证的风控场景由确认弹窗接手,不重复给出重试入口
+                errorRetryable = !result.validate
+                errorMessage = if (result.validate) {
+                    "需要完成安全验证后重试"
+                } else {
+                    "获取旅行者札记失败:${result.message}"
+                }
                 if (!result.validate) {
                     "获取旅行者札记失败:${result.message}".errorNotify()
                 }

@@ -307,6 +307,14 @@ class GachaRecordScreenViewModel : ViewModel() {
     }
 
     /*
+    * 重试当前标签页,供 ContentLoadingLayout 的错误占位按钮调用。
+    *
+    * 复用 setSelectedPageIndex:它对需要联网的 1/2/5/6 页各自重新加载,
+    * 其余页(总览/角色/武器)为本地数据无需重试。
+    * */
+    fun retryCurrentPage() = setSelectedPageIndex(currentPageIndex)
+
+    /*
     * 加载千星奇域记录
     *
     * 该页只依赖当前选中的祈愿 uid(与总览同源),不需要额外参数。

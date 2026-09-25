@@ -126,6 +126,16 @@ class RoleCombatScreenViewModel : ViewModel() {
         load(page)
     }
 
+    /*
+    * 重试当前标签页,供 ContentLoadingLayout 的错误占位按钮调用。
+    *
+    * load() 对已加载的页有守卫(`0 -> if (roleCombatData != null) return` 等),
+    * 失败时对应字段仍为 null,故重试会真正重新发起请求。
+    * */
+    fun retryCurrentPage() {
+        load(currentPageIndex)
+    }
+
     private fun load(page: Int) {
         //全服统计页不依赖登录用户
         if (page != 2 && (currentUser == null || currentGameRole == null)) {
