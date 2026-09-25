@@ -153,4 +153,63 @@ class GachaMaterialOpenWindowTest {
 
         assertNull(GachaMaterialOpenWindow.findActiveWindowSource(events, openDay, gmt8))
     }
+
+    /*
+    * 「一周七格」-> 真实日期的映射。
+    *
+    * ⚠️ 这是最容易**静默错位**的地方:格子是"星期几",而卡池窗口按日期算。
+    *    若映射错了(例如把周日算到下周),整周的高亮都会偏 —— UI 上只表现为
+    *    "某个格子颜色不对",极难发现。故单独钉住。
+    * */
+    @Test
+    fun `周三所在周的七格映射到本周一到周日`() {
+        //2026-08-12 是周三
+        val wednesday = LocalDate.of(2026, 8, 12)
+        assertEquals(java.time.DayOfWeek.WEDNESDAY, wednesday.dayOfWeek)
+
+        //index 0..6 -> 8-10(周一) .. 8-16(周日)
+        assertEquals(LocalDate.of(2026, 8, 10), GachaMaterialOpenWindow.dateOfDayCell(wednesday, 0))
+        assertEquals(LocalDate.of(2026, 8, 12), GachaMaterialOpenWindow.dateOfDayCell(wednesday, 2))
+        assertEquals(LocalDate.of(2026, 8, 16), GachaMaterialOpenWindow.dateOfDayCell(wednesday, 6))
+    }
+
+    /*
+    * 周日必须**回退**到本周周一,而不是前进到下周 ——
+    * 这是 ISO 周(周一起算)与"周日为一周之始"两种习惯的交界处,最易写错。
+    * 若实现用 `plusDays` 直接从周日算,index 0 会得到下周一(8-17),整周错位。
+    * */
+    @Test
+    fun `周日所在周的七格仍映射到本周而非下周`() {
+        //2026-08-16 是周日
+        val sunday = LocalDate.of(2026, 8, 16)
+        assertEquals(java.time.DayOfWeek.SUNDAY, sunday.dayOfWeek)
+
+        //index 0 应为本周一 8-10(不是下周 8-17)
+        assertEquals(LocalDate.of(2026, 8, 10), GachaMaterialOpenWindow.dateOfDayCell(sunday, 0))
+        //index 6 应回到它自己
+        assertEquals(LocalDate.of(2026, 8, 16), GachaMaterialOpenWindow.dateOfDayCell(sunday, 6))
+    }
+
+    @Test
+    fun `周一所在周的七格映射正确`() {
+        val monday = LocalDate.of(2026, 8, 10)
+        assertEquals(java.time.DayOfWeek.MONDAY, monday.dayOfWeek)
+
+        assertEquals(monday, GachaMaterialOpenWindow.dateOfDayCell(monday, 0))
+        assertEquals(LocalDate.of(2026, 8, 16), GachaMaterialOpenWindow.dateOfDayCell(monday, 6))
+    }
+
+    /*
+    * 跨月边界:一周可能横跨两个月,映射不能把日期算丢。
+    * */
+    @Test
+    fun `跨月的一周映射仍连续`() {
+        //2026-08-31 是周一,该周跨到 9 月
+        val monday = LocalDate.of(2026, 8, 31)
+        assertEquals(java.time.DayOfWeek.MONDAY, monday.dayOfWeek)
+
+        assertEquals(LocalDate.of(2026, 8, 31), GachaMaterialOpenWindow.dateOfDayCell(monday, 0))
+        assertEquals(LocalDate.of(2026, 9, 1), GachaMaterialOpenWindow.dateOfDayCell(monday, 1))
+        assertEquals(LocalDate.of(2026, 9, 6), GachaMaterialOpenWindow.dateOfDayCell(monday, 6))
+    }
 }

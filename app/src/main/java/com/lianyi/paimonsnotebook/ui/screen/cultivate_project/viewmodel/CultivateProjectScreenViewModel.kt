@@ -382,7 +382,18 @@ class CultivateProjectScreenViewModel : ViewModel() {
         var updated = 0
         val failed = mutableListOf<String>()
 
-        for (candidate in planResult.candidates) {
+        for ((index, candidate) in planResult.candidates.withIndex()) {
+            /*
+            * ⚠️ 每个角色都要发一次 batch_compute,必须限速 ——
+            *    与祈愿拉取同样的事件:服务端对高频访问返回
+            *    `-110 visit too frequently`(见 BeyondGachaLogService.kt:125)。
+            *    沿用项目既有的 **1~2 秒随机间隔**(GachaRecordOptionScreenViewModel:724)。
+            *    首个角色不等待,避免"只同步一个"时也白等 1~2 秒。
+            * */
+            if (index > 0) {
+                delay((1000L..2000L).random())
+            }
+
             try {
                 recomputeAndWrite(candidate, projectId)
                 updated++

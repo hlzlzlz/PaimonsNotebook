@@ -2,6 +2,7 @@ package com.lianyi.paimonsnotebook.common.util.weekly
 
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.gacha_event.GachaEventData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.gacha_event.GachaEventEntry
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -59,6 +60,20 @@ object GachaMaterialOpenWindow {
         date: LocalDate,
         zoneOffset: ZoneOffset = ZoneOffset.ofHours(8)
     ): Boolean = findActiveWindowSource(events, date, zoneOffset) != null
+
+    /*
+    * 把"一周七格"的第 index 格(index 0=周一 .. 6=周日)映射成真实日期
+    *
+    * ⚠️ 抽出来单测的原因:素材日历的格子是"星期几",而卡池窗口是按**日期**
+    *    算的。若这个映射错了(例如把周日算到下一周),**整周的窗口高亮都会
+    *    错位** —— 而这类错误在 UI 上只表现为"某个格子颜色不对",极难发现。
+    *
+    * 语义:`DayOfWeek.MONDAY` 作为 TemporalAdjuster 是"把 DAY_OF_WEEK 设为
+    * 周一",即**取所在 ISO 周的周一**(ISO 周以周一起算)。故对周日会**回退**
+    * 到本周周一,而不是前进到下周。
+    * */
+    fun dateOfDayCell(weekContaining: LocalDate, index: Int): LocalDate =
+        weekContaining.with(DayOfWeek.MONDAY).plusDays(index.toLong())
 
     /*
     * 取"当前生效的窗口来源"卡池名,供 UI 说明"为何今天全开放"。

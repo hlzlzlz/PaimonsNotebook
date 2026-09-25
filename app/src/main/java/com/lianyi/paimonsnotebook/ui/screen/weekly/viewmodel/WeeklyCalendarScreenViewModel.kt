@@ -196,7 +196,7 @@ class WeeklyCalendarScreenViewModel : ViewModel() {
             *    对应的日期是 now 所在周的周一..周日,不能拿 now 去代表整周。
             *    ISO 周以周一为首,故周日会归到本周(周一起算的第 7 格)。
             * */
-            val dateOfCell = now.with(DayOfWeek.MONDAY).plusDays(index.toLong())
+            val dateOfCell = GachaMaterialOpenWindow.dateOfDayCell(now, index)
 
             val inGachaWindow = GachaMaterialOpenWindow.isDateInOpenWindow(
                 events = events,
