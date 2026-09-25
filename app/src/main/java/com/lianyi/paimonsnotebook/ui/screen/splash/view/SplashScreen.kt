@@ -19,6 +19,7 @@ import com.lianyi.paimonsnotebook.ui.screen.home.util.HomeHelper
 import com.lianyi.paimonsnotebook.ui.screen.home.view.HomeDrawerManagerScreen
 import com.lianyi.paimonsnotebook.ui.screen.home.view.HomeScreen
 import com.lianyi.paimonsnotebook.ui.screen.splash.components.EnableMetadataHint
+import com.lianyi.paimonsnotebook.ui.screen.splash.components.MetadataDownloadFailedPanel
 import com.lianyi.paimonsnotebook.ui.screen.splash.viewmodel.SplashScreenViewModel
 import com.lianyi.paimonsnotebook.ui.theme.BackGroundColor
 import com.lianyi.paimonsnotebook.ui.theme.PaimonsNotebookTheme
@@ -93,6 +94,22 @@ class SplashScreen : BaseActivity(false) {
                                 onCountDownEnd = this@SplashScreen::downloadMetadata,
                                 skipDownloadMetadata = this@SplashScreen::skipDownload,
                                 downloadMetadata = this@SplashScreen::downloadMetadata
+                            )
+                        }
+                    }
+
+                    /*
+                    * 下载失败出口。
+                    *
+                    * 必须排在进度与倒计时之后(最后绘制、位于最上层):失败时
+                    * showEnableMetadataHint 已为 false、showLoading 也已复位,
+                    * 若无此面板屏幕上将没有任何可点内容(纯白屏)。
+                    * */
+                    Crossfade(targetState = viewModel.metadataDownloadFailed, label = "") {
+                        if (it) {
+                            MetadataDownloadFailedPanel(
+                                onRetry = this@SplashScreen::downloadMetadata,
+                                onSkip = this@SplashScreen::skipDownload
                             )
                         }
                     }

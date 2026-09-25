@@ -32,6 +32,18 @@ class SplashScreenViewModel : ViewModel() {
     var showEnableMetadataHint by mutableStateOf(false)
         private set
 
+    /*
+    * 元数据下载失败标记。
+    *
+    * 界面必须据此渲染"重试 / 跳过并进入"面板 —— 失败时若只弹 toast,
+    * 此刻 showEnableMetadataHint 已被置 false、showLoading 又由 onFinally
+    * 复位,屏幕上将没有任何可点内容(纯白屏);且重进 App 会因
+    * OnLaunchShowEnableMetadataHint=false 再次自动下载、再次失败
+    * ⇒ 永久白屏循环。
+    * */
+    var metadataDownloadFailed by mutableStateOf(false)
+        private set
+
     var enableMetadata = false
 
     var initialMetadataDownload = false
@@ -85,11 +97,17 @@ class SplashScreenViewModel : ViewModel() {
                 return@launch
             }
 
-            withContextMain { showLoading = true }
+            withContextMain {
+                showLoading = true
+                //重试时先清掉上一次的失败标记,避免面板与进度同时出现
+                metadataDownloadFailed = false
+            }
 
             MetadataHelper.updateMetadata(updateMap = true,
                 onFailed = {
                     "下载元数据时出现了错误".errorNotify()
+                    //失败必须让界面给出可见出口,否则是一片无按钮的白屏
+                    withContextMain { metadataDownloadFailed = true }
                 }, onSuccess = {
                     "元数据下载完毕".notify()
 
