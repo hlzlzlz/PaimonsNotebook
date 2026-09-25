@@ -24,6 +24,7 @@ import com.lianyi.paimonsnotebook.common.extension.string.errorNotify
 import com.lianyi.paimonsnotebook.common.extension.string.notify
 import com.lianyi.paimonsnotebook.common.extension.string.warnNotify
 import com.lianyi.paimonsnotebook.common.util.enums.LoadingState
+import com.lianyi.paimonsnotebook.common.util.cultivation.CultivateMaterialWriter
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.binding.UserGameRoleData
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.event.calculate.BatchCalculatePromotionDetail
 import com.lianyi.paimonsnotebook.common.web.hoyolab.takumi.event.calculate.BatchComputeData
@@ -105,6 +106,14 @@ open class ItemBaseViewModel<T>(private val observeCurrentItemState: Boolean = t
 
     private val calculateClient by lazy {
         CalculateClient()
+    }
+
+    /*
+    * 养成结果写入器(与「从米游社同步」共用同一份写入语义)
+    * 详见 CultivateMaterialWriter 的类注释。
+    * */
+    private val cultivateMaterialWriter by lazy {
+        CultivateMaterialWriter()
     }
 
     open fun init(intent: Intent) {
@@ -296,180 +305,27 @@ open class ItemBaseViewModel<T>(private val observeCurrentItemState: Boolean = t
         }
     }
 
+    /*
+    * 把 batch_compute 的角色结果写入养成计划
+    *
+    * ⚠️ 具体写入逻辑已抽到 `CultivateMaterialWriter` —— 1.8.26 新增的
+    *    「从米游社同步角色等级与天赋」需要**完全相同的写入语义**,若在此内联
+    *    一份、那边再复制一份,两边将来必然漂移。
+    *    本方法只负责"取项目 id"与"成功后的提示"这两件视图层的事。
+    * */
     private suspend fun saveAvatarComputeResult(
         result: BatchComputeData,
         promotionDetail: BatchCalculatePromotionDetail
     ) {
         if (result.items.isEmpty()) return
 
-        /*
-        * TODO 支持一次性添加多名角色
-        * 获取第一个角色id不为空的数据
-        * */
-        val avatarPromotion = promotionDetail.items.takeFirstIf { it.avatar_id != null } ?: return
-        val avatarId = avatarPromotion.avatar_id ?: return
         val projectId = currentSelectedCultivateProjectCache?.projectId ?: return
 
-        val firstResult = result.items.first()
-        /*
-        * 全部材料类型,包含缺少的数量
-        *
-        * cultivateItemId = 负的角色id
-        * */
-        val overallMaterials = result.overall_consume.map {
-            CultivateItemMaterials(
-                itemId = it.id,
-                cultivateItemId = -avatarId,
-                projectId = projectId,
-                count = it.num,
-                lackCount = it.lack_num,
-                /*
-                * 玩家实际持有 = 需要总数 - 缺少数。
-                *
-                * 与胡桃 InventoryService.cs 的算法一致:
-                *   (int)item.Num - item.LackNum
-                *
-                * 服务端只在请求带 uid/region 时才按该账号的真实库存计算
-                * lack_num;has_user_info 为 false 时二者退化为纯计算值,
-                * 相减得 0 —— 此时标记为未知(-1),避免 UI 显示
-                * "持有 0" 这种误导文案。
-                * */
-                ownedCount = if (result.has_user_info) {
-                    (it.num - it.lack_num).coerceAtLeast(0)
-                } else {
-                    CultivateItemMaterials.OWNED_COUNT_UNKNOWN
-                },
-                status = if (it.lack_num > 0) {
-                    0
-                } else {
-                    1
-                }
-            )
-        }
-
-        /*
-        * 角色突破所需材料
-        *
-        * item id = 材料id
-        * cultivateItemId = 角色id
-        * */
-        val avatarMaterials = firstResult.avatar_consume.map {
-            CultivateItemMaterials(
-                itemId = it.id,
-                cultivateItemId = avatarId,
-                projectId = projectId,
-                count = it.num,
-                lackCount = 0,
-                status = 0
-            )
-        }
-
-        /*
-        * 技能突破所需材料
-        *
-        * 约束的id始终为当前角色的元素爆发技能id,如果后续接口返回每个技能的材料则改为每个技能的id
-        * itemId = 材料id
-        * cultivateItemId = 角色技能id
-        * */
-        val avatarSkillMaterials = firstResult.skills_consume.map { skillConsume ->
-            skillConsume.consume_list.map { consume ->
-                CultivateItemMaterials(
-                    itemId = consume.id,
-                    cultivateItemId = skillConsume.skill_info.id.toInt(),
-                    projectId = projectId,
-                    count = consume.num,
-                    lackCount = 0,
-                    status = 0
-                )
-            }
-        }.flatten()
-
-        if (overallMaterials.isEmpty() && avatarMaterials.isEmpty() && avatarSkillMaterials.isEmpty()) {
-            error("当前角色养成配置没有所需的养成材料")
-        }
-
-        /*
-        * 如果已经添加过了,需要更新数据库
-        * 为避免不同等级产生不同数量的材料(lv1跟lv10所需要的材料数量是不同的)
-        * 这里直接把原来的给删了,重新添加
-        * 外键约束会自动删除引用的表的数据
-        * */
-        if (itemAddedToCurrentCultivateProject) {
-            cultivateEntityDao.deleteEntityByItemIdAndProjectId(avatarId, projectId)
-        }
-
-        /*
-        * 创建角色养成计划实体
-        * */
-        val avatarEntity = CultivateEntity(
-            itemId = avatarId,
-            projectId = projectId,
-            type = CultivateEntityType.Avatar,
-            status = 0
-        )
-
-        cultivateEntityDao.insert(avatarEntity)
-
-        /*
-        * 全部材料计算项(存储全部材料的数量与所需个数)
-        * */
-        val overallItems = CultivateItems(
-            itemId = -avatarId,
-            entityItemId = avatarId,
-            projectId = projectId,
-            itemType = CultivateItemType.Overall,
-            fromLevel = 0,
-            toLevel = 0,
-            status = 0
-        )
-
-
-        /*
-        * 角色养成计算项
-        *
-        * item id = 角色id
-        * entity id = 角色id
-        * item type = 角色,区分角色养成计算项与技能养成计算项
-        * */
-        val avatarItem = CultivateItems(
-            itemId = avatarId,
-            entityItemId = avatarId,
-            projectId = projectId,
-            itemType = CultivateItemType.Avatar,
-            fromLevel = avatarPromotion.avatar_level_current ?: 0,
-            toLevel = avatarPromotion.avatar_level_target ?: 0,
-            status = 0
-        )
-
-        /*
-        * 创建角色技能计算项
-        *
-        * item id = 技能id
-        * entity id = 角色id
-        * item type = 技能,区分角色养成计算项与技能养成计算项
-        * */
-        val skillList = avatarPromotion.skill_list ?: listOf()
-        val avatarSkillItems = skillList.map {
-            CultivateItems(
-                itemId = it.id,
-                entityItemId = avatarId,
-                projectId = projectId,
-                itemType = CultivateItemType.Skill,
-                fromLevel = it.level_current,
-                toLevel = it.level_target,
-                status = 0
-            )
-        }
-
-        cultivateItemsDao.insert(overallItems)
-        cultivateItemsDao.insert(avatarItem)
-        cultivateItemsDao.insert(avatarSkillItems)
-
-
-
-        cultivateItemMaterialsDao.insert(overallMaterials)
-        cultivateItemMaterialsDao.insert(avatarMaterials)
-        cultivateItemMaterialsDao.insert(avatarSkillMaterials)
+        val avatarId = cultivateMaterialWriter.writeAvatar(
+            result = result,
+            promotionDetail = promotionDetail,
+            projectId = projectId
+        ) ?: return
 
         onDataAddSuccess("角色", avatarId)
     }
