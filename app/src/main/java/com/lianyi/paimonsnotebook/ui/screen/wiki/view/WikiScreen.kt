@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import com.lianyi.paimonsnotebook.common.components.spacer.StatusBarPaddingSpacer
+import com.lianyi.paimonsnotebook.common.components.widget.SectionSwitcher
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.ui.screen.items.components.state.ItemScreenLoadingState
@@ -157,47 +158,6 @@ class WikiScreen : BaseActivity() {
                     }
                 }
             }
-        }
-    }
-}
-
-/*
-* 类别切换器(两级结构的第一级)
-*
-* 用分段控件样式与下方标签栏区分开,避免两行都是"可点文字"时点错。
-* ⚠️ 四个类别名很短(2~3 字),360dp 下放得下,故用等宽 weight 而非横向滚动。
-* */
-@Composable
-private fun SectionSwitcher(
-    sections: Array<String>,
-    currentIndex: Int,
-    onSelect: (Int) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-            .radius(8.dp)
-            .background(CardBackGroundColor)
-            .padding(3.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp)
-    ) {
-        sections.forEachIndexed { index, name ->
-            val selected = index == currentIndex
-
-            Text(
-                text = name,
-                fontSize = 14.sp,
-                color = if (selected) Black else Black_40,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                modifier = Modifier
-                    .weight(1f)
-                    .radius(6.dp)
-                    .background(if (selected) BackGroundColor else CardBackGroundColor)
-                    .clickable { onSelect(index) }
-                    .padding(vertical = 8.dp),
-                textAlign = TextAlign.Center
-            )
         }
     }
 }

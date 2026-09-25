@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import com.lianyi.paimonsnotebook.common.components.spacer.StatusBarPaddingSpacer
+import com.lianyi.paimonsnotebook.common.components.widget.SectionSwitcher
 import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
 import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
 import com.lianyi.paimonsnotebook.ui.screen.cultivate_project.view.CultivateProjectPanel
@@ -102,46 +103,5 @@ class GrowScreen : BaseActivity() {
         super.onResume()
         //应用可能跨天未重启,回到本页时重算"今天"高亮与生日(纯本地数据,开销可忽略)
         weeklyViewModel.refreshToday()
-    }
-}
-
-/*
-* 板块切换器(两级结构的第一级)
-*
-* 用卡片底色 + 圆角做成分段控件的样子,避免与下方标签栏混淆
-* (两行都是"可点的文字"时很容易点错)。
-* */
-@Composable
-private fun SectionSwitcher(
-    sections: Array<String>,
-    currentIndex: Int,
-    onSelect: (Int) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-            .radius(8.dp)
-            .background(CardBackGroundColor)
-            .padding(3.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp)
-    ) {
-        sections.forEachIndexed { index, name ->
-            val selected = index == currentIndex
-
-            Text(
-                text = name,
-                fontSize = 14.sp,
-                color = if (selected) Black else Black_40,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                modifier = Modifier
-                    .weight(1f)
-                    .radius(6.dp)
-                    .background(if (selected) BackGroundColor else CardBackGroundColor)
-                    .clickable { onSelect(index) }
-                    .padding(vertical = 8.dp),
-                textAlign = TextAlign.Center
-            )
-        }
     }
 }
