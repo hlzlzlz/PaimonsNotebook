@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewModelScope
 import com.lianyi.paimonsnotebook.common.extension.scope.launchIO
+import com.lianyi.paimonsnotebook.common.extension.scope.withContextMain
 import com.lianyi.paimonsnotebook.common.util.enums.LoadingState
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.MaterialService
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.MonsterService
@@ -55,9 +56,21 @@ class MonsterScreenViewModel : ItemBaseViewModel<MonsterData>(observeCurrentItem
     * 与改造前的分组展示不同:统一到列表/筛选架构后,分组标题在筛选结果里
     * 无法保持意义(搜索会把组打散,凭空冒出多个同名组标题),故改为平铺列表,
     * 原来的组名改由卡片副标题(称号)体现。
+    *
+    * ⚠️ 用 `by lazy` 而不是"在 init 的协程里赋值":ItemFilterViewModel 在构造时
+    *    就**按值捕获** items(List 是不可变引用),若先构造筛选器、再在 init 的
+    *    协程里赋值,筛选器会永久持有**空列表** —— 表现为"打开资料库点列表按钮
+    *    后一条都没有"。角色/武器不受影响是因为它们传的是 service 的属性,而
+    *    那些 service 在**构造器内同步**读完文件。这里照同样的模式做:
+    *    service(同步读文件) -> 折叠排序 -> 一次性给出列表。
     * */
-    var monsterList by mutableStateOf<List<MonsterData>>(listOf())
-        private set
+    val monsterList: List<MonsterData> by lazy {
+        monsterService.monsterList
+            //同名变种折叠,保留id最小的一条
+            .associateBy { it.name }
+            .values
+            .sortedBy { it.id }
+    }
 
     val itemFilterViewModel by lazy {
         ItemSearchOptionHelper.getMonsterFilterItemViewModel(monsters = monsterList)
@@ -70,22 +83,36 @@ class MonsterScreenViewModel : ItemBaseViewModel<MonsterData>(observeCurrentItem
 
     init {
         viewModelScope.launchIO {
-            monsterList = monsterService.monsterList
-                //同名变种折叠,保留id最小的一条
-                .associateBy { it.name }
-                .values
-                .sortedBy { it.id }
+            //先触碰 monsterList,让 service 在 IO 线程完成文件读取与解析
+            val list = monsterList
 
-            loadingState = ItemScreenStateResolver.resolve(
-                current = loadingState,
-                hasItem = monsterList.isNotEmpty()
-            )
+            /*
+            * Compose 状态的写入必须在主线程(本项目硬性约束)——
+            * 原实现在 IO 协程里直接写 loadingState/currentItem。
+            * */
+            withContextMain {
+                loadingState = ItemScreenStateResolver.resolve(
+                    current = loadingState,
+                    hasItem = list.isNotEmpty()
+                )
 
-            //默认选中第一个,使信息卡立即可见(与角色/武器的默认选中一致)
-            if (currentItem == null) {
-                monsterList.firstOrNull()?.let { onClickItem(it) }
+                //默认选中第一个,使信息卡立即可见(与角色/武器的默认选中一致)
+                if (currentItem == null) {
+                    list.firstOrNull()?.let { onClickItem(it) }
+                }
             }
         }
+    }
+
+    /*
+    * ⚠️ 必须重写:基类的 toggleFilterContent() 是**空实现**
+    *    (`ItemBaseViewModel:126` 的 `open fun toggleFilterContent() {}`)。
+    *    角色/武器各自重写它来打开"物品列表"抽屉,我最初漏了这一处,
+    *    导致资料库里的怪物页**点列表按钮没反应、列表永远打不开**,
+    *    看起来就像"列表是空的"。
+    * */
+    override fun toggleFilterContent() {
+        itemFilterViewModel.toggleFilterContent()
     }
 
     fun getMaterialById(id: Int): Material = materialService.getMaterialById(id)

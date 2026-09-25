@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewModelScope
 import com.lianyi.paimonsnotebook.common.extension.scope.launchIO
+import com.lianyi.paimonsnotebook.common.extension.scope.withContextMain
 import com.lianyi.paimonsnotebook.common.util.enums.LoadingState
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.common.service.ReliquaryService
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.conveter.RelicIconConverter
@@ -32,9 +33,6 @@ class ReliquaryScreenViewModel : ItemBaseViewModel<ReliquarySetData>(observeCurr
     var errorMessage by mutableStateOf("")
         private set
 
-    var reliquarySetList by mutableStateOf<List<ReliquarySetData>>(listOf())
-        private set
-
     private val reliquaryService by lazy {
         ReliquaryService(
             onMissingFile = {
@@ -45,6 +43,17 @@ class ReliquaryScreenViewModel : ItemBaseViewModel<ReliquarySetData>(observeCurr
         )
     }
 
+    /*
+    * 套装列表(按 SetId 倒序,新套装在前 —— 与改造前一致)。
+    *
+    * ⚠️ 必须用 `by lazy` 而不是"在 init 的协程里赋值":ItemFilterViewModel
+    *    在构造时**按值捕获** items,若筛选器先于数据构造,它会永久持有空列表
+    *    —— 表现为"点列表按钮后一条都没有"。详见 MonsterScreenViewModel 同类注释。
+    * */
+    val reliquarySetList: List<ReliquarySetData> by lazy {
+        reliquaryService.reliquarySetList.sortedByDescending { it.SetId }
+    }
+
     val itemFilterViewModel by lazy {
         ItemSearchOptionHelper.getReliquaryFilterItemViewModel(sets = reliquarySetList)
     }
@@ -53,21 +62,35 @@ class ReliquaryScreenViewModel : ItemBaseViewModel<ReliquarySetData>(observeCurr
 
     init {
         viewModelScope.launchIO {
-            //与改造前一致:按 SetId 倒序(新套装在前)
-            reliquarySetList = reliquaryService.reliquarySetList.sortedByDescending { it.SetId }
+            //先触碰 reliquarySetList,让 service 在 IO 线程完成文件读取与解析
+            val list = reliquarySetList
 
-            loadingState = ItemScreenStateResolver.resolve(
-                current = loadingState,
-                hasItem = reliquarySetList.isNotEmpty()
-            )
+            //Compose 状态的写入必须在主线程(本项目硬性约束)
+            withContextMain {
+                loadingState = ItemScreenStateResolver.resolve(
+                    current = loadingState,
+                    hasItem = list.isNotEmpty()
+                )
 
-            if (currentItem == null) {
-                reliquarySetList.firstOrNull()?.let { onClickItem(it) }
+                if (currentItem == null) {
+                    list.firstOrNull()?.let { onClickItem(it) }
+                }
             }
         }
     }
 
     override fun getCurrentItemId(): Int = currentItem?.SetId ?: 0
+
+    /*
+    * ⚠️ 必须重写:基类的 toggleFilterContent() 是**空实现**
+    *    (`ItemBaseViewModel:126` 的 `open fun toggleFilterContent() {}`)。
+    *    角色/武器各自重写它来打开"物品列表"抽屉,我最初漏了这一处,
+    *    导致资料库里的圣遗物页**点列表按钮没反应、列表永远打不开**,
+    *    看起来就像"列表是空的"。
+    * */
+    override fun toggleFilterContent() {
+        itemFilterViewModel.toggleFilterContent()
+    }
 
     fun getReliquaryStar(setId: Int) = reliquaryService.reliquaryMaxStarMap[setId] ?: 0
 
