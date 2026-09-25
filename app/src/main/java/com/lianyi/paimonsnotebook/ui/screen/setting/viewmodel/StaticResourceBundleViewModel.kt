@@ -106,15 +106,25 @@ class StaticResourceBundleViewModel : ViewModel() {
 
         currentJob = viewModelScope.launch {
             try {
+                /*
+                * ⚠️ 进度回调来自 OkHttp 的读线程,**每 8KB 触发一次**
+                *    (ProgressResponseBody 的 read 里调 update)。
+                *    16MB 的包会产生约 2000 次回调 —— 每次都起一个协程写 Compose 状态
+                *    是明显的浪费,故做节流:只在整数百分比变化时才更新。
+                *    这也是项目既有约定(高频回调要节流)。
+                * */
+                var lastPercent = -1
+
                 val count = StaticResourceBundle.downloadAndExtract(category) { read, total ->
                     if (total > 0) {
-                        val p = (read.toFloat() / total.toFloat()).coerceIn(0f, 1f)
-                        /*
-                        * ⚠️ 进度回调用 OkHttp 的读线程。
-                        *    直接写 Compose 状态会违反"状态写入必须在主线程"的项目约定,
-                        *    故投递到主线程。
-                        * */
-                        viewModelScope.launch { progressMap[category] = p }
+                        val percent = (read * 100 / total).toInt()
+                        if (percent != lastPercent) {
+                            lastPercent = percent
+                            //回调在 IO 线程,Compose 状态写入必须回主线程
+                            viewModelScope.launch {
+                                progressMap[category] = percent / 100f
+                            }
+                        }
                     }
                 }
 
