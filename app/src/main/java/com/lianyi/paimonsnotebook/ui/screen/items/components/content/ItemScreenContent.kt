@@ -54,6 +54,13 @@ internal fun <T> ItemScreenContent(
     itemAddedCurrentCultivateProject: Boolean = false,
     showAddButton: Boolean = true,
     itemBackgroundResId: Int = -1,
+    /*
+    * 是否由本组件自行添加状态栏占位。
+    *
+    * 默认 true(保持各独立资料页的原行为);合并页(资料库)外层已有切换栏
+    * 并自带状态栏占位,必须传 false,否则顶部会多出一段空白。
+    * */
+    statusBarPaddingEnabled: Boolean = true,
     itemFilterViewModel: ItemFilterViewModel<T>,
     onClickListButton: () -> Unit,
     itemImageContentScale: ContentScale = ContentScale.Crop,
@@ -110,7 +117,9 @@ internal fun <T> ItemScreenContent(
 
             item {
                 Column {
-                    StatusBarPaddingSpacer()
+                    if (statusBarPaddingEnabled) {
+                        StatusBarPaddingSpacer()
+                    }
 
                     Spacer(
                         modifier = Modifier

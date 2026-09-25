@@ -13,6 +13,8 @@ import com.lianyi.paimonsnotebook.common.web.hutao.genshin.conveter.WeaponTypeIc
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.AssociationType
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.ElementType
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.intrinsic.WeaponType
+import com.lianyi.paimonsnotebook.common.web.hutao.genshin.monster.MonsterData
+import com.lianyi.paimonsnotebook.common.web.hutao.genshin.reliquary.ReliquarySetData
 import com.lianyi.paimonsnotebook.common.web.hutao.genshin.weapon.WeaponData
 import com.lianyi.paimonsnotebook.ui.screen.items.components.widget.StarGroup
 import com.lianyi.paimonsnotebook.ui.screen.items.data.SearchOptionData
@@ -115,6 +117,46 @@ object ItemSearchOptionHelper {
                 )
             }
         )
+
+    /*
+    * 怪物筛选
+    *
+    * ⚠️ 刻意只提供"列表布局 + 默认排序",不提供星级/元素/地区等选项 ——
+    * MonsterData 里没有这些维度(没有星级字段;type 是未公开语义的 Int,
+    * 不同版本的取值含义不明,凭它命名筛选条件等于编造)。能诚实支持的
+    * 只有按名称/称号搜索,故选项就只给这些。
+    * */
+    fun getMonsterFilterItemViewModel(
+        monsters: List<MonsterData>
+    ) = ItemFilterViewModel(
+        items = monsters,
+        searchOptionList = ItemSearchOptionHelper.apply {
+            setListLayout()
+            setOrderBy(options = listOf(ItemFilterType.Default))
+        }.get(),
+        getFilteredItemList = ItemSearchOptionHelper::filterMonsterList,
+        itemSortCompareBy = { monster, _ -> monster.id.toLong() }
+    )
+
+    /*
+    * 圣遗物套装筛选
+    *
+    * 同样只给"列表布局 + 默认排序":ReliquarySetData 只有套装名、图标、
+    * 件数与效果描述,没有星级/部位等可筛维度(星级要从 ReliquaryService
+    * 的 starMap 反查,不适合做筛选键 —— 那会让排序键依赖另一个服务,
+    * 与本页的筛选器生命周期不一致)。
+    * */
+    fun getReliquaryFilterItemViewModel(
+        sets: List<ReliquarySetData>
+    ) = ItemFilterViewModel(
+        items = sets,
+        searchOptionList = ItemSearchOptionHelper.apply {
+            setListLayout()
+            setOrderBy(options = listOf(ItemFilterType.Default))
+        }.get(),
+        getFilteredItemList = ItemSearchOptionHelper::filterReliquaryList,
+        itemSortCompareBy = { set, _ -> set.SetId.toLong() }
+    )
 
 
     //列表布局
@@ -261,8 +303,7 @@ object ItemSearchOptionHelper {
     }
 
     //过滤角色列表
-    private fun filterAvatarList(
-        itemFilterViewModel: ItemFilterViewModel<AvatarData>,
+    private fun filterAvatarList(        itemFilterViewModel: ItemFilterViewModel<AvatarData>,
         items: List<AvatarData>
     ): List<AvatarData> {
         val list = mutableListOf<AvatarData>()
@@ -296,6 +337,55 @@ object ItemSearchOptionHelper {
             }
 
             list += avatarData
+        }
+
+        return list
+    }
+
+    /*
+    * 过滤怪物列表
+    *
+    * 只按名称与称号做子串匹配 —— 与 MonsterScreen 原实现一致(原页面的
+    * 搜索框也只看 name)。加入 title 是因为同名变种会被去重折叠,
+    * 称号是区分它们的唯一线索。
+    * */
+    private fun filterMonsterList(
+        itemFilterViewModel: ItemFilterViewModel<MonsterData>,
+        items: List<MonsterData>
+    ): List<MonsterData> {
+        val list = mutableListOf<MonsterData>()
+
+        val keyword = itemFilterViewModel.inputNameValue
+
+        items.forEach { monster ->
+            if (keyword.isNotEmpty() &&
+                monster.name.indexOf(keyword) == -1 &&
+                monster.title.indexOf(keyword) == -1
+            ) {
+                return@forEach
+            }
+
+            list += monster
+        }
+
+        return list
+    }
+
+    //过滤圣遗物套装列表(按套装名)
+    private fun filterReliquaryList(
+        itemFilterViewModel: ItemFilterViewModel<ReliquarySetData>,
+        items: List<ReliquarySetData>
+    ): List<ReliquarySetData> {
+        val list = mutableListOf<ReliquarySetData>()
+
+        val keyword = itemFilterViewModel.inputNameValue
+
+        items.forEach { set ->
+            if (keyword.isNotEmpty() && set.Name.indexOf(keyword) == -1) {
+                return@forEach
+            }
+
+            list += set
         }
 
         return list

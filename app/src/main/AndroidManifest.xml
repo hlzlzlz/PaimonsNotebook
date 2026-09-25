@@ -126,6 +126,9 @@
             android:name=".ui.screen.grow.view.GrowScreen"
             android:theme="@style/Theme.PaimonsNotebook" />
         <activity
+            android:name=".ui.screen.wiki.view.WikiScreen"
+            android:theme="@style/Theme.PaimonsNotebook" />
+        <activity
             android:name=".common.view.HoyolabWebActivity"
             android:theme="@style/Theme.PaimonsNotebook" />
         <activity

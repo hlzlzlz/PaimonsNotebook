@@ -19,10 +19,7 @@ import com.lianyi.paimonsnotebook.ui.screen.gacha.view.GachaRecordScreen
 import com.lianyi.paimonsnotebook.ui.screen.grow.view.GrowScreen
 import com.lianyi.paimonsnotebook.ui.screen.home.data.HomeCustomDrawerData
 import com.lianyi.paimonsnotebook.ui.screen.home.data.ModalItemData
-import com.lianyi.paimonsnotebook.ui.screen.items.view.AvatarScreen
-import com.lianyi.paimonsnotebook.ui.screen.items.view.MonsterScreen
-import com.lianyi.paimonsnotebook.ui.screen.items.view.ReliquaryScreen
-import com.lianyi.paimonsnotebook.ui.screen.items.view.WeaponScreen
+import com.lianyi.paimonsnotebook.ui.screen.wiki.view.WikiScreen
 import com.lianyi.paimonsnotebook.ui.screen.sign_in_status.view.SignInStatusScreen
 import com.lianyi.paimonsnotebook.ui.screen.player_character.view.PlayerCharacterScreen
 import com.lianyi.paimonsnotebook.ui.screen.dps.view.DpsCalculatorScreen
@@ -67,31 +64,10 @@ object HomeHelper {
             requireMetadata = true
         ),
         ModalItemData(
-            name = "角色资料",
+            name = "资料库",
             icon = R.drawable.ic_genshin_game_character_card,
-            target = AvatarScreen::class.java,
+            target = WikiScreen::class.java,
             sortIndex = 40,
-            requireMetadata = true
-        ),
-        ModalItemData(
-            name = "武器资料",
-            icon = R.drawable.ic_genshin_game_equip,
-            target = WeaponScreen::class.java,
-            sortIndex = 50,
-            requireMetadata = true
-        ),
-        ModalItemData(
-            name = "怪物资料",
-            icon = R.drawable.ic_genshin_game_biology,
-            target = MonsterScreen::class.java,
-            sortIndex = 55,
-            requireMetadata = true
-        ),
-        ModalItemData(
-            name = "圣遗物资料",
-            icon = R.drawable.ic_genshin_game_sign_artifacts,
-            target = ReliquaryScreen::class.java,
-            sortIndex = 60,
             requireMetadata = true
         ),
         ModalItemData(

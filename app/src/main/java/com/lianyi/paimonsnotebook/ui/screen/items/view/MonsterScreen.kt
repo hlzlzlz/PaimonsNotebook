@@ -1,54 +1,22 @@
 package com.lianyi.paimonsnotebook.ui.screen.items.view
 
 import android.os.Bundle
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.ViewModelProvider
-import com.lianyi.core.ui.components.text.InfoText
-import com.lianyi.core.ui.components.text.PrimaryText
-import com.lianyi.paimonsnotebook.common.components.lazy.ContentSpacerLazyColumn
-import com.lianyi.paimonsnotebook.common.components.loading.ContentLoadingLayout
-import com.lianyi.paimonsnotebook.common.components.media.NetworkImage
-import com.lianyi.paimonsnotebook.common.components.placeholder.ErrorPlaceholder
-import com.lianyi.paimonsnotebook.common.core.base.BaseActivity
-import com.lianyi.paimonsnotebook.common.components.widget.InputTextFiled
-import com.lianyi.paimonsnotebook.common.extension.modifier.radius.radius
-import com.lianyi.paimonsnotebook.ui.screen.items.components.item.icon.ItemIconCard
+import com.lianyi.paimonsnotebook.ui.screen.items.components.state.ItemScreenLoadingState
 import com.lianyi.paimonsnotebook.ui.screen.items.viewmodel.MonsterScreenViewModel
-import com.lianyi.paimonsnotebook.ui.theme.BackGroundColor
-import com.lianyi.paimonsnotebook.ui.theme.Black
-import com.lianyi.paimonsnotebook.ui.theme.CardBackGroundColor
+import com.lianyi.paimonsnotebook.ui.screen.items.widget.MonsterWikiContent
 import com.lianyi.paimonsnotebook.ui.theme.PaimonsNotebookTheme
-import com.lianyi.paimonsnotebook.ui.theme.White
 
-class MonsterScreen : BaseActivity() {
+/*
+* 怪物资料独立页
+*
+* 内容已抽到 MonsterWikiContent,与资料库(WikiScreen)共用。
+* 本页保留是为了不破坏已有的快捷方式与桌面组件按类名指向的跳转
+* (ShortcutsList 以 target.name 为键持久化)。
+* */
+class MonsterScreen : ComponentActivity() {
 
     private val viewModel by lazy {
         ViewModelProvider(this)[MonsterScreenViewModel::class.java]
@@ -57,212 +25,11 @@ class MonsterScreen : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            PaimonsNotebookTheme(this) {
-                ContentLoadingLayout(
-                    loadingState = viewModel.loadingState,
-                    errorContent = {
-                        ErrorPlaceholder(
-                            text = viewModel.errorMessage.ifBlank { "怪物资料加载失败" }
-                        )
-                    }
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(BackGroundColor)
-                    ) {
-                        InputTextFiled(
-                            value = viewModel.searchKeyword,
-                            onValueChange = {
-                                viewModel.searchKeyword = it
-                            },
-                            placeholder = "搜索怪物名称",
-                            backgroundColor = CardBackGroundColor,
-                            borderColor = Color.Transparent,
-                            textStyle = TextStyle(fontSize = 14.sp, color = Black),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp, 6.dp)
-                                .radius(6.dp)
-                        )
-
-                        ContentSpacerLazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(12.dp, 6.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            val keyword = viewModel.searchKeyword.trim()
-
-                            viewModel.monsterGroups.forEach { (title, monsters) ->
-                                val filtered = if (keyword.isEmpty()) {
-                                    monsters
-                                } else {
-                                    monsters.filter { it.name.contains(keyword) }
-                                }
-
-                                if (filtered.isEmpty()) {
-                                    return@forEach
-                                }
-
-                                item(key = "group_$title") {
-                                    PrimaryText(
-                                        text = title,
-                                        textSize = 14.sp,
-                                        modifier = Modifier.padding(4.dp, 6.dp)
-                                    )
-                                }
-
-                                //Monster.json中存在大量Id=0的条目(机关系列等),
-                                //不能以id作key;名称在VM已按associateBy去重,必唯一
-                                items(filtered, key = { "monster_${it.name}" }) { monster ->
-                                    Column(
-                                        modifier = Modifier
-                                            .radius(6.dp)
-                                            .background(CardBackGroundColor)
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                viewModel.showMonsterDetail(monster)
-                                            }
-                                            .padding(8.dp)
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            ItemIconCard(
-                                                url = monster.iconUrl,
-                                                star = 0,
-                                                size = 36.dp,
-                                                borderRadius = 6.dp
-                                            )
-
-                                            Spacer(modifier = Modifier.width(8.dp))
-
-                                            PrimaryText(
-                                                text = monster.name,
-                                                textSize = 14.sp
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                viewModel.currentMonster?.let { monster ->
-                    MonsterDetailDialog(monster)
+            PaimonsNotebookTheme(this, lightStatusBar = false) {
+                ItemScreenLoadingState(loadingState = viewModel.loadingState) {
+                    MonsterWikiContent(viewModel = viewModel)
                 }
             }
         }
     }
-
-    @Composable
-    private fun MonsterDetailDialog(monster: com.lianyi.paimonsnotebook.common.web.hutao.genshin.monster.MonsterData) {
-        Dialog(onDismissRequest = viewModel::dismissMonsterDetail) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .radius(8.dp)
-                    .background(White)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    NetworkImage(
-                        url = monster.iconUrl,
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                    )
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    Column {
-                        PrimaryText(
-                            text = monster.name,
-                            textSize = 18.sp
-                        )
-
-                        InfoText(text = monster.title, fontSize = 12.sp)
-                    }
-                }
-
-                //机关/测试类条目没有BaseValue字段,缺失时整个属性区块不展示
-                monster.baseValue?.let { baseValue ->
-                    InfoRow("基础生命", formatBaseValue(baseValue.HpBase))
-                    InfoRow("基础攻击", formatBaseValue(baseValue.AttackBase))
-                    InfoRow("基础防御", formatBaseValue(baseValue.DefenseBase.toFloat()))
-
-                    PrimaryText(text = "抗性", textSize = 14.sp)
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        InfoRow("物理", formatResist(baseValue.PhysicalSubHurt))
-                        InfoRow("火", formatResist(baseValue.FireSubHurt))
-                        InfoRow("雷", formatResist(baseValue.ElecSubHurt))
-                        InfoRow("水", formatResist(baseValue.WaterSubHurt))
-                        InfoRow("草", formatResist(baseValue.GrassSubHurt))
-                        InfoRow("风", formatResist(baseValue.WindSubHurt))
-                        InfoRow("冰", formatResist(baseValue.IceSubHurt))
-                        InfoRow("岩", formatResist(baseValue.RockSubHurt))
-                    }
-                }
-
-                val drops = monster.drops.orEmpty()
-
-                if (drops.isNotEmpty()) {
-                    PrimaryText(text = "掉落", textSize = 14.sp)
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        drops.take(8).forEach { materialId ->
-                            val material = viewModel.getMaterialById(materialId)
-
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.width(56.dp)
-                            ) {
-                                NetworkImage(
-                                    url = material.iconUrl,
-                                    modifier = Modifier.size(40.dp)
-                                )
-
-                                InfoText(
-                                    text = material.Name,
-                                    fontSize = 10.sp,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                    }
-                }
-
-                val description = monster.description.orEmpty()
-
-                if (description.isNotBlank()) {
-                    PrimaryText(text = "描述", textSize = 14.sp)
-                    InfoText(text = description)
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-        }
-    }
-
-    @Composable
-    private fun InfoRow(label: String, value: String) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            InfoText(
-                text = label,
-                fontSize = 13.sp,
-                modifier = Modifier.weight(1f)
-            )
-
-            PrimaryText(text = value, textSize = 13.sp)
-        }
-    }
-
-    private fun formatBaseValue(value: Float): String =
-        if (value % 1f == 0f) "${value.toInt()}" else String.format("%.1f", value)
-
-    private fun formatResist(value: Float): String =
-        String.format("%.1f%%", value * 100)
 }
